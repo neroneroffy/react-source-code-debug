@@ -1,0 +1,22 @@
+.state-component {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+}
+.state-component .parent1, .state-component .parent2 {
+    width: 500px;
+}
+.state-component .parent1 .child-wrapper, .state-component .parent2 .child-wrapper {
+    display: flex;
+    justify-content: space-around;
+}
+.state-component .p2-child {
+    width: 50%;
+}
+.state-component .p2-child .sub-child-wrapper {
+    display: flex;
+    justify-content: space-around;
+}
+.state-component div {
+    margin: 20px 0;
+}
