@@ -6,9 +6,8 @@
  *
  * @flow
  */
-
-// UpdateQueue is a linked list of prioritized updates.
-//
+// UpdateQueue是一个基于优先级更新的链表，与Fiber一样，更新队列是成对的，
+// UpdateQueue is a linked list of prioritized updates.`
 // Like fibers, update queues come in pairs: a current queue, which represents
 // the visible state of the screen, and a work-in-progress queue, which can be
 // mutated and processed asynchronously before it is committed — a form of
@@ -325,6 +324,7 @@ function getStateFromUpdate<State>(
     }
     // Intentional fallthrough
     case UpdateState: {
+      // 获取update上的payload，有可能是对象，有可能是函数
       const payload = update.payload;
       let partialState;
       if (typeof payload === 'function') {
@@ -338,12 +338,19 @@ function getStateFromUpdate<State>(
             payload.call(instance, prevState, nextProps);
           }
         }
+        // 如果是函数，调用它，并将调用结果存到partialState。这里就是setState传入函数的场景
+        // this.setState((prevState, nextProps) => {
+        //     return {
+        //        ...
+        //     }
+        // })
         partialState = payload.call(instance, prevState, nextProps);
         if (__DEV__) {
           exitDisallowedContextReadInDEV();
         }
       } else {
         // Partial state object
+        // setState传入对象的场景
         partialState = payload;
       }
       if (partialState === null || partialState === undefined) {
@@ -351,6 +358,9 @@ function getStateFromUpdate<State>(
         return prevState;
       }
       // Merge the partial state and the previous state.
+      // 将本次计算的state，与上一次的prevState进行合并。由于对象的属性只能唯一，因而在setState传入对象的场景下，
+      // 多次同步调用this.setState,得到的state总是最后一次设置的结果。
+      // console.log('prevState, partialState', prevState, partialState);
       return Object.assign({}, prevState, partialState);
     }
     case ForceUpdate: {
@@ -379,47 +389,54 @@ export function processUpdateQueue<State>(
   // The last rebase update that is NOT part of the base state.
   // baseQueue 是正在更新的队列
   let baseQueue = queue.baseQueue;
-  console.log('queue', queue);
+  // console.log('queue', queue);
   // The last pending update that hasn't been processed yet.
   // pendingQueue是等待更新的队列
   let pendingQueue = queue.shared.pending;
   if (pendingQueue !== null) {
-    // 当前产生了一个等待被处理的更新，它将会被添加到正在更新的堆列中
+    // 有待更新的队列，它将会被添加到正在更新的队列中
     // We have new updates that haven't been processed yet.
     // We'll add them to the base queue.
-    // 更新队列是一个环状链表
+
     if (baseQueue !== null) {
       // Merge the pending queue and the base queue.
+      // 更新队列是一个环状链表，将待更新队列追加到当前正在更新的队列的尾部，也就是将更新中的队列与等待更新的队列进行合并
       let baseFirst = baseQueue.next;
       let pendingFirst = pendingQueue.next;
       baseQueue.next = pendingFirst;
       pendingQueue.next = baseFirst;
     }
-
+    // 将现有的正在更新的队列重新赋值为合并后的新队列
     baseQueue = pendingQueue;
-
+    // 合并之后，释放原有存储的待更新队列
     queue.shared.pending = null;
     // TODO: Pass `current` as argument
+    // 从workInProgress中取出对应的Fiber节点（alternate对应着workInProgress当前节点对应的Fiber节点）
     const current = workInProgress.alternate;
     if (current !== null) {
       const currentQueue = current.updateQueue;
       if (currentQueue !== null) {
+        // 对Fiber节点上的正在更新的队列重新赋值，新值为上边合并后的更新队列
         currentQueue.baseQueue = pendingQueue;
       }
     }
   }
 
   // These values may change as we process the queue.
+  // （直译）在处理队列时，这些值可能会发生变化。
   if (baseQueue !== null) {
     let first = baseQueue.next;
     // Iterate through the list of updates to compute the result.
+    // 这部分的逻辑是遍历更新队列，计算出新的结果
+
+    // 这里的newState，可以理解为上一次更新的state。
     let newState = queue.baseState;
     let newExpirationTime = NoWork;
 
     let newBaseState = null;
     let newBaseQueueFirst = null;
     let newBaseQueueLast = null;
-
+    // 当没有到baseQueue链表不为空，进行遍历
     if (first !== null) {
       let update = first;
       do {
@@ -428,7 +445,8 @@ export function processUpdateQueue<State>(
           // Priority is insufficient. Skip this update. If this is the first
           // skipped update, the previous update/state is the new base
           // update/state.
-          // 优先级不足，跳过更新，如果被调过的是第一个，
+          // 优先级不足，跳过更新，如果这是第一个被跳过的更新，前一个update/state
+          // （前一个update的结果）就会被更新成新的update/state，
           const clone: Update<State> = {
             expirationTime: update.expirationTime,
             suspenseConfig: update.suspenseConfig,
@@ -437,23 +455,30 @@ export function processUpdateQueue<State>(
             payload: update.payload,
             callback: update.callback,
 
+            // next指向了null，说明这个update下边不会再有其他update，这是它作为尾部节点的特征
             next: (null: any),
           };
+          // 将这个更新放到newBaseQueue中，这里判断了newBaseQueue有没有元素，
+          // 没有的话，直接放进去，有的话就追加到尾部
           if (newBaseQueueLast === null) {
             newBaseQueueFirst = newBaseQueueLast = clone;
+            // newBaseState 更新为前一个update的结果
             newBaseState = newState;
           } else {
             newBaseQueueLast = newBaseQueueLast.next = clone;
           }
           // Update the remaining priority in the queue.
+          // 更新update的优先级
           if (updateExpirationTime > newExpirationTime) {
             newExpirationTime = updateExpirationTime;
           }
         } else {
           // This update does have sufficient priority.
-
+          // update有足够的优先级
           if (newBaseQueueLast !== null) {
+            // 将update放到更新队列的尾部
             const clone: Update<State> = {
+              // update即将进入commit阶段，所以需要将它的优先级置为同步，就是最高优先级
               expirationTime: Sync, // This update is going to be committed so we never want uncommit it.
               suspenseConfig: update.suspenseConfig,
 
@@ -476,8 +501,8 @@ export function processUpdateQueue<State>(
             updateExpirationTime,
             update.suspenseConfig,
           );
-
           // Process this update.
+          // 处理更新，计算出新结果
           newState = getStateFromUpdate(
             workInProgress,
             queue,
@@ -497,6 +522,7 @@ export function processUpdateQueue<State>(
             }
           }
         }
+        // 将当前处理的update换成当前的下一个，实现移动链表的遍历
         update = update.next;
         if (update === null || update === first) {
           pendingQueue = queue.shared.pending;
@@ -511,15 +537,16 @@ export function processUpdateQueue<State>(
             queue.shared.pending = null;
           }
         }
-      } while (true);
+      } while (true); // 因为updateQueue是环状闭合链表，所以一直循环，直到链表清空 ？ @TODO 需要再研究这里的循环逻辑
     }
-
+    // 如果当前的更新队列的最后一个元素为空，此时链表为空，newBaseState赋值为之前计算出的newState
     if (newBaseQueueLast === null) {
       newBaseState = newState;
     } else {
+      // 否则将链表首尾相连
       newBaseQueueLast.next = (newBaseQueueFirst: any);
     }
-
+    // 重新设置queue更新队列
     queue.baseState = ((newBaseState: any): State);
     queue.baseQueue = newBaseQueueLast;
 
@@ -532,6 +559,8 @@ export function processUpdateQueue<State>(
     // that regardless.
     markUnprocessedUpdateTime(newExpirationTime);
     workInProgress.expirationTime = newExpirationTime;
+
+    // 设置workInProgress节点的memoizedState，最终表现为组件的this.state
     workInProgress.memoizedState = newState;
   }
 

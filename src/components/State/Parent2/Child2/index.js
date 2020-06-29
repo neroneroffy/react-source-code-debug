@@ -10,14 +10,14 @@ class Child2 extends Component {
   }
 
   add = () => {
-    this.setState((prevState, prevProps) => {
-      return {
-        count: prevState.count + 1
-      }
-    }, () => {
-      this.setState({
-        count: this.state.count + 3
-      })
+    this.setState({
+      count: this.state.count + 1
+    })
+    this.setState({
+      count: this.state.count + 2
+    })
+    this.setState({
+      count: this.state.count + 3
     })
   }
   render() {
