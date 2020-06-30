@@ -7,8 +7,6 @@ const Child1 = () => {
     <div>
       <button onClick={() => {
         setCount(count + 1)
-        setCount(count + 1)
-        setCount(count + 1)
       }}>+</button>
       {count}
     </div>

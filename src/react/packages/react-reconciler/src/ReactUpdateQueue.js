@@ -424,6 +424,7 @@ export function processUpdateQueue<State>(
 
   // These values may change as we process the queue.
   // （直译）在处理队列时，这些值可能会发生变化。
+
   if (baseQueue !== null) {
     let first = baseQueue.next;
     // Iterate through the list of updates to compute the result.
@@ -433,20 +434,28 @@ export function processUpdateQueue<State>(
     let newState = queue.baseState;
     let newExpirationTime = NoWork;
 
-    let newBaseState = null;
+    let newBaseState = null; // 用来存储新的state，最终会是组件的新的this.state
     let newBaseQueueFirst = null;
     let newBaseQueueLast = null;
     // 当没有到baseQueue链表不为空，进行遍历
     if (first !== null) {
       let update = first;
+      /**
+       * update：当前要被处理的update
+       * updateExpirationTime：update的优先级
+       * newExpirationTime：本次更新的优先级，最终要被记录到workInProgress中
+       * renderExpirationTime: FiberRoot 上最大优先级的值
+       * */
       do {
-        const updateExpirationTime = update.expirationTime;
+        const updateExpirationTime = update.expirationTime; // 当前更新的优先级
         if (updateExpirationTime < renderExpirationTime) {
           // Priority is insufficient. Skip this update. If this is the first
           // skipped update, the previous update/state is the new base
           // update/state.
-          // 优先级不足，跳过更新，如果这是第一个被跳过的更新，前一个update/state
-          // （前一个update的结果）就会被更新成新的update/state，
+          // （直译）优先级不足，跳过更新，如果这是第一个被跳过的更新，前一个update/state
+          // （前一个update的结果）就会被更新成新的update/state。
+
+          // 这个判断其实表达的是，如果当前的update优先级不足，那么就把它放到 newBaseQueue 的尾部，先处理高优先级的
           const clone: Update<State> = {
             expirationTime: update.expirationTime,
             suspenseConfig: update.suspenseConfig,
@@ -468,7 +477,7 @@ export function processUpdateQueue<State>(
             newBaseQueueLast = newBaseQueueLast.next = clone;
           }
           // Update the remaining priority in the queue.
-          // 更新update的优先级
+          // 更新workInProgress的优先级
           if (updateExpirationTime > newExpirationTime) {
             newExpirationTime = updateExpirationTime;
           }
@@ -540,13 +549,14 @@ export function processUpdateQueue<State>(
       } while (true); // 因为updateQueue是环状闭合链表，所以一直循环，直到链表清空 ？ @TODO 需要再研究这里的循环逻辑
     }
     // 如果当前的更新队列的最后一个元素为空，此时链表为空，newBaseState赋值为之前计算出的newState
+    console.log(newBaseQueueFirst, newBaseQueueLast, first);
     if (newBaseQueueLast === null) {
       newBaseState = newState;
     } else {
       // 否则将链表首尾相连
       newBaseQueueLast.next = (newBaseQueueFirst: any);
     }
-    // 重新设置queue更新队列
+    // 重新设置queue的baseState 和  更新队列
     queue.baseState = ((newBaseState: any): State);
     queue.baseQueue = newBaseQueueLast;
 
