@@ -6,13 +6,30 @@
  *
  * @flow
  */
-// UpdateQueue是一个基于优先级更新的链表，与Fiber一样，更新队列是成对的，
+// UpdateQueue是一个基于优先级更新的链表，与Fiber一样，更新队列是成对的：
+//
+// 一个当前队列（current queue），代表着当前屏幕上的你在屏幕上看到的状态。
+
+// 另外一个是正在进行中的队列（work-in-progress queue），
+// React正在对它进行计算，它可以在提交之前被异步地更改和处理，这是一种双缓冲形式。
+
+// 如果一个正在进行的渲染（work-in-progress）在完成（提交）之前被丢弃，
+// 可以通过克隆当前队列来创建一个新的正在进行的工作。也就是要是work-in-progress被废了,
+// 就用current新建一个,他们两个是互为备份的关系.
+
 // UpdateQueue is a linked list of prioritized updates.`
 // Like fibers, update queues come in pairs: a current queue, which represents
 // the visible state of the screen, and a work-in-progress queue, which can be
 // mutated and processed asynchronously before it is committed — a form of
 // double buffering. If a work-in-progress render is discarded before finishing,
 // we create a new work-in-progress by cloning the current queue.
+//
+// 这两个队列共享一个环状的单向链表结构，调度一个更新时，这个更新会被追加到两个队列地尾部，
+// 每个队列维护一个指向环状列表中第一个未处理的update的指针（first指针），work-in-progress 队列的first指针
+// 的位置大于等于current队列的first指针，因为我们只处理work-in-progress 队列。current队列的指针只在
+// work-in-progress 队列处理完进入到commit阶段才更新.
+
+// 当work-in-progress队列处理完之后,会进入到commit阶段,而她在这个时候就会变成current队列.
 //
 // Both queues share a persistent, singly-linked list structure. To schedule an
 // update, we append it to the end of both queues. Each queue maintains a
@@ -30,6 +47,12 @@
 //                                          The work-in-progress queue has
 //                                          processed more updates than current.
 //
+// 之所以向两个队列追加update是因为我们可能会在不处理这两个队列的情况下删除更新,比如只往work-in-progress队列添加更新,
+// 那么当这个队列被丢弃再通过clone current队列重新启动时,后来被添加的update将会丢失.
+// 同样的,只往current队列添加添加更新,那么在将work-in-progress队列复制到current队列时,
+// current队列就会丢失刚刚已经添加的更新.
+// 但是通过同时向两个队列追加更新,可以保证这个更新会成为下一个work-in-progress 队列的一部分.
+// (因为work-in-progress队列在commit之后就称为current队列,所以不存在两次的更新都相同的情况)
 // The reason we append to both queues is because otherwise we might drop
 // updates without ever processing them. For example, if we only add updates to
 // the work-in-progress queue, some updates could be lost whenever a work-in
@@ -44,9 +67,15 @@
 // Prioritization
 // --------------
 //
+// update不会按照优先级排序，而是通过插入顺序，新的update会插入到链表的尾部
 // Updates are not sorted by priority, but by insertion; new updates are always
 // appended to the end of the list.
 //
+// 尽管如此，优先级仍然很重要，当在渲染阶段处理更新队列时，渲染的结果只会包含具有足够优先级的更新。
+// 如果因为优先级不足跳过了一个update，它将还是会在队列中，只不过稍后处理。
+// 关键在于被跳过的update之后的所有update也是不管优先级如何，都在队列里，这意味着高优先级的update有时候
+// 会以不同的渲染优先级处理两次。我们还追踪base state，它表示已经被应用（被应用就表示整理好了，即将被处理）
+// 的队列中第一个update的上一个状态。
 // The priority is still important, though. When processing the update queue
 // during the render phase, only the updates with sufficient priority are
 // included in the result. If we skip an update because it has insufficient
@@ -58,11 +87,12 @@
 // update in the queue is applied.
 //
 // For example:
-//
+//   baseState 是空字符串，下边是更新队列，从下边的例子来看，优先级是1 > 2的
 //   Given a base state of '', and the following queue of updates
 //
 //     A1 - B2 - C1 - D2
 //
+//   数字表示优先级，字母表示update的状态（state），React将对这些update进行两次处理，每次按照不同的优先级:
 //   where the number indicates the priority, and the update is applied to the
 //   previous state by appending a letter, React will process these updates as
 //   two separate renders, one per distinct priority level:
@@ -78,10 +108,30 @@
 //     Updates: [B2, C1, D2]      <-  C1 was rebased on top of B2
 //     Result state: 'ABCD'
 //
+
+// 在这个例子中，C1就被处理了两次，印证了：高优先级的update有时候会以不同的渲染优先级处理两次。
+// 第一次渲染的结果是AC，第二次的渲染开始时，Base state是A，不包含C，是因为上边解释了：
+// base state，它表示已经被应用（被应用就表示整理好了，即将被处理）的队列中第一个update的上一个状态。
+// 第二次的时候这个“被应用”的队列就是[B2, C1, D2]，第一个update就是A1，状态是A
+
+// 因为是通过插入顺序来处理的更新，并且在跳过之前的update是重设高优先级update。最终结果都是确定的，
+// 中间状态可能因为系统资源的不同而不同，但最终状态总是相同的
 // Because we process updates in insertion order, and rebase high priority
 // updates when preceding updates are skipped, the final result is deterministic
 // regardless of priority. Intermediate state may vary according to system
 // resources, but the final state is always the same.
+
+// A1 - B1 - C2 - D1 - F2
+//   First render, at priority 1:
+//     Base state: ''
+//     Updates: [A1, B1, D1]
+//     Result state: 'ABD'
+//   Second render, at priority 2:
+//     Base state: 'B'            <-  The base state does not include C1,
+//                                    because B2 was skipped.
+//     Updates: [C2, D1, F2]      <-  C1 was rebased on top of B2
+//     Result state: 'BCDF'
+
 
 import type {Fiber} from './ReactFiber';
 import type {ExpirationTime} from './ReactFiberExpirationTime';
@@ -214,11 +264,11 @@ export function createUpdate(
 
  updateQueue的结构：
    baseState：先前的状态，作为 payload 函数的 prevState 参数
-   baseQueue：存储执行中的更新任务 Update 队列，尾节点存储形式
-   shared：以 pending 属性存储待执行的更新任务 Update 队列，尾节点存储形式
+   baseQueue：执行中的更新任务 Update 队列，work-in-progress队列
+   shared：以 pending 属性存储待执行的更新任务 Update 队列，current队列
    effects：side-effects 队列，commit 阶段执行
 
- UpdateQueue用来存储更新队列，一共有两条队列：正在更新的队列baseQueue，待更新的队列（shared中的pending）
+ UpdateQueue用来存储更新队列，一共有两条队列，work-in-progress队列 和 current队列
  * */
 
 export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
@@ -387,13 +437,15 @@ export function processUpdateQueue<State>(
   }
 
   // The last rebase update that is NOT part of the base state.
-  // baseQueue 是正在更新的队列
   let baseQueue = queue.baseQueue;
   // console.log('queue', queue);
   // The last pending update that hasn't been processed yet.
-  // pendingQueue是等待更新的队列
   let pendingQueue = queue.shared.pending;
+  console.log('判断之外', baseQueue, pendingQueue, queue);
   if (pendingQueue !== null) {
+    // 这个判断的作用是，判断有没有待更新的队列，有的话就把它和正在更新的队列连到一起，
+    // 把新队列赋值给正在更新的队列
+    console.log('pendingQueue !== null', pendingQueue);
     // 有待更新的队列，它将会被添加到正在更新的队列中
     // We have new updates that haven't been processed yet.
     // We'll add them to the base queue.
@@ -426,6 +478,8 @@ export function processUpdateQueue<State>(
   // （直译）在处理队列时，这些值可能会发生变化。
 
   if (baseQueue !== null) {
+    // 这个判断就是遍历队列处理更新获取新状态了
+    console.log('baseQueue !== null', baseQueue);
     let first = baseQueue.next;
     // Iterate through the list of updates to compute the result.
     // 这部分的逻辑是遍历更新队列，计算出新的结果
@@ -549,7 +603,6 @@ export function processUpdateQueue<State>(
       } while (true); // 因为updateQueue是环状闭合链表，所以一直循环，直到链表清空 ？ @TODO 需要再研究这里的循环逻辑
     }
     // 如果当前的更新队列的最后一个元素为空，此时链表为空，newBaseState赋值为之前计算出的newState
-    console.log(newBaseQueueFirst, newBaseQueueLast, first);
     if (newBaseQueueLast === null) {
       newBaseState = newState;
     } else {
@@ -560,6 +613,9 @@ export function processUpdateQueue<State>(
     queue.baseState = ((newBaseState: any): State);
     queue.baseQueue = newBaseQueueLast;
 
+    // 将剩余的过期时间设置为队列中剩余的时间。这应该没问题，因为影响过期时间的只有props和context。
+    // 当开始处理队列时，我们已经在开始阶段的中间，所以我们已经处理了props。指定shouldComponentUpdate的组件中的context很棘手;
+    // 但无论如何，我们都要考虑到这一点。
     // Set the remaining expiration time to be whatever is remaining in the queue.
     // This should be fine because the only two other things that contribute to
     // expiration time are props and context. We're already in the middle of the

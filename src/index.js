@@ -1,16 +1,16 @@
 import React from 'react';
-import * as ReactDOM from 'react-dom';
+import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 
+/*ReactDOM.createRoot(
+  document.getElementById('root')
+).render(<App />);*/
 
-/*ReactDOM.render(
+ReactDOM.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
   document.getElementById('root')
-);*/
-ReactDOM.createRoot(
-  document.getElementById('root')
-).render(<App />);
+);
 console.log('React 源码调试，当前版本：' + React.version);
