@@ -14,8 +14,8 @@
 // React正在对它进行计算，它可以在提交之前被异步地更改和处理，这是一种双缓冲形式。
 
 // 如果一个正在进行的渲染（work-in-progress）在完成（提交）之前被丢弃，
-// 可以通过克隆当前队列来创建一个新的正在进行的工作。也就是要是work-in-progress被废了,
-// 就用current新建一个,他们两个是互为备份的关系.
+// 可以通过克隆当前队列来创建一个新的正在进行的工作。也就是要是work-in-progress被废了，
+// 就用current新建一个。
 
 // UpdateQueue is a linked list of prioritized updates.`
 // Like fibers, update queues come in pairs: a current queue, which represents
@@ -24,12 +24,13 @@
 // double buffering. If a work-in-progress render is discarded before finishing,
 // we create a new work-in-progress by cloning the current queue.
 //
-// 这两个队列共享一个环状的单向链表结构，调度一个更新时，这个更新会被追加到两个队列地尾部，
+// 这两个队列共享一个环状的单向链表结构，当一个新的更新进入调度时，它会被追加到两个队列的尾部，
 // 每个队列维护一个指向环状列表中第一个未处理的update的指针（first指针），work-in-progress 队列的first指针
 // 的位置大于等于current队列的first指针，因为我们只处理work-in-progress 队列。current队列的指针只在
-// work-in-progress 队列处理完进入到commit阶段才更新.
+// work-in-progress 队列处理完进入到commit阶段才更新。
 
-// 当work-in-progress队列处理完之后,会进入到commit阶段,而她在这个时候就会变成current队列.
+// 当work-in-progress队列处理完之后，会进入到commit阶段，这个时候current队列 和 work-in-progress队列交换，
+// current队列就变成了之前的work-in-progress队列。
 //
 // Both queues share a persistent, singly-linked list structure. To schedule an
 // update, we append it to the end of both queues. Each queue maintains a
@@ -47,12 +48,12 @@
 //                                          The work-in-progress queue has
 //                                          processed more updates than current.
 //
-// 之所以向两个队列追加update是因为我们可能会在不处理这两个队列的情况下删除更新,比如只往work-in-progress队列添加更新,
-// 那么当这个队列被丢弃再通过clone current队列重新启动时,后来被添加的update将会丢失.
-// 同样的,只往current队列添加添加更新,那么在将work-in-progress队列复制到current队列时,
-// current队列就会丢失刚刚已经添加的更新.
-// 但是通过同时向两个队列追加更新,可以保证这个更新会成为下一个work-in-progress 队列的一部分.
-// (因为work-in-progress队列在commit之后就称为current队列,所以不存在两次的更新都相同的情况)
+// 之所以向两个队列追加update是因为我们可能会在不处理这两个队列的情况下删除更新，比如只往work-in-progress队列添加更新，
+// 那么当这个队列被丢弃再通过clone current队列重新启动时，后来被添加的update将会丢失。
+// 同样的，只往current队列添加添加更新，那么在将work-in-progress队列与current队列交换时,
+// current队列就会丢失刚刚已经添加的更新。
+// 但是通过同时向两个队列追加更新，可以保证这个更新会成为下一个work-in-progress 队列的一部分。
+// (因为work-in-progress队列在commit之后就称为current队列，所以不存在两次的更新都相同的情况)
 // The reason we append to both queues is because otherwise we might drop
 // updates without ever processing them. For example, if we only add updates to
 // the work-in-progress queue, some updates could be lost whenever a work-in
