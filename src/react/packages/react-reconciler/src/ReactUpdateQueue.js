@@ -441,11 +441,9 @@ export function processUpdateQueue<State>(
   // console.log('queue', queue);
   // The last pending update that hasn't been processed yet.
   let pendingQueue = queue.shared.pending;
-  console.log('判断之外', baseQueue, pendingQueue, queue);
   if (pendingQueue !== null) {
     // 这个判断的作用是，判断有没有待更新的队列，有的话就把它和正在更新的队列连到一起，
     // 把新队列赋值给正在更新的队列
-    console.log('pendingQueue !== null', pendingQueue);
     // 有待更新的队列，它将会被添加到正在更新的队列中
     // We have new updates that haven't been processed yet.
     // We'll add them to the base queue.
