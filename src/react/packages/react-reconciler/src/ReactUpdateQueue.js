@@ -6,32 +6,27 @@
  *
  * @flow
  */
-// UpdateQueue是一个基于优先级更新的链表，与Fiber一样，更新队列是成对的：
-//
-// 一个当前队列（current queue），代表着当前屏幕上的你在屏幕上看到的状态。
-
-// 另外一个是正在进行中的队列（work-in-progress queue），
-// React正在对它进行计算，它可以在提交之前被异步地更改和处理，这是一种双缓冲形式。
-
-// 如果一个正在进行的渲染（work-in-progress）在完成（提交）之前被丢弃，
-// 可以通过克隆当前队列来创建一个新的正在进行的工作。也就是要是work-in-progress被废了，
-// 就用current新建一个。
-
 // UpdateQueue is a linked list of prioritized updates.`
 // Like fibers, update queues come in pairs: a current queue, which represents
 // the visible state of the screen, and a work-in-progress queue, which can be
 // mutated and processed asynchronously before it is committed — a form of
 // double buffering. If a work-in-progress render is discarded before finishing,
 // we create a new work-in-progress by cloning the current queue.
-//
-// 这两个队列共享一个环状的单向链表结构，当一个新的更新进入调度时，它会被追加到两个队列的尾部，
-// 每个队列维护一个指向环状列表中第一个未处理的update的指针（first指针），work-in-progress 队列的first指针
-// 的位置大于等于current队列的first指针，因为我们只处理work-in-progress 队列。current队列的指针只在
-// work-in-progress 队列处理完进入到commit阶段才更新。
 
-// 当work-in-progress队列处理完之后，会进入到commit阶段，这个时候current队列 和 work-in-progress队列交换，
-// current队列就变成了之前的work-in-progress队列。
-//
+// UpdateQueue是一个基于优先级更新的链表，与Fiber一样，更新队列是成对的。
+// 一个当前队列（current queue），代表着当前屏幕上的你在屏幕上看到的状态。
+// 另外一个是正在处理中（WIP）的队列（work-in-progress queue），代表着react正在后台处理的队列。
+// 它可以在提交之前被异步地更改和处理，这是一种双缓冲形式。
+// 如果一个正在进行的渲染（work-in-progress）在完成（提交）之前被丢弃，
+// 可以通过克隆当前队列来创建一个新的正在进行的工作。也就是要是WIP被废了，就用current新建一个。
+
+/**----注：
+双缓冲的概念，有了它，可以一定程度上抹平两次更新之间的空白。
+说的意思是当前的current queue展示给用户，而WIP queue在后台处理，当需要展示立刻替换current queue，将新的更新展示给用户，
+而只有一个队列，先处理再展示，这样可能不会及时把更新呈现出来。
+类比js的异步队列，是相似的概念。
+*/
+
 // Both queues share a persistent, singly-linked list structure. To schedule an
 // update, we append it to the end of both queues. Each queue maintains a
 // pointer to first update in the persistent list that hasn't been processed.
@@ -39,21 +34,37 @@
 // the current queue, since we always work on that one. The current queue's
 // pointer is only updated during the commit phase, when we swap in the
 // work-in-progress.
+
+// 这两个队列共享一个环状的单链表结构，当产生（原文是调度）一个新的update时，会追加到两个队列的尾部，
+// 每个队列都有一个指向环状列表中第一个未处理的update的指针（也就是queue的next），WIP队列的next指针
+// 的位置大于等于current队列的指针，因为我们只处理WIP 队列。current队列的指针只在WIP队列处理完进入到
+// commit阶段才更新。
+
+// 当WIP队列处理完之后，会进入到commit阶段，这个时候current队列 和 WIP队列交换，
+// current队列就变成了新的WIP队列，后续的update都会追加到它的尾部。
+//
 //
 // For example:
 //
+// 原版注释的示意图是
 //   Current pointer:           A - B - C - D - E - F
 //   Work-in-progress pointer:              D - E - F
 //                                          ^
 //                                          The work-in-progress queue has
 //                                          processed more updates than current.
-//
-// 之所以向两个队列追加update是因为我们可能会在不处理这两个队列的情况下删除更新，比如只往work-in-progress队列添加更新，
-// 那么当这个队列被丢弃再通过clone current队列重新启动时，后来被添加的update将会丢失。
-// 同样的，只往current队列添加添加更新，那么在将work-in-progress队列与current队列交换时,
-// current队列就会丢失刚刚已经添加的更新。
-// 但是通过同时向两个队列追加更新，可以保证这个更新会成为下一个work-in-progress 队列的一部分。
-// (因为work-in-progress队列在commit之后就称为current队列，所以不存在两次的更新都相同的情况)
+
+// 但理解起来不通畅，稍微修改了一下
+//   Current pointer:           A - B - C - D - E - F
+//                                          ^
+//   Work-in-progress pointer:  A - B - C - D - E - F
+//                                                  ^
+//                                                   WIP队列总比current队列处理更多的update
+/**----注：
+ * “WIP队列的next指针的位置大于等于current队列的指针”，这句话要从图中理解，并结合“每个队列都有一个指向环状列表中第一个未处理的update的指针”。
+ * 假设A-B-C为三个新添加的update，Curren队列的第一个未处理的update为D，而WIP第一个未处理的为F，F的位置总比D大。而且由于update同时被推入两个队列，所以
+ * WIP的指针不可能比Current小。
+* */
+
 // The reason we append to both queues is because otherwise we might drop
 // updates without ever processing them. For example, if we only add updates to
 // the work-in-progress queue, some updates could be lost whenever a work-in
@@ -64,19 +75,21 @@
 // work-in-progress. (And because the work-in-progress queue becomes the
 // current queue once it commits, there's no danger of applying the same
 // update twice.)
+
+// 之所以向两个队列追加update是因为我们可能会在不处理某些更新的情况下删除它们，比如只往WIP队列
+// 添加更新，那么当这个队列被丢弃，再通过clone current队列重新建立WIP队列时，后来被添加的update
+// 将会丢失。同样的，只往current队列添加更新，那么在将WIP队列与current队列交换时,current队列就会
+// 丢失刚刚已经添加的更新。但是通过同时向两个队列追加更新，可以保证这个更新会成为下一个WIP队列的
+// 一部分。(因为WIP队列在commit之后就成为current队列，所以不存在相同的更新被处理两次的情况)
 //
-// Prioritization
+// Prioritization 优先级
 // --------------
-//
-// update不会按照优先级排序，而是通过插入顺序，新的update会插入到链表的尾部
 // Updates are not sorted by priority, but by insertion; new updates are always
 // appended to the end of the list.
+
+// update不会按照优先级排序，而是通过插入顺序，新的update会插入到链表的尾部
 //
-// 尽管如此，优先级仍然很重要，当在渲染阶段处理更新队列时，渲染的结果只会包含具有足够优先级的更新。
-// 如果因为优先级不足跳过了一个update，它将还是会在队列中，只不过稍后处理。
-// 关键在于被跳过的update之后的所有update也是不管优先级如何，都在队列里，这意味着高优先级的update有时候
-// 会以不同的渲染优先级处理两次。我们还追踪base state，它表示已经被应用（被应用就表示整理好了，即将被处理）
-// 的队列中第一个update的上一个状态。
+
 // The priority is still important, though. When processing the update queue
 // during the render phase, only the updates with sufficient priority are
 // included in the result. If we skip an update because it has insufficient
@@ -84,19 +97,23 @@
 // priority render. Crucially, all updates subsequent to a skipped update also
 // remain in the queue *regardless of their priority*. That means high priority
 // updates are sometimes processed twice, at two separate priorities. We also
-// keep track of a base state, that represents the state before the first
-// update in the queue is applied.
+// keep track of a base state, that represents the state before the first update in the queue is applied.
+
+// 尽管如此，优先级仍然很重要，当在渲染阶段处理更新队列时，渲染的结果只会包含具有足够优先级的更新。
+// 如果因为优先级不足跳过了一个update，它将还是会在队列中，只不过稍后处理。
+// 关键在于这个被跳过的update之后的所有update不管优先级如何，都在队列里，这意味着高优先级的update有时候
+// 会以不同的渲染优先级处理两次。我们还跟踪base state，表示被处理的队列中第一个update之前的状态。
 //
 // For example:
 //   baseState 是空字符串，下边是更新队列，从下边的例子来看，优先级是1 > 2的
 //   Given a base state of '', and the following queue of updates
 //
 //     A1 - B2 - C1 - D2
-//
-//   数字表示优先级，字母表示update的状态（state），React将对这些update进行两次处理，每次按照不同的优先级:
+
 //   where the number indicates the priority, and the update is applied to the
 //   previous state by appending a letter, React will process these updates as
 //   two separate renders, one per distinct priority level:
+//   数字表示优先级，字母表示update的所持有的状态（state），React将对这些update进行两次处理，每次按照不同的优先级:
 //
 //   First render, at priority 1:
 //     Base state: ''
@@ -104,34 +121,43 @@
 //     Result state: 'AC'
 //
 //   Second render, at priority 2:
-//     Base state: 'A'            <-  The base state does not include C1,
+//     Base state: 'A'            <-  The base state does not include C1, base state不包含C1，因为B2被跳过了
 //                                    because B2 was skipped.
-//     Updates: [B2, C1, D2]      <-  C1 was rebased on top of B2
+//     Updates: [B2, C1, D2]      <-  C1 was rebased on top of B2 C1的优先级在B2之上
 //     Result state: 'ABCD'
 //
 
-// 在这个例子中，C1就被处理了两次，印证了：高优先级的update有时候会以不同的渲染优先级处理两次。
-// 第一次渲染的结果是AC，第二次的渲染开始时，Base state是A，不包含C，是因为上边解释了：
-// base state，它表示已经被应用（被应用就表示整理好了，即将被处理）的队列中第一个update的上一个状态。
-// 第二次的时候这个“被应用”的队列就是[B2, C1, D2]，第一个update就是A1，状态是A
+/**-----注：
+ 在这个例子中，C1就被处理了两次，印证了：高优先级的update有时候会以不同的渲染优先级处理两次。
+ 第一次渲染的结果是AC，第二次的渲染开始时，Base state是A，不包含C，是因为上边解释了“base state，
+ 表示被处理的队列中第一个update之前的状态”。第二次的时候“被处理”的队列就是[B2, C1, D2]，第一
+ 个update就是A1，状态是A。
+* */
 
-// 因为是通过插入顺序来处理的更新，并且在跳过之前的update是重设高优先级update。最终结果都是确定的，
-// 中间状态可能因为系统资源的不同而不同，但最终状态总是相同的
+// 再来一个例子
+// A1 - B1 - C2 - D1 - E2
+//   First render, at priority 1:
+//     Base state: ''
+//     Updates: [A1, B1, D1]
+//     Result state: 'ABD'
+
+
+//   Second render, at priority 2:
+//     Base state: 'AB'           <-  base state 没有包含D，是因为C2被跳过了。
+//                                    此时的队列为[C2, D1, E2]，第一个update为C2，它之前的状态是A和B
+//     Updates: [C2, D1, E2]      <-  D1的优先级在C2之上
+//     Result state: 'ABCDE'
+// ------------------------------------------------------------------------------------------------
+
+
 // Because we process updates in insertion order, and rebase high priority
 // updates when preceding updates are skipped, the final result is deterministic
 // regardless of priority. Intermediate state may vary according to system
 // resources, but the final state is always the same.
 
-// A1 - B1 - C2 - D1 - F2
-//   First render, at priority 1:
-//     Base state: ''
-//     Updates: [A1, B1, D1]
-//     Result state: 'ABD'
-//   Second render, at priority 2:
-//     Base state: 'B'            <-  The base state does not include C1,
-//                                    because B2 was skipped.
-//     Updates: [C2, D1, F2]      <-  C1 was rebased on top of B2
-//     Result state: 'BCDF'
+// 因为是按照update插入的顺序来依次处理更新，并且在跳过update时，重新设置高优先级的baseState。最终结果都是确定的，
+// 中间状态可能因为系统资源的不同而不同，但最终状态总是相同的
+
 
 
 import type {Fiber} from './ReactFiber';
