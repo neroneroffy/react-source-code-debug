@@ -1053,6 +1053,7 @@ function updateClassInstance(
 
   const oldState = workInProgress.memoizedState;
   let newState = (instance.state = oldState);
+  // 处理更新，拿到新的state
   processUpdateQueue(workInProgress, newProps, instance, renderExpirationTime);
   newState = workInProgress.memoizedState;
 
