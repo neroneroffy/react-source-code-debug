@@ -532,35 +532,36 @@ export function processUpdateQueue<State>(
           // （直译）优先级不足，跳过更新，如果这是第一个被跳过的更新，前一个update/state
           // 就作为新的update/state。
 
-          // 这个判断其实表达的是，如果当前的update优先级不足，跳过它，先处理高优先级的
+          // 如果当前的update优先级不足，就把它放到newBaseQueue中，并且newBaseState设置为前一个update更新的结果
           const clone: Update<State> = {
             expirationTime: update.expirationTime,
             suspenseConfig: update.suspenseConfig,
             tag: update.tag,
             payload: update.payload,
             callback: update.callback,
-            // next指向了null，说明这个update下边不会再有其他update，这是它作为尾部节点的特征
             next: (null: any),
           };
-          // 将这个更新放到newBaseQueue中，这里判断了newBaseQueue有没有元素，
-          // 没有的话，直接放进去，有的话就追加到尾部
+          // 没有的话，直接放进newBaseQueue，有的话在尾节点（newBaseQueueLast）之后存入当前的这个优先级
+          // 不足的update，替换掉
           if (newBaseQueueLast === null) {
             newBaseQueueFirst = newBaseQueueLast = clone;
-            // 以前一个的state为基础进行更新
+            // newBaseState 更新为前一个 update 任务的结果
             newBaseState = newState;
           } else {
             newBaseQueueLast = newBaseQueueLast.next = clone;
           }
           // Update the remaining priority in the queue.
-          // 更新workInProgress的优先级
+          // 更新队列中剩余的优先级
           if (updateExpirationTime > newExpirationTime) {
             newExpirationTime = updateExpirationTime;
           }
         } else {
           // This update does have sufficient priority.
-          // update有足够的优先级
+          // 当前的update有足够的优先级
           if (newBaseQueueLast !== null) {
-            // 如果update 在优先级不足的update之后，将其拷贝到newBaseQueue 队列中
+            // 进到这个判断说明现在处理的这个update在优先级不足的update之后，
+            // 原因是第一，优先级足够；第二，newBaseQueueLast不为null说明已经有优先级不足的update了
+            // 所以要将其拷贝到newBaseQueue 队列中
             const clone: Update<State> = {
               // update即将进入commit阶段，所以需要将它的优先级置为同步，就是最高优先级
               expirationTime: Sync, // This update is going to be committed so we never want uncommit it.
@@ -618,7 +619,7 @@ export function processUpdateQueue<State>(
             queue.shared.pending = null;
           }
         }
-      } while (true); // 因为updateQueue是环状闭合链表，所以一直循环，直到链表清空 ？ @TODO 需要再研究这里的循环逻辑
+      } while (true);
     }
     if (newBaseQueueLast === null) {
       newBaseState = newState;
