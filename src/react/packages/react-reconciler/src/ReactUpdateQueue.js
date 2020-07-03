@@ -141,10 +141,13 @@
 //     Updates: [A1, B1, D1]
 //     Result state: 'ABD'
 
-
 //   Second render, at priority 2:
-//     Base state: 'AB'           <-  base state 没有包含D，是因为C2被跳过了。
-//                                    此时的队列为[C2, D1, E2]，第一个update为C2，它之前的状态是A和B
+//     Base state: 'AB'           <-  base state 没有包含D，是因为C2被跳过了，此时的队列为[C2, D1, E2]，
+//                                    第一个update为C2，它之前的状态是A和B。
+//
+//                                    当循环处理链表，到C2时，如果判断它优先级不足，会先记住此刻的baseState，
+//                                    因为A和B都处理完了，所以此时的baseState就是AB。
+//
 //     Updates: [C2, D1, E2]      <-  D1的优先级在C2之上
 //     Result state: 'ABCDE'
 // ------------------------------------------------------------------------------------------------
@@ -158,7 +161,10 @@
 // 因为是按照update插入的顺序来依次处理更新，并且在跳过update时，重新设置高优先级的baseState。最终结果都是确定的，
 // 中间状态可能因为系统资源的不同而不同，但最终状态总是相同的
 
-
+/**
+ * react自上而下依次调用this.setState，但结果总是最后的state的原因就在于每次调用setState时，会将新的state插入到updateQueue，
+ * 然后在组件更新时，会统一处理队列中的update，后设置的state会覆盖新的state。
+* */
 
 import type {Fiber} from './ReactFiber';
 import type {ExpirationTime} from './ReactFiberExpirationTime';
@@ -293,7 +299,7 @@ export function createUpdate(
    baseState：先前的状态，作为 payload 函数的 prevState 参数
    baseQueue：执行中的更新任务 Update 队列，work-in-progress队列
    shared：以 pending 属性存储待执行的更新任务 Update 队列，current队列
-   effects：side-effects 队列，commit 阶段执行
+   effects：side-effects 队列，commit 阶段执行，setState的回调会被放入到这个队列里
 
  UpdateQueue用来存储更新队列，一共有两条队列，work-in-progress队列 和 current队列
  * */
@@ -500,7 +506,6 @@ export function processUpdateQueue<State>(
 
   // These values may change as we process the queue.
   // （直译）在处理队列时，这些值可能会发生变化。
-
   if (baseQueue !== null) {
     // 这个判断就是遍历队列处理更新获取新状态了
     let first = baseQueue.next;
@@ -510,27 +515,26 @@ export function processUpdateQueue<State>(
     let newState = queue.baseState;
     let newExpirationTime = NoWork;
 
-    let newBaseState = null; // 用来存储新的state，最终会是组件的新的this.state
-    let newBaseQueueFirst = null; // 新链表的第一个
-    let newBaseQueueLast = null;
-    // 当没有到baseQueue链表不为空，进行遍历
+    let newBaseState = null; // 用来存储新的state，循环链表时每次基于它处理update
+    // 这里使用newBaseQueueFirst 和 newBaseQueueLast 来表示并未声明的newBaseQueue队列，目的是存储优先级不够的update队列
+    let newBaseQueueFirst = null; // newBaseQueue第一个update，
+    let newBaseQueueLast = null; // newBaseQueue最后一个update，向队列中追加update都是来操作newBaseQueueLast
+
     if (first !== null) {
       let update = first;
       /**
        * update：当前要被处理的update
-       * updateExpirationTime：update的优先级
-       * newExpirationTime：本次更新的优先级，最终要被记录到workInProgress中
+       * updateExpirationTime：当前处理的update的优先级
+       * newExpirationTime：记录本次更新的优先级，最终要被记录到workInProgress中
        * renderExpirationTime: FiberRoot 上最大优先级的值
        * */
       do {
         const updateExpirationTime = update.expirationTime; // 当前更新的优先级
-        // 优先级不足，将update添加到 newBaseQueue中
-        // newBaseState 更新为前一个 update 任务的结果
+        // 优先级不足，将update添加到newBaseQueue中
         if (updateExpirationTime < renderExpirationTime) {
           // Priority is insufficient. Skip this update. If this is the first skipped update,
           // the previous update/state is the new base update/state.
-          // （直译）优先级不足，跳过更新，如果这是第一个被跳过的更新，前一个update/state
-          // 就作为新的update/state。
+          // （直译）优先级不足，跳过更新，如果这是第一个被跳过的更新，前一个update/state就作为新的update/state。
 
           // 如果当前的update优先级不足，就把它放到newBaseQueue中，并且newBaseState设置为前一个update更新的结果
           const clone: Update<State> = {
@@ -541,17 +545,18 @@ export function processUpdateQueue<State>(
             callback: update.callback,
             next: (null: any),
           };
-          // 没有的话，直接放进newBaseQueue，有的话在尾节点（newBaseQueueLast）之后存入当前的这个优先级
-          // 不足的update，替换掉
+          // 如果newBaseQueue为空，将clone作为唯一的一个元素放到队列中
           if (newBaseQueueLast === null) {
             newBaseQueueFirst = newBaseQueueLast = clone;
-            // newBaseState 更新为前一个 update 任务的结果
+            // newBaseState 更新为前一个 update 任务的结果，下一轮持有新优先级的渲染过程处理更
+            // 新队列时，将会以这个newBaseState为base state进行计算。
             newBaseState = newState;
           } else {
+            // 如果队列中已经有了update，那么将当前的update追加到队列尾部
             newBaseQueueLast = newBaseQueueLast.next = clone;
           }
           // Update the remaining priority in the queue.
-          // 更新队列中剩余的优先级
+          // 更新队列中的优先级
           if (updateExpirationTime > newExpirationTime) {
             newExpirationTime = updateExpirationTime;
           }
@@ -560,11 +565,13 @@ export function processUpdateQueue<State>(
           // 当前的update有足够的优先级
           if (newBaseQueueLast !== null) {
             // 进到这个判断说明现在处理的这个update在优先级不足的update之后，
-            // 原因是第一，优先级足够；第二，newBaseQueueLast不为null说明已经有优先级不足的update了
-            // 所以要将其拷贝到newBaseQueue 队列中
+            // 原因有二：
+            // 第一，优先级足够；
+            // 第二，newBaseQueueLast不为null说明已经有优先级不足的update了
+            // 所以要将其追加到newBaseQueue 队列尾部
             const clone: Update<State> = {
-              // update即将进入commit阶段，所以需要将它的优先级置为同步，就是最高优先级
               expirationTime: Sync, // This update is going to be committed so we never want uncommit it.
+                                    // （直译）update即将进入commit阶段，所以需要将它的优先级置为同步，就是最高优先级
               suspenseConfig: update.suspenseConfig,
               tag: update.tag,
               payload: update.payload,
@@ -594,6 +601,7 @@ export function processUpdateQueue<State>(
             instance,
           );
           const callback = update.callback;
+          // 这里的callback是setState的第二个参数，属于副作用，会被放入queue的副作用队列里
           if (callback !== null) {
             workInProgress.effectTag |= Callback;
             let effects = queue.effects;
@@ -604,15 +612,17 @@ export function processUpdateQueue<State>(
             }
           }
         }
-        // 将当前处理的update换成当前的下一个，实现移动链表的遍历
+        // 将当前处理的update换成当前的下一个，移动链表实现遍历
         update = update.next;
         if (update === null || update === first) {
           pendingQueue = queue.shared.pending;
           if (pendingQueue === null) {
+            // 如果没有等待处理的update，那么跳出循环
             break;
           } else {
-            // An update was scheduled from inside a reducer. Add the new
-            // pending updates to the end of the list and keep processing.
+            // An update was scheduled from inside a reducer.
+            // Add the new pending updates to the end of the list and keep processing.
+            // 将新的未处理的update添加到baseQueue的末尾继续处理
             update = baseQueue.next = pendingQueue.next;
             pendingQueue.next = first;
             queue.baseQueue = baseQueue = pendingQueue;
@@ -621,19 +631,18 @@ export function processUpdateQueue<State>(
         }
       } while (true);
     }
+    // 如果没有低优先级的更新，那么新的newBaseState就被赋值为刚刚计算出来的state
     if (newBaseQueueLast === null) {
       newBaseState = newState;
     } else {
-      // 否则将链表首尾相连
+      // 否则将链表连成环状
       newBaseQueueLast.next = (newBaseQueueFirst: any);
     }
-    // 重新设置queue的baseState 和更新队列
+    // 重新设置queue的baseState和更新队列
     queue.baseState = ((newBaseState: any): State);
+    // 将优先级不足的update队列赋值给queue的baseQueue，继续下一轮处理
     queue.baseQueue = newBaseQueueLast;
 
-    // 将剩余的过期时间设置为队列中剩余的时间。这应该没问题，因为影响过期时间的只有props和context。
-    // 当开始处理队列时，我们已经在开始阶段的中间，所以我们已经处理了props。指定shouldComponentUpdate的组件中的context很棘手;
-    // 但无论如何，我们都要考虑到这一点。
     // Set the remaining expiration time to be whatever is remaining in the queue.
     // This should be fine because the only two other things that contribute to
     // expiration time are props and context. We're already in the middle of the
@@ -641,6 +650,9 @@ export function processUpdateQueue<State>(
     // dealt with the props. Context in components that specify
     // shouldComponentUpdate is tricky; but we'll have to account for
     // that regardless.
+    // 将剩余的过期时间设置为队列中剩余的时间。这应该没问题，因为影响过期时间的只有props和context。
+    // 当开始处理队列时，我们已经在开始阶段的中间，所以我们已经处理了props。指定shouldComponentUpdate的组件中的context很棘手;
+    // 但无论如何，我们都要考虑到这一点。
     markUnprocessedUpdateTime(newExpirationTime);
     workInProgress.expirationTime = newExpirationTime;
 

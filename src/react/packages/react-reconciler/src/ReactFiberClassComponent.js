@@ -198,7 +198,6 @@ const classComponentUpdater = {
       }
       update.callback = callback;
     }
-
     enqueueUpdate(fiber, update);
     scheduleWork(fiber, expirationTime);
   },
@@ -1056,7 +1055,6 @@ function updateClassInstance(
   // 处理更新，拿到新的state
   processUpdateQueue(workInProgress, newProps, instance, renderExpirationTime);
   newState = workInProgress.memoizedState;
-
   if (
     oldProps === newProps &&
     oldState === newState &&

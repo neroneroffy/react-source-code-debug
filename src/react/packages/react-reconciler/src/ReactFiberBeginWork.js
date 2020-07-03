@@ -798,7 +798,6 @@ function updateClassComponent(
       }
     }
   }
-  // console.log('current', current);
   // Push context providers early to prevent context stack mismatches.
   // During mounting we don't know the child context yet as the instance doesn't exist.
   // We will invalidate the child context in finishClassComponent() right after rendering.
@@ -825,6 +824,7 @@ function updateClassComponent(
       workInProgress.effectTag |= Placement;
     }
     // In the initial pass we might need to construct the instance.
+    // 最开始的时候需要构建组件实例
     constructClassInstance(workInProgress, Component, nextProps);
     mountClassInstance(
       workInProgress,
@@ -835,6 +835,7 @@ function updateClassComponent(
     shouldUpdate = true;
   } else if (current === null) {
     // In a resume, we'll already have an instance we can reuse.
+    // 在中断后，我们已经有了一个可以复用的组件实例
     shouldUpdate = resumeMountClassInstance(
       workInProgress,
       Component,

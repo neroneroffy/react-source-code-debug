@@ -1476,7 +1476,6 @@ function performUnitOfWork(unitOfWork: Fiber): Fiber | null {
   // nothing should rely on this, but relying on it here means that we don't
   // need an additional field on the work in progress.
   const current = unitOfWork.alternate;
-
   startWorkTimer(unitOfWork);
   setCurrentDebugFiberInDEV(unitOfWork);
 
