@@ -8,12 +8,9 @@
  */
 
 import type {Container} from './ReactDOMHostConfig';
-import type {RootTag} from 'shared/ReactRootTags';
-import type {ReactNodeList} from 'shared/ReactTypes';
-// TODO: This type is shared between the reconciler and ReactDOM, but will
-// eventually be lifted out to the renderer.
-import type {FiberRoot} from 'react-reconciler/src/ReactFiberRoot';
-import {findHostInstanceWithNoPortals} from 'react-reconciler/inline.dom';
+import type {RootTag} from 'react-reconciler/src/ReactRootTags';
+import type {MutableSource, ReactNodeList} from 'shared/ReactTypes';
+import type {FiberRoot} from 'react-reconciler/src/ReactInternalTypes';
 
 export type RootType = {
   render(children: ReactNodeList): void,
@@ -27,6 +24,7 @@ export type RootOptions = {
   hydrationOptions?: {
     onHydrated?: (suspenseNode: Comment) => void,
     onDeleted?: (suspenseNode: Comment) => void,
+    mutableSources?: Array<MutableSource<any>>,
     ...
   },
   ...
@@ -44,10 +42,20 @@ import {
   DOCUMENT_NODE,
   DOCUMENT_FRAGMENT_NODE,
 } from '../shared/HTMLNodeType';
+import {ensureListeningTo} from './ReactDOMComponent';
 
-import {createContainer, updateContainer} from 'react-reconciler/inline.dom';
+import {
+  createContainer,
+  updateContainer,
+  findHostInstanceWithNoPortals,
+  registerMutableSourceForHydration,
+} from 'react-reconciler/src/ReactFiberReconciler';
 import invariant from 'shared/invariant';
-import {BlockingRoot, ConcurrentRoot, LegacyRoot} from 'shared/ReactRootTags';
+import {
+  BlockingRoot,
+  ConcurrentRoot,
+  LegacyRoot,
+} from 'react-reconciler/src/ReactRootTags';
 
 function ReactDOMRoot(container: Container, options: void | RootOptions) {
   this._internalRoot = createRootImpl(container, ConcurrentRoot, options);
@@ -116,15 +124,37 @@ function createRootImpl(
   const hydrate = options != null && options.hydrate === true;
   const hydrationCallbacks =
     (options != null && options.hydrationOptions) || null;
+  const mutableSources =
+    (options != null &&
+      options.hydrationOptions != null &&
+      options.hydrationOptions.mutableSources) ||
+    null;
   const root = createContainer(container, tag, hydrate, hydrationCallbacks);
   markContainerAsRoot(root.current, container);
+  const containerNodeType = container.nodeType;
+
   if (hydrate && tag !== LegacyRoot) {
     const doc =
-      container.nodeType === DOCUMENT_NODE
-        ? container
-        : container.ownerDocument;
-    eagerlyTrapReplayableEvents(container, doc);
+      containerNodeType === DOCUMENT_NODE ? container : container.ownerDocument;
+    // We need to cast this because Flow doesn't work
+    // with the hoisted containerNodeType. If we inline
+    // it, then Flow doesn't complain. We intentionally
+    // hoist it to reduce code-size.
+    eagerlyTrapReplayableEvents(container, ((doc: any): Document));
+  } else if (
+    containerNodeType !== DOCUMENT_FRAGMENT_NODE &&
+    containerNodeType !== DOCUMENT_NODE
+  ) {
+    ensureListeningTo(container, 'onMouseEnter');
   }
+
+  if (mutableSources) {
+    for (let i = 0; i < mutableSources.length; i++) {
+      const mutableSource = mutableSources[i];
+      registerMutableSourceForHydration(root, mutableSource);
+    }
+  }
+
   return root;
 }
 

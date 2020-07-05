@@ -7,7 +7,7 @@
  * @flow
  */
 
-import EventEmitter from 'events';
+import EventEmitter from '../events';
 import {inspect} from 'util';
 import {
   TREE_OPERATION_ADD,
@@ -370,7 +370,7 @@ export default class Store extends EventEmitter<{|
       return null;
     }
 
-    // Find wich root this element is in...
+    // Find which root this element is in...
     let rootID;
     let root;
     let rootWeight = 0;
@@ -479,7 +479,7 @@ export default class Store extends EventEmitter<{|
 
   getOwnersListForElement(ownerID: number): Array<Element> {
     const list = [];
-    let element = this._idToElement.get(ownerID);
+    const element = this._idToElement.get(ownerID);
     if (element != null) {
       list.push({
         ...element,

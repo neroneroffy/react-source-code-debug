@@ -105,6 +105,7 @@ export type ProfilingDataForRootFrontend = {|
 export type ProfilingDataFrontend = {|
   // Profiling data per root.
   dataForRoots: Map<number, ProfilingDataForRootFrontend>,
+  imported: boolean,
 |};
 
 export type CommitDataExport = {|
@@ -132,7 +133,7 @@ export type ProfilingDataForRootExport = {|
   snapshots: Array<[number, SnapshotNode]>,
 |};
 
-// Serializable vefrsion of ProfilingDataFrontend data.
+// Serializable version of ProfilingDataFrontend data.
 export type ProfilingDataExport = {|
   version: 4,
   dataForRoots: Array<ProfilingDataForRootExport>,

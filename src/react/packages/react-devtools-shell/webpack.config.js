@@ -1,5 +1,6 @@
 const {resolve} = require('path');
 const {DefinePlugin} = require('webpack');
+const TerserPlugin = require('terser-webpack-plugin');
 const {
   GITHUB_URL,
   getVersionString,
@@ -39,9 +40,21 @@ const config = {
       scheduler: resolve(builtModulesDir, 'scheduler'),
     },
   },
+  optimization: {
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          compress: {drop_debugger: false},
+          output: {comments: true},
+        },
+      }),
+    ],
+  },
   plugins: [
     new DefinePlugin({
       __DEV__,
+      __PROFILE__: false,
+      __EXPERIMENTAL__: true,
       'process.env.GITHUB_URL': `"${GITHUB_URL}"`,
       'process.env.DEVTOOLS_VERSION': `"${DEVTOOLS_VERSION}"`,
     }),

@@ -25,10 +25,10 @@ function flattenChildren(children) {
     if (child == null) {
       return;
     }
-    content += child;
+    content += (child: any);
     // Note: we don't warn about invalid children here.
     // Instead, this is done separately below so that
-    // it happens during the hydration codepath too.
+    // it happens during the hydration code path too.
   });
 
   return content;
@@ -40,7 +40,7 @@ function flattenChildren(children) {
 
 export function validateProps(element: Element, props: Object) {
   if (__DEV__) {
-    // This mirrors the codepath above, but runs for hydration too.
+    // This mirrors the code path above, but runs for hydration too.
     // Warn about invalid children here so that client and hydration are consistent.
     // TODO: this seems like it could cause a DEV-only throw for hydration
     // if children contains a non-element object. We should try to avoid that.
@@ -52,7 +52,7 @@ export function validateProps(element: Element, props: Object) {
         if (typeof child === 'string' || typeof child === 'number') {
           return;
         }
-        if (typeof child.type !== 'string') {
+        if (typeof (child: any).type !== 'string') {
           return;
         }
         if (!didWarnInvalidChild) {

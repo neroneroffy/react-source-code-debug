@@ -7,11 +7,12 @@
  * @flow
  */
 
-import type {AnyNativeEvent} from 'legacy-events/PluginModuleType';
+import type {AnyNativeEvent} from '../events/PluginModuleType';
 import type {Container, SuspenseInstance} from '../client/ReactDOMHostConfig';
-import type {DOMTopLevelEventType} from 'legacy-events/TopLevelEventTypes';
-import type {EventSystemFlags} from 'legacy-events/EventSystemFlags';
-import type {FiberRoot} from 'react-reconciler/src/ReactFiberRoot';
+import type {DOMTopLevelEventType} from '../events/TopLevelEventTypes';
+import type {ElementListenerMap} from '../client/ReactDOMComponentTree';
+import type {EventSystemFlags} from './EventSystemFlags';
+import type {FiberRoot} from 'react-reconciler/src/ReactInternalTypes';
 
 import {
   enableDeprecatedFlareAPI,
@@ -27,18 +28,15 @@ import {
   getNearestMountedFiber,
   getContainerFromFiber,
   getSuspenseInstanceFromFiber,
-} from 'react-reconciler/reflection';
-import {
-  attemptToDispatchEvent,
-  addResponderEventSystemEvent,
-} from './ReactDOMEventListener';
-import {getListenerMapForElement} from './DOMEventListenerMap';
+} from 'react-reconciler/src/ReactFiberTreeReflection';
+import {attemptToDispatchEvent} from './ReactDOMEventListener';
 import {
   getInstanceFromNode,
   getClosestInstanceFromNode,
+  getEventListenerMap,
 } from '../client/ReactDOMComponentTree';
-import {unsafeCastDOMTopLevelTypeToString} from 'legacy-events/TopLevelEventTypes';
-import {HostRoot, SuspenseComponent} from 'shared/ReactWorkTags';
+import {unsafeCastDOMTopLevelTypeToString} from '../events/TopLevelEventTypes';
+import {HostRoot, SuspenseComponent} from 'react-reconciler/src/ReactWorkTags';
 
 let attemptSynchronousHydration: (fiber: Object) => void;
 
@@ -116,32 +114,33 @@ import {
   TOP_FOCUS,
   TOP_BLUR,
 } from './DOMTopLevelEventTypes';
-import {IS_REPLAYED} from 'legacy-events/EventSystemFlags';
-import {legacyListenToTopLevelEvent} from './DOMLegacyEventPluginSystem';
+import {IS_REPLAYED, PLUGIN_EVENT_SYSTEM} from './EventSystemFlags';
+import {listenToTopLevelEvent} from './DOMModernPluginEventSystem';
+import {addResponderEventSystemEvent} from './DeprecatedDOMEventResponderSystem';
 
 type QueuedReplayableEvent = {|
   blockedOn: null | Container | SuspenseInstance,
   topLevelType: DOMTopLevelEventType,
   eventSystemFlags: EventSystemFlags,
   nativeEvent: AnyNativeEvent,
-  container: Document | Element | Node,
+  targetContainers: Array<EventTarget>,
 |};
 
 let hasScheduledReplayAttempt = false;
 
 // The queue of discrete events to be replayed.
-let queuedDiscreteEvents: Array<QueuedReplayableEvent> = [];
+const queuedDiscreteEvents: Array<QueuedReplayableEvent> = [];
 
 // Indicates if any continuous event targets are non-null for early bailout.
-let hasAnyQueuedContinuousEvents: boolean = false;
+const hasAnyQueuedContinuousEvents: boolean = false;
 // The last of each continuous event type. We only need to replay the last one
 // if the last target was dehydrated.
 let queuedFocus: null | QueuedReplayableEvent = null;
 let queuedDrag: null | QueuedReplayableEvent = null;
 let queuedMouse: null | QueuedReplayableEvent = null;
 // For pointer events there can be one latest event per pointerId.
-let queuedPointers: Map<number, QueuedReplayableEvent> = new Map();
-let queuedPointerCaptures: Map<number, QueuedReplayableEvent> = new Map();
+const queuedPointers: Map<number, QueuedReplayableEvent> = new Map();
+const queuedPointerCaptures: Map<number, QueuedReplayableEvent> = new Map();
 // We could consider replaying selectionchange and touchmoves too.
 
 type QueuedHydrationTarget = {|
@@ -149,7 +148,7 @@ type QueuedHydrationTarget = {|
   target: Node,
   priority: number,
 |};
-let queuedExplicitHydrationTargets: Array<QueuedHydrationTarget> = [];
+const queuedExplicitHydrationTargets: Array<QueuedHydrationTarget> = [];
 
 export function hasQueuedDiscreteEvents(): boolean {
   return queuedDiscreteEvents.length > 0;
@@ -211,12 +210,24 @@ export function isReplayableDiscreteEvent(
   return discreteReplayableEvents.indexOf(eventType) > -1;
 }
 
+function trapReplayableEventForContainer(
+  topLevelType: DOMTopLevelEventType,
+  container: Container,
+  listenerMap: ElementListenerMap,
+) {
+  listenToTopLevelEvent(
+    topLevelType,
+    ((container: any): Element),
+    listenerMap,
+    PLUGIN_EVENT_SYSTEM,
+  );
+}
+
 function trapReplayableEventForDocument(
   topLevelType: DOMTopLevelEventType,
   document: Document,
-  listenerMap: Map<DOMTopLevelEventType | string, null | (any => void)>,
+  listenerMap: ElementListenerMap,
 ) {
-  legacyListenToTopLevelEvent(topLevelType, document, listenerMap);
   if (enableDeprecatedFlareAPI) {
     // Trap events for the responder system.
     const topLevelTypeString = unsafeCastDOMTopLevelTypeToString(topLevelType);
@@ -231,7 +242,7 @@ function trapReplayableEventForDocument(
         topLevelTypeString,
         false,
       );
-      listenerMap.set(activeEventKey, listener);
+      listenerMap.set(activeEventKey, {passive: false, listener});
     }
   }
 }
@@ -240,13 +251,24 @@ export function eagerlyTrapReplayableEvents(
   container: Container,
   document: Document,
 ) {
-  const listenerMapForDoc = getListenerMapForElement(document);
+  const listenerMapForDoc = getEventListenerMap(document);
+  const listenerMapForContainer = getEventListenerMap(container);
   // Discrete
   discreteReplayableEvents.forEach(topLevelType => {
+    trapReplayableEventForContainer(
+      topLevelType,
+      container,
+      listenerMapForContainer,
+    );
     trapReplayableEventForDocument(topLevelType, document, listenerMapForDoc);
   });
   // Continuous
   continuousReplayableEvents.forEach(topLevelType => {
+    trapReplayableEventForContainer(
+      topLevelType,
+      container,
+      listenerMapForContainer,
+    );
     trapReplayableEventForDocument(topLevelType, document, listenerMapForDoc);
   });
 }
@@ -255,7 +277,7 @@ function createQueuedReplayableEvent(
   blockedOn: null | Container | SuspenseInstance,
   topLevelType: DOMTopLevelEventType,
   eventSystemFlags: EventSystemFlags,
-  container: Document | Element | Node,
+  targetContainer: EventTarget,
   nativeEvent: AnyNativeEvent,
 ): QueuedReplayableEvent {
   return {
@@ -263,7 +285,7 @@ function createQueuedReplayableEvent(
     topLevelType,
     eventSystemFlags: eventSystemFlags | IS_REPLAYED,
     nativeEvent,
-    container,
+    targetContainers: [targetContainer],
   };
 }
 
@@ -271,14 +293,14 @@ export function queueDiscreteEvent(
   blockedOn: null | Container | SuspenseInstance,
   topLevelType: DOMTopLevelEventType,
   eventSystemFlags: EventSystemFlags,
-  container: Document | Element | Node,
+  targetContainer: EventTarget,
   nativeEvent: AnyNativeEvent,
 ): void {
   const queuedEvent = createQueuedReplayableEvent(
     blockedOn,
     topLevelType,
     eventSystemFlags,
-    container,
+    targetContainer,
     nativeEvent,
   );
   queuedDiscreteEvents.push(queuedEvent);
@@ -287,7 +309,7 @@ export function queueDiscreteEvent(
       // If this was the first discrete event, we might be able to
       // synchronously unblock it so that preventDefault still works.
       while (queuedEvent.blockedOn !== null) {
-        let fiber = getInstanceFromNode(queuedEvent.blockedOn);
+        const fiber = getInstanceFromNode(queuedEvent.blockedOn);
         if (fiber === null) {
           break;
         }
@@ -328,13 +350,13 @@ export function clearIfContinuousEvent(
       break;
     case TOP_POINTER_OVER:
     case TOP_POINTER_OUT: {
-      let pointerId = ((nativeEvent: any): PointerEvent).pointerId;
+      const pointerId = ((nativeEvent: any): PointerEvent).pointerId;
       queuedPointers.delete(pointerId);
       break;
     }
     case TOP_GOT_POINTER_CAPTURE:
     case TOP_LOST_POINTER_CAPTURE: {
-      let pointerId = ((nativeEvent: any): PointerEvent).pointerId;
+      const pointerId = ((nativeEvent: any): PointerEvent).pointerId;
       queuedPointerCaptures.delete(pointerId);
       break;
     }
@@ -346,22 +368,22 @@ function accumulateOrCreateContinuousQueuedReplayableEvent(
   blockedOn: null | Container | SuspenseInstance,
   topLevelType: DOMTopLevelEventType,
   eventSystemFlags: EventSystemFlags,
-  container: Document | Element | Node,
+  targetContainer: EventTarget,
   nativeEvent: AnyNativeEvent,
 ): QueuedReplayableEvent {
   if (
     existingQueuedEvent === null ||
     existingQueuedEvent.nativeEvent !== nativeEvent
   ) {
-    let queuedEvent = createQueuedReplayableEvent(
+    const queuedEvent = createQueuedReplayableEvent(
       blockedOn,
       topLevelType,
       eventSystemFlags,
-      container,
+      targetContainer,
       nativeEvent,
     );
     if (blockedOn !== null) {
-      let fiber = getInstanceFromNode(blockedOn);
+      const fiber = getInstanceFromNode(blockedOn);
       if (fiber !== null) {
         // Attempt to increase the priority of this target.
         attemptContinuousHydration(fiber);
@@ -371,9 +393,16 @@ function accumulateOrCreateContinuousQueuedReplayableEvent(
   }
   // If we have already queued this exact event, then it's because
   // the different event systems have different DOM event listeners.
-  // We can accumulate the flags and store a single event to be
-  // replayed.
+  // We can accumulate the flags, and the targetContainers, and
+  // store a single event to be replayed.
   existingQueuedEvent.eventSystemFlags |= eventSystemFlags;
+  const targetContainers = existingQueuedEvent.targetContainers;
+  if (
+    targetContainer !== null &&
+    targetContainers.indexOf(targetContainer) === -1
+  ) {
+    targetContainers.push(targetContainer);
+  }
   return existingQueuedEvent;
 }
 
@@ -381,7 +410,7 @@ export function queueIfContinuousEvent(
   blockedOn: null | Container | SuspenseInstance,
   topLevelType: DOMTopLevelEventType,
   eventSystemFlags: EventSystemFlags,
-  container: Document | Element | Node,
+  targetContainer: EventTarget,
   nativeEvent: AnyNativeEvent,
 ): boolean {
   // These set relatedTarget to null because the replayed event will be treated as if we
@@ -395,7 +424,7 @@ export function queueIfContinuousEvent(
         blockedOn,
         topLevelType,
         eventSystemFlags,
-        container,
+        targetContainer,
         focusEvent,
       );
       return true;
@@ -407,7 +436,7 @@ export function queueIfContinuousEvent(
         blockedOn,
         topLevelType,
         eventSystemFlags,
-        container,
+        targetContainer,
         dragEvent,
       );
       return true;
@@ -419,7 +448,7 @@ export function queueIfContinuousEvent(
         blockedOn,
         topLevelType,
         eventSystemFlags,
-        container,
+        targetContainer,
         mouseEvent,
       );
       return true;
@@ -434,7 +463,7 @@ export function queueIfContinuousEvent(
           blockedOn,
           topLevelType,
           eventSystemFlags,
-          container,
+          targetContainer,
           pointerEvent,
         ),
       );
@@ -450,7 +479,7 @@ export function queueIfContinuousEvent(
           blockedOn,
           topLevelType,
           eventSystemFlags,
-          container,
+          targetContainer,
           pointerEvent,
         ),
       );
@@ -467,13 +496,13 @@ function attemptExplicitHydrationTarget(
   // TODO: This function shares a lot of logic with attemptToDispatchEvent.
   // Try to unify them. It's a bit tricky since it would require two return
   // values.
-  let targetInst = getClosestInstanceFromNode(queuedTarget.target);
+  const targetInst = getClosestInstanceFromNode(queuedTarget.target);
   if (targetInst !== null) {
-    let nearestMounted = getNearestMountedFiber(targetInst);
+    const nearestMounted = getNearestMountedFiber(targetInst);
     if (nearestMounted !== null) {
       const tag = nearestMounted.tag;
       if (tag === SuspenseComponent) {
-        let instance = getSuspenseInstanceFromFiber(nearestMounted);
+        const instance = getSuspenseInstanceFromFiber(nearestMounted);
         if (instance !== null) {
           // We're blocked on hydrating this boundary.
           // Increase its priority.
@@ -499,7 +528,7 @@ function attemptExplicitHydrationTarget(
 
 export function queueExplicitHydrationTarget(target: Node): void {
   if (enableSelectiveHydration) {
-    let priority = getCurrentPriorityLevel();
+    const priority = getCurrentPriorityLevel();
     const queuedTarget: QueuedHydrationTarget = {
       blockedOn: null,
       target: target,
@@ -524,20 +553,26 @@ function attemptReplayContinuousQueuedEvent(
   if (queuedEvent.blockedOn !== null) {
     return false;
   }
-  let nextBlockedOn = attemptToDispatchEvent(
-    queuedEvent.topLevelType,
-    queuedEvent.eventSystemFlags,
-    queuedEvent.container,
-    queuedEvent.nativeEvent,
-  );
-  if (nextBlockedOn !== null) {
-    // We're still blocked. Try again later.
-    let fiber = getInstanceFromNode(nextBlockedOn);
-    if (fiber !== null) {
-      attemptContinuousHydration(fiber);
+  const targetContainers = queuedEvent.targetContainers;
+  while (targetContainers.length > 0) {
+    const targetContainer = targetContainers[0];
+    const nextBlockedOn = attemptToDispatchEvent(
+      queuedEvent.topLevelType,
+      queuedEvent.eventSystemFlags,
+      targetContainer,
+      queuedEvent.nativeEvent,
+    );
+    if (nextBlockedOn !== null) {
+      // We're still blocked. Try again later.
+      const fiber = getInstanceFromNode(nextBlockedOn);
+      if (fiber !== null) {
+        attemptContinuousHydration(fiber);
+      }
+      queuedEvent.blockedOn = nextBlockedOn;
+      return false;
     }
-    queuedEvent.blockedOn = nextBlockedOn;
-    return false;
+    // This target container was successfully dispatched. Try the next.
+    targetContainers.shift();
   }
   return true;
 }
@@ -556,27 +591,35 @@ function replayUnblockedEvents() {
   hasScheduledReplayAttempt = false;
   // First replay discrete events.
   while (queuedDiscreteEvents.length > 0) {
-    let nextDiscreteEvent = queuedDiscreteEvents[0];
+    const nextDiscreteEvent = queuedDiscreteEvents[0];
     if (nextDiscreteEvent.blockedOn !== null) {
       // We're still blocked.
       // Increase the priority of this boundary to unblock
       // the next discrete event.
-      let fiber = getInstanceFromNode(nextDiscreteEvent.blockedOn);
+      const fiber = getInstanceFromNode(nextDiscreteEvent.blockedOn);
       if (fiber !== null) {
         attemptUserBlockingHydration(fiber);
       }
       break;
     }
-    let nextBlockedOn = attemptToDispatchEvent(
-      nextDiscreteEvent.topLevelType,
-      nextDiscreteEvent.eventSystemFlags,
-      nextDiscreteEvent.container,
-      nextDiscreteEvent.nativeEvent,
-    );
-    if (nextBlockedOn !== null) {
-      // We're still blocked. Try again later.
-      nextDiscreteEvent.blockedOn = nextBlockedOn;
-    } else {
+    const targetContainers = nextDiscreteEvent.targetContainers;
+    while (targetContainers.length > 0) {
+      const targetContainer = targetContainers[0];
+      const nextBlockedOn = attemptToDispatchEvent(
+        nextDiscreteEvent.topLevelType,
+        nextDiscreteEvent.eventSystemFlags,
+        targetContainer,
+        nextDiscreteEvent.nativeEvent,
+      );
+      if (nextBlockedOn !== null) {
+        // We're still blocked. Try again later.
+        nextDiscreteEvent.blockedOn = nextBlockedOn;
+        break;
+      }
+      // This target container was successfully dispatched. Try the next.
+      targetContainers.shift();
+    }
+    if (nextDiscreteEvent.blockedOn === null) {
       // We've successfully replayed the first event. Let's try the next one.
       queuedDiscreteEvents.shift();
     }
@@ -622,7 +665,7 @@ export function retryIfBlockedOn(
     // worth it because we expect very few discrete events to queue up and once
     // we are actually fully unblocked it will be fast to replay them.
     for (let i = 1; i < queuedDiscreteEvents.length; i++) {
-      let queuedEvent = queuedDiscreteEvents[i];
+      const queuedEvent = queuedDiscreteEvents[i];
       if (queuedEvent.blockedOn === unblocked) {
         queuedEvent.blockedOn = null;
       }
@@ -644,14 +687,14 @@ export function retryIfBlockedOn(
   queuedPointerCaptures.forEach(unblock);
 
   for (let i = 0; i < queuedExplicitHydrationTargets.length; i++) {
-    let queuedTarget = queuedExplicitHydrationTargets[i];
+    const queuedTarget = queuedExplicitHydrationTargets[i];
     if (queuedTarget.blockedOn === unblocked) {
       queuedTarget.blockedOn = null;
     }
   }
 
   while (queuedExplicitHydrationTargets.length > 0) {
-    let nextExplicitTarget = queuedExplicitHydrationTargets[0];
+    const nextExplicitTarget = queuedExplicitHydrationTargets[0];
     if (nextExplicitTarget.blockedOn !== null) {
       // We're still blocked.
       break;

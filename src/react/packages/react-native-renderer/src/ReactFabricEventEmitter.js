@@ -7,22 +7,19 @@
  * @flow
  */
 
-import type {AnyNativeEvent} from 'legacy-events/PluginModuleType';
-import type {EventSystemFlags} from 'legacy-events/EventSystemFlags';
-import type {Fiber} from 'react-reconciler/src/ReactFiber';
-import type {PluginModule} from 'legacy-events/PluginModuleType';
-import type {ReactSyntheticEvent} from 'legacy-events/ReactSyntheticEventType';
-import type {TopLevelType} from 'legacy-events/TopLevelEventTypes';
+import type {AnyNativeEvent} from './legacy-events/PluginModuleType';
+import type {Fiber} from 'react-reconciler/src/ReactInternalTypes';
+import type {LegacyPluginModule} from './legacy-events/PluginModuleType';
+import type {ReactSyntheticEvent} from './legacy-events/ReactSyntheticEventType';
+import type {TopLevelType} from './legacy-events/TopLevelEventTypes';
 
-import {PLUGIN_EVENT_SYSTEM} from 'legacy-events/EventSystemFlags';
-import {registrationNameModules} from 'legacy-events/EventPluginRegistry';
-import {batchedUpdates} from 'legacy-events/ReactGenericBatching';
-import accumulateInto from 'legacy-events/accumulateInto';
+import {registrationNameModules} from './legacy-events/EventPluginRegistry';
+import {batchedUpdates} from './legacy-events/ReactGenericBatching';
+import accumulateInto from './legacy-events/accumulateInto';
 
-import {enableNativeTargetAsInstance} from 'shared/ReactFeatureFlags';
-import {plugins} from 'legacy-events/EventPluginRegistry';
-import getListener from 'legacy-events/getListener';
-import {runEventsInBatch} from 'legacy-events/EventBatching';
+import {plugins} from './legacy-events/EventPluginRegistry';
+import getListener from './ReactNativeGetListener';
+import {runEventsInBatch} from './legacy-events/EventBatching';
 
 export {getListener, registrationNameModules as registrationNames};
 
@@ -38,19 +35,18 @@ function extractPluginEvents(
   targetInst: null | Fiber,
   nativeEvent: AnyNativeEvent,
   nativeEventTarget: null | EventTarget,
-  eventSystemFlags: EventSystemFlags,
 ): Array<ReactSyntheticEvent> | ReactSyntheticEvent | null {
   let events = null;
-  for (let i = 0; i < plugins.length; i++) {
+  const legacyPlugins = ((plugins: any): Array<LegacyPluginModule<Event>>);
+  for (let i = 0; i < legacyPlugins.length; i++) {
     // Not every plugin in the ordering may be loaded at runtime.
-    const possiblePlugin: PluginModule<AnyNativeEvent> = plugins[i];
+    const possiblePlugin: LegacyPluginModule<AnyNativeEvent> = legacyPlugins[i];
     if (possiblePlugin) {
       const extractedEvents = possiblePlugin.extractEvents(
         topLevelType,
         targetInst,
         nativeEvent,
         nativeEventTarget,
-        eventSystemFlags,
       );
       if (extractedEvents) {
         events = accumulateInto(events, extractedEvents);
@@ -65,14 +61,12 @@ function runExtractedPluginEventsInBatch(
   targetInst: null | Fiber,
   nativeEvent: AnyNativeEvent,
   nativeEventTarget: null | EventTarget,
-  eventSystemFlags: EventSystemFlags,
 ) {
   const events = extractPluginEvents(
     topLevelType,
     targetInst,
     nativeEvent,
     nativeEventTarget,
-    eventSystemFlags,
   );
   runEventsInBatch(events);
 }
@@ -85,12 +79,12 @@ export function dispatchEvent(
   const targetFiber = (target: null | Fiber);
 
   let eventTarget = null;
-  if (enableNativeTargetAsInstance) {
-    if (targetFiber != null) {
-      eventTarget = targetFiber.stateNode.canonical;
+  if (targetFiber != null) {
+    const stateNode = targetFiber.stateNode;
+    // Guard against Fiber being unmounted
+    if (stateNode != null) {
+      eventTarget = stateNode.canonical;
     }
-  } else {
-    eventTarget = nativeEvent.target;
   }
 
   batchedUpdates(function() {
@@ -100,7 +94,6 @@ export function dispatchEvent(
       targetFiber,
       nativeEvent,
       eventTarget,
-      PLUGIN_EVENT_SYSTEM,
     );
   });
   // React Native doesn't use ReactControlledComponent but if it did, here's

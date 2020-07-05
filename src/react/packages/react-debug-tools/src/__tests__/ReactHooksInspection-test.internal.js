@@ -22,11 +22,7 @@ describe('ReactHooksInspection', () => {
     ReactDebugTools = require('react-debug-tools');
   });
 
-  if (!__EXPERIMENTAL__) {
-    it("empty test so Jest doesn't complain", () => {});
-    return;
-  }
-
+  // @gate experimental
   it('should inspect a simple useResponder hook', () => {
     const TestResponder = React.DEPRECATED_createResponder('TestResponder', {});
 
@@ -36,7 +32,7 @@ describe('ReactHooksInspection', () => {
       });
       return <div DEPRECATED_flareListeners={listener}>Hello world</div>;
     }
-    let tree = ReactDebugTools.inspectHooks(Foo, {});
+    const tree = ReactDebugTools.inspectHooks(Foo, {});
     expect(tree).toEqual([
       {
         isStateEditable: false,

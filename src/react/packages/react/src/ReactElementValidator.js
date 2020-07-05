@@ -22,7 +22,7 @@ import {
   REACT_ELEMENT_TYPE,
 } from 'shared/ReactSymbols';
 import {warnAboutSpreadingKeyToJSX} from 'shared/ReactFeatureFlags';
-import checkPropTypes from 'prop-types/checkPropTypes';
+import checkPropTypes from 'shared/checkPropTypes';
 
 import ReactCurrentOwner from './ReactCurrentOwner';
 import {
@@ -31,9 +31,24 @@ import {
   cloneElement,
   jsxDEV,
 } from './ReactElement';
-import ReactDebugCurrentFrame, {
-  setCurrentlyValidatingElement,
-} from './ReactDebugCurrentFrame';
+import {setExtraStackFrame} from './ReactDebugCurrentFrame';
+import {describeUnknownElementTypeFrameInDEV} from 'shared/ReactComponentStackFrame';
+
+function setCurrentlyValidatingElement(element) {
+  if (__DEV__) {
+    if (element) {
+      const owner = element._owner;
+      const stack = describeUnknownElementTypeFrameInDEV(
+        element.type,
+        element._source,
+        owner ? owner.type : null,
+      );
+      setExtraStackFrame(stack);
+    } else {
+      setExtraStackFrame(null);
+    }
+  }
+}
 
 let propTypesMisspellWarningShown;
 
@@ -129,16 +144,16 @@ function validateExplicitKey(element, parentType) {
     )}.`;
   }
 
-  setCurrentlyValidatingElement(element);
   if (__DEV__) {
+    setCurrentlyValidatingElement(element);
     console.error(
       'Each child in a list should have a unique "key" prop.' +
         '%s%s See https://fb.me/react-warning-keys for more information.',
       currentComponentErrorInfo,
       childOwner,
     );
+    setCurrentlyValidatingElement(null);
   }
-  setCurrentlyValidatingElement(null);
 }
 
 /**
@@ -212,15 +227,7 @@ function validatePropTypes(element) {
       return;
     }
     if (propTypes) {
-      setCurrentlyValidatingElement(element);
-      checkPropTypes(
-        propTypes,
-        element.props,
-        'prop',
-        name,
-        ReactDebugCurrentFrame.getStackAddendum,
-      );
-      setCurrentlyValidatingElement(null);
+      checkPropTypes(propTypes, element.props, 'prop', name, element);
     } else if (type.PropTypes !== undefined && !propTypesMisspellWarningShown) {
       propTypesMisspellWarningShown = true;
       console.error(
@@ -246,26 +253,26 @@ function validatePropTypes(element) {
  */
 function validateFragmentProps(fragment) {
   if (__DEV__) {
-    setCurrentlyValidatingElement(fragment);
-
     const keys = Object.keys(fragment.props);
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       if (key !== 'children' && key !== 'key') {
+        setCurrentlyValidatingElement(fragment);
         console.error(
           'Invalid prop `%s` supplied to `React.Fragment`. ' +
             'React.Fragment can only have `key` and `children` props.',
           key,
         );
+        setCurrentlyValidatingElement(null);
         break;
       }
     }
 
     if (fragment.ref !== null) {
+      setCurrentlyValidatingElement(fragment);
       console.error('Invalid attribute `ref` supplied to `React.Fragment`.');
+      setCurrentlyValidatingElement(null);
     }
-
-    setCurrentlyValidatingElement(null);
   }
 }
 

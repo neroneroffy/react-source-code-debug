@@ -13,11 +13,11 @@
 //
 // Changes to search state may impact tree state.
 // For example, updating the selected search result also updates the tree's selected value.
-// Search does not fundamanetally change the tree though.
+// Search does not fundamentally change the tree though.
 // It is also possible to update the selected tree value independently.
 //
 // Changes to owners state mask search and tree values.
-// When owners statck is not empty, search is temporarily disabnled,
+// When owners stack is not empty, search is temporarily disabled,
 // and tree values (e.g. num elements, selected element) are masked.
 // Both tree and search values are restored when the owners stack is cleared.
 //
@@ -157,7 +157,8 @@ type State = {|
 |};
 
 function reduceTreeState(store: Store, state: State, action: Action): State {
-  let {numElements, ownerID, selectedElementIndex, selectedElementID} = state;
+  let {numElements, selectedElementIndex, selectedElementID} = state;
+  const ownerID = state.ownerID;
 
   let lookupIDForIndex = true;
 
@@ -277,13 +278,13 @@ function reduceTreeState(store: Store, state: State, action: Action): State {
 
 function reduceSearchState(store: Store, state: State, action: Action): State {
   let {
-    ownerID,
     searchIndex,
     searchResults,
     searchText,
     selectedElementID,
     selectedElementIndex,
   } = state;
+  const ownerID = state.ownerID;
 
   const prevSearchIndex = searchIndex;
   const prevSearchText = searchText;
@@ -452,10 +453,8 @@ function reduceOwnersState(store: Store, state: State, action: Action): State {
     selectedElementIndex,
     ownerID,
     ownerFlatTree,
-    searchIndex,
-    searchResults,
-    searchText,
   } = state;
+  const {searchIndex, searchResults, searchText} = state;
 
   let prevSelectedElementIndex = selectedElementIndex;
 
@@ -734,7 +733,7 @@ function TreeContextController({
       prevSelectedElementID.current = state.selectedElementID;
 
       if (state.selectedElementID !== null) {
-        let element = store.getElementByID(state.selectedElementID);
+        const element = store.getElementByID(state.selectedElementID);
         if (element !== null && element.parentID > 0) {
           store.toggleIsCollapsed(element.parentID, false);
         }

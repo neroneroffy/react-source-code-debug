@@ -11,9 +11,9 @@ import type {EventPriority} from 'shared/ReactTypes';
 import type {
   TopLevelType,
   DOMTopLevelEventType,
-} from 'legacy-events/TopLevelEventTypes';
-import type {DispatchConfig} from 'legacy-events/ReactSyntheticEventType';
+} from '../events/TopLevelEventTypes';
 
+import {registerTwoPhaseEvent} from './EventRegistry';
 import * as DOMTopLevelEventTypes from './DOMTopLevelEventTypes';
 import {
   DiscreteEvent,
@@ -21,17 +21,11 @@ import {
   ContinuousEvent,
 } from 'shared/ReactTypes';
 
-// Needed for SimpleEventPlugin, rather than
-// do it in two places, which duplicates logic
-// and increases the bundle size, we do it all
-// here once. If we remove or refactor the
-// SimpleEventPlugin, we should also remove or
-// update the below line.
-export const simpleEventPluginEventTypes = {};
+import {enableCreateEventHandleAPI} from 'shared/ReactFeatureFlags';
 
-export const topLevelEventsToDispatchConfig: Map<
+export const topLevelEventsToReactNames: Map<
   TopLevelType,
-  DispatchConfig,
+  string | null,
 > = new Map();
 
 const eventPriorities = new Map();
@@ -92,6 +86,13 @@ const otherDiscreteEvents = [
   DOMTopLevelEventTypes.TOP_COMPOSITION_UPDATE,
 ];
 
+if (enableCreateEventHandleAPI) {
+  otherDiscreteEvents.push(
+    DOMTopLevelEventTypes.TOP_BEFORE_BLUR,
+    DOMTopLevelEventTypes.TOP_AFTER_BLUR,
+  );
+}
+
 // prettier-ignore
 const userBlockingPairsForSimpleEventPlugin = [
   DOMTopLevelEventTypes.TOP_DRAG, 'drag',
@@ -143,23 +144,16 @@ const continuousPairsForSimpleEventPlugin = [
 /**
  * Turns
  * ['abort', ...]
+ *
  * into
- * eventTypes = {
- *   'abort': {
- *     phasedRegistrationNames: {
- *       bubbled: 'onAbort',
- *       captured: 'onAbortCapture',
- *     },
- *     dependencies: [TOP_ABORT],
- *   },
- *   ...
- * };
- * topLevelEventsToDispatchConfig = new Map([
- *   [TOP_ABORT, { sameConfig }],
+ *
+ * topLevelEventsToReactNames = new Map([
+ *   [TOP_ABORT, 'onAbort'],
  * ]);
+ *
+ * and registers them.
  */
-
-function processSimpleEventPluginPairsByPriority(
+function registerSimplePluginEventsAndSetTheirPriorities(
   eventTypes: Array<DOMTopLevelEventType | string>,
   priority: EventPriority,
 ): void {
@@ -173,23 +167,14 @@ function processSimpleEventPluginPairsByPriority(
     const topEvent = ((eventTypes[i]: any): DOMTopLevelEventType);
     const event = ((eventTypes[i + 1]: any): string);
     const capitalizedEvent = event[0].toUpperCase() + event.slice(1);
-    const onEvent = 'on' + capitalizedEvent;
-
-    const config = {
-      phasedRegistrationNames: {
-        bubbled: onEvent,
-        captured: onEvent + 'Capture',
-      },
-      dependencies: [topEvent],
-      eventPriority: priority,
-    };
+    const reactName = 'on' + capitalizedEvent;
     eventPriorities.set(topEvent, priority);
-    topLevelEventsToDispatchConfig.set(topEvent, config);
-    simpleEventPluginEventTypes[event] = config;
+    topLevelEventsToReactNames.set(topEvent, reactName);
+    registerTwoPhaseEvent(reactName, [topEvent]);
   }
 }
 
-function processTopEventPairsByPriority(
+function setEventPriorities(
   eventTypes: Array<DOMTopLevelEventType | string>,
   priority: EventPriority,
 ): void {
@@ -197,22 +182,6 @@ function processTopEventPairsByPriority(
     eventPriorities.set(eventTypes[i], priority);
   }
 }
-
-// SimpleEventPlugin
-processSimpleEventPluginPairsByPriority(
-  discreteEventPairsForSimpleEventPlugin,
-  DiscreteEvent,
-);
-processSimpleEventPluginPairsByPriority(
-  userBlockingPairsForSimpleEventPlugin,
-  UserBlockingEvent,
-);
-processSimpleEventPluginPairsByPriority(
-  continuousPairsForSimpleEventPlugin,
-  ContinuousEvent,
-);
-// Not used by SimpleEventPlugin
-processTopEventPairsByPriority(otherDiscreteEvents, DiscreteEvent);
 
 export function getEventPriorityForPluginSystem(
   topLevelType: TopLevelType,
@@ -222,4 +191,36 @@ export function getEventPriorityForPluginSystem(
   // want to warn if we can't detect the priority
   // for the event.
   return priority === undefined ? ContinuousEvent : priority;
+}
+
+export function getEventPriorityForListenerSystem(
+  type: DOMTopLevelEventType,
+): EventPriority {
+  const priority = eventPriorities.get(type);
+  if (priority !== undefined) {
+    return priority;
+  }
+  if (__DEV__) {
+    console.warn(
+      'The event "type" provided to createEventHandle() does not have a known priority type.' +
+        ' It is recommended to provide a "priority" option to specify a priority.',
+    );
+  }
+  return ContinuousEvent;
+}
+
+export function registerSimpleEvents() {
+  registerSimplePluginEventsAndSetTheirPriorities(
+    discreteEventPairsForSimpleEventPlugin,
+    DiscreteEvent,
+  );
+  registerSimplePluginEventsAndSetTheirPriorities(
+    userBlockingPairsForSimpleEventPlugin,
+    UserBlockingEvent,
+  );
+  registerSimplePluginEventsAndSetTheirPriorities(
+    continuousPairsForSimpleEventPlugin,
+    ContinuousEvent,
+  );
+  setEventPriorities(otherDiscreteEvents, DiscreteEvent);
 }

@@ -6,7 +6,7 @@
  *
  * @flow
  */
-
+import * as React from './src/React';
 // Keep in sync with https://github.com/facebook/flow/blob/master/lib/react.js
 export type StatelessFunctionalComponent<
   P,
@@ -55,8 +55,11 @@ export {
   useReducer,
   useRef,
   useState,
+  useMutableSource,
+  createMutableSource,
   Fragment,
   Profiler,
+  unstable_DebugTracingMode,
   StrictMode,
   Suspense,
   createElement,
@@ -66,19 +69,20 @@ export {
   __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED,
   createFactory,
   useTransition,
+  useTransition as unstable_useTransition,
   useDeferredValue,
+  useDeferredValue as unstable_useDeferredValue,
   SuspenseList,
+  SuspenseList as unstable_SuspenseList,
   unstable_withSuspenseConfig,
   block,
+  block as unstable_block,
+  unstable_LegacyHidden,
   DEPRECATED_useResponder,
   DEPRECATED_createResponder,
   unstable_createFundamental,
   unstable_createScope,
-  jsx,
-  jsxs,
-  jsxDEV,
+  unstable_useOpaqueIdentifier,
 } from './src/React';
-
-import * as React from './src/React'
 
 export default React

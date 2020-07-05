@@ -227,8 +227,8 @@ describe('ReactElementValidator', () => {
       'Warning: Failed prop type: ' +
         'Invalid prop `color` of type `number` supplied to `MyComp`, ' +
         'expected `string`.\n' +
-        '    in MyComp (created by ParentComp)\n' +
-        '    in ParentComp',
+        '    in MyComp (at **)\n' +
+        '    in ParentComp (at **)',
     );
   });
 
@@ -399,7 +399,6 @@ describe('ReactElementValidator', () => {
         'returned a function. You may have forgotten to pass an argument to ' +
         'the type checker creator (arrayOf, instanceOf, objectOf, oneOf, ' +
         'oneOfType, and shape all require an argument).',
-      {withoutStack: true},
     );
   });
 

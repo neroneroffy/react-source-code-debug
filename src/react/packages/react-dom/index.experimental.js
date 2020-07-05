@@ -19,16 +19,14 @@ export {
   render,
   unmountComponentAtNode,
   // exposeConcurrentModeAPIs
-  createRoot,
-  createBlockingRoot,
-  unstable_discreteUpdates,
-  unstable_flushDiscreteUpdates,
+  createRoot as unstable_createRoot,
+  createBlockingRoot as unstable_createBlockingRoot,
   unstable_flushControlled,
   unstable_scheduleHydration,
   // Disabled behind disableUnstableRenderSubtreeIntoContainer
   unstable_renderSubtreeIntoContainer,
   // Disabled behind disableUnstableCreatePortal
   // Temporary alias since we already shipped React 16 RC with it.
-  // TODO: remove in React 17.
+  // TODO: remove in React 18.
   unstable_createPortal,
 } from './src/client/ReactDOM';

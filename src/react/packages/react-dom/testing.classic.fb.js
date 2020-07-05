@@ -8,4 +8,16 @@
  */
 
 export * from './index.classic.fb.js';
-export {act} from 'react-reconciler/inline.dom';
+export {
+  act,
+  createComponentSelector,
+  createHasPsuedoClassSelector,
+  createRoleSelector,
+  createTestNameSelector,
+  createTextSelector,
+  getFindAllNodesFailureDescription,
+  findAllNodes,
+  findBoundingRects,
+  focusWithin,
+  observeVisibleRects,
+} from 'react-reconciler/src/ReactFiberReconciler';

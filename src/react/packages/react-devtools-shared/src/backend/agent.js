@@ -7,7 +7,7 @@
  * @flow
  */
 
-import EventEmitter from 'events';
+import EventEmitter from '../events';
 import throttle from 'lodash.throttle';
 import {
   SESSION_STORAGE_LAST_SELECTION_KEY,
@@ -161,8 +161,8 @@ export default class Agent extends EventEmitter<{|
     );
     bridge.addListener('shutdown', this.shutdown);
     bridge.addListener(
-      'updateAppendComponentStack',
-      this.updateAppendComponentStack,
+      'updateConsolePatchSettings',
+      this.updateConsolePatchSettings,
     );
     bridge.addListener('updateComponentFilters', this.updateComponentFilters);
     bridge.addListener('viewAttributeSource', this.viewAttributeSource);
@@ -211,7 +211,7 @@ export default class Agent extends EventEmitter<{|
   }
 
   getIDForNode(node: Object): number | null {
-    for (let rendererID in this._rendererInterfaces) {
+    for (const rendererID in this._rendererInterfaces) {
       const renderer = ((this._rendererInterfaces[
         (rendererID: any)
       ]: any): RendererInterface);
@@ -389,7 +389,7 @@ export default class Agent extends EventEmitter<{|
 
     setTraceUpdatesEnabled(traceUpdatesEnabled);
 
-    for (let rendererID in this._rendererInterfaces) {
+    for (const rendererID in this._rendererInterfaces) {
       const renderer = ((this._rendererInterfaces[
         (rendererID: any)
       ]: any): RendererInterface);
@@ -413,7 +413,7 @@ export default class Agent extends EventEmitter<{|
   startProfiling = (recordChangeDescriptions: boolean) => {
     this._recordChangeDescriptions = recordChangeDescriptions;
     this._isProfiling = true;
-    for (let rendererID in this._rendererInterfaces) {
+    for (const rendererID in this._rendererInterfaces) {
       const renderer = ((this._rendererInterfaces[
         (rendererID: any)
       ]: any): RendererInterface);
@@ -425,7 +425,7 @@ export default class Agent extends EventEmitter<{|
   stopProfiling = () => {
     this._isProfiling = false;
     this._recordChangeDescriptions = false;
-    for (let rendererID in this._rendererInterfaces) {
+    for (const rendererID in this._rendererInterfaces) {
       const renderer = ((this._rendererInterfaces[
         (rendererID: any)
       ]: any): RendererInterface);
@@ -443,20 +443,26 @@ export default class Agent extends EventEmitter<{|
     }
   };
 
-  updateAppendComponentStack = (appendComponentStack: boolean) => {
+  updateConsolePatchSettings = ({
+    appendComponentStack,
+    breakOnConsoleErrors,
+  }: {|
+    appendComponentStack: boolean,
+    breakOnConsoleErrors: boolean,
+  |}) => {
     // If the frontend preference has change,
     // or in the case of React Native- if the backend is just finding out the preference-
     // then install or uninstall the console overrides.
     // It's safe to call these methods multiple times, so we don't need to worry about that.
-    if (appendComponentStack) {
-      patchConsole();
+    if (appendComponentStack || breakOnConsoleErrors) {
+      patchConsole({appendComponentStack, breakOnConsoleErrors});
     } else {
       unpatchConsole();
     }
   };
 
   updateComponentFilters = (componentFilters: Array<ComponentFilter>) => {
-    for (let rendererID in this._rendererInterfaces) {
+    for (const rendererID in this._rendererInterfaces) {
       const renderer = ((this._rendererInterfaces[
         (rendererID: any)
       ]: any): RendererInterface);
