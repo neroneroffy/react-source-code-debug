@@ -292,6 +292,7 @@ export function updateContainer(
   const update = createUpdate(eventTime, lane, suspenseConfig);
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 第一次渲染时，element作为update的payload
   update.payload = {element};
 
   callback = callback === undefined ? null : callback;

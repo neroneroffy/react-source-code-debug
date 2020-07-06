@@ -298,6 +298,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   const pingedLanes = root.pingedLanes;
 
   // Check if any work has expired.
+  // 检查是否有任务过期
   if (expiredLanes !== NoLanes) {
     nextLanes = expiredLanes;
     nextLanePriority = return_highestLanePriority = SyncLanePriority;
