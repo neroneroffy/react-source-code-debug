@@ -49,7 +49,7 @@ const cssRegex = /\.css$/;
 const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
 const sassModuleRegex = /\.module\.(scss|sass)$/;
-
+const REACT_VERSION = process.env.REACT_VERSION
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
 module.exports = function(webpackEnv) {
@@ -126,7 +126,6 @@ module.exports = function(webpackEnv) {
     }
     return loaders;
   };
-  console.log(env);
   return {
     mode: isEnvProduction ? 'production' : isEnvDevelopment && 'development',
     // Stop compilation early in production
@@ -297,17 +296,17 @@ module.exports = function(webpackEnv) {
           'scheduler/tracing': 'scheduler/tracing-profiling',
         }),
         ...(modules.webpackAliases || {}),*/
-        'react': path.resolve(__dirname, '../src/react/packages/react'),
+        'react': path.resolve(__dirname, `../src/react/${REACT_VERSION}/react`),
 
-        'react-dom': path.resolve(__dirname, '../src/react/packages/react-dom'),
+        'react-dom': path.resolve(__dirname, `../src/react/${REACT_VERSION}/react-dom`),
 
-        'legacy-events': path.resolve(__dirname, '../src/react/packages/legacy-events'),
+        'legacy-events': path.resolve(__dirname, `../src/react/${REACT_VERSION}/legacy-events`),
 
-        'shared': path.resolve(__dirname, '../src/react/packages/shared'),
+        'shared': path.resolve(__dirname, `../src/react/${REACT_VERSION}/shared`),
 
-        'scheduler': path.resolve(__dirname, '../src/react/packages/scheduler'),
+        'scheduler': path.resolve(__dirname, `../src/react/${REACT_VERSION}/scheduler`),
 
-        'react-reconciler': path.resolve(__dirname, '../src/react/packages/react-reconciler'),
+        'react-reconciler': path.resolve(__dirname, `../src/react/${REACT_VERSION}/react-reconciler`),
       },
       plugins: [
         // Adds support for installing with Plug'n'Play, leading to faster installs and adding
