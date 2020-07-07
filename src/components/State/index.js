@@ -5,7 +5,7 @@ import './index.css'
 const State = () => {
   return <div className={'state-component'}>
     {/*<h2>State Change</h2>*/}
-    <Parent1/>
+    {/*<Parent1/>*/}
     <Parent2/>
   </div>
 }
