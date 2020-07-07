@@ -7,5 +7,5 @@ npm install
 * v16.13.1：npm run dev:16.13.1
 * v16.12.0：npm run dev:16.12.0
 
-v16.13.1clone自官方仓库master分支
+v16.13.1 clone自官方仓库master分支
 
