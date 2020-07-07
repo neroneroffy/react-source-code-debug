@@ -639,6 +639,17 @@ export function includesSomeLane(a: Lanes | Lane, b: Lanes | Lane) {
 }
 
 export function isSubsetOfLanes(set: Lanes, subset: Lanes | Lane) {
+  /*
+  * 按位或 &：对每个 bit 执行 & 操作, 如果相同位数的 bit 都为 1, 则结果为 1
+  *
+  *         set   &  subset === subset
+  * 二进制  10    &  2      = 2
+  * 十进制  1010  &  0010   = 0010
+  *
+  * 上述操作是在1010（Lanes）中尝试取0010（Lane）的子集，如果子集等于 0010 （Lane）本身，说明
+  * Lanes 中包含 Lane
+  *
+  * */
   return (set & subset) === subset;
 }
 

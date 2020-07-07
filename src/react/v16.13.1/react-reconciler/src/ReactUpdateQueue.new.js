@@ -569,6 +569,8 @@ export function processUpdateQueue<State>(
       const updateLane = update.lane;
       const updateEventTime = update.eventTime;
       // 优先级不足，将update添加到newBaseUpdateQueue中
+      // isSubsetOfLanes函数的意义是，判断updateLane是否在批处理渲染优先级（renderLanes）中
+      // 如果不在，那么就说明优先级不足
       if (!isSubsetOfLanes(renderLanes, updateLane)) {
         // Priority is insufficient. Skip this update. If this is the first
         // skipped update, the previous update/state is the new base
