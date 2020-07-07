@@ -5,7 +5,7 @@ const Parent2 = () => {
   return <div className={'parent2'}>
     Parent2
     <div className={'child-wrapper'}>
-      <Child1/>
+      {/*<Child1/>*/}
       <Child2/>
     </div>
   </div>

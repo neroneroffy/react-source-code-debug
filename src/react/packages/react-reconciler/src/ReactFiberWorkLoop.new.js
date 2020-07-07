@@ -633,6 +633,8 @@ function markUpdateLaneFromFiberToRoot(
  * 使用此函数为root节点调度任务。每个root节点只有一个任务;如果任务已经被调度，
  * 我们将检查以确保现有任务的到期时间与root节点工作的下一个级别的到期时间相同。
  * 在每次更新时以及退出任务之前都会调用此函数。
+ *
+ * ？是否是打断渲染的操作？假设有更高的优先级任务，那么先做更高的优先级，当前这个先暂停？？
 *
 * */
 function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
@@ -640,16 +642,23 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 
   // Check if any lanes are being starved by other work. If so, mark them as
   // expired so we know to work on those next.
+  // 检查lanes是否已经被其他任务占用，如果有，把它们标记为过期，便于我们知道接下来
+  // 从哪里开始
   markStarvedLanesAsExpired(root, currentTime);
 
   // Determine the next lanes to work on, and their priority.
   // 确定下一个要完成的lanes，和它们的优先级
+  // 找到下一个要完成的lanes
   const newCallbackId = getNextLanes(
     root,
     root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
   );
+  /**
+   * 先找到被占用的，然后确定它的位置，以及优先级
+   * */
   // This returns the priority level computed during the `getNextLanes` call.
-  //
+  // 找到' getNextLanes '调用期间计算的优先级。
+  // 找到下一个要完成的lanes的优先级
   const newCallbackPriority = returnNextLanesPriority();
 
   if (newCallbackId === NoLanes) {
@@ -685,6 +694,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   }
 
   // Schedule a new callback.
+  // 重新调度
   let newCallbackNode;
   if (newCallbackPriority === SyncLanePriority) {
     // 如果是同步优先级任务，要同步执行render阶段
@@ -998,7 +1008,7 @@ function performSyncWorkOnRoot(root) {
   flushPassiveEffects();
 
   let lanes;
-  let exitStatus; // 声明一个状态，来保存render阶段完成时的状态，对某些错误做特定处理
+  let exitStatus; // 声明一个状态，来保存render阶段完成时的状态，便于对某些错误做特定处理
   if (
     root === workInProgressRoot &&
     includesSomeLane(root.expiredLanes, workInProgressRootRenderLanes)

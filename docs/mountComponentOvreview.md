@@ -70,6 +70,10 @@ const classComponentUpdater = {
 scheduleUpdateOnFiber是重点，它里面包含了render阶段和commit阶段的工作。而该函数会在初始化阶段，
 以及setState的时候分别被调用，从而触发组件更新。
 
-scheduleUpdateOnFiber的触发最终会调用beginWork，render阶段便以此为起点，
+scheduleUpdateOnFiber的触发最终会调用beginWork，render阶段便以此为起点。
+scheduleUpdateOnFiber 函数主要做的事情有：
+* 如果是同步渲染的优先级
+  - 如果是首次挂载，调用performSyncWorkOnRoot开始同步地更新
+  - 如果是更新组件，调用ensureRootIsScheduled
 
 
