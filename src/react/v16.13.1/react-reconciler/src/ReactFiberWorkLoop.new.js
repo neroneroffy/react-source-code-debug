@@ -644,6 +644,7 @@ function markUpdateLaneFromFiberToRoot(
 *
 * */
 function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
+  // 先取到上一次调度的callbackNode
   const existingCallbackNode = root.callbackNode;
   // Check if any lanes are being starved by other work. If so, mark them as
   // expired so we know to work on those next.
@@ -662,7 +663,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 
   if (newCallbackId === NoLanes) {
     // Special case: There's nothing to work on.
-    // 不需要有所更新
+    // 不需要有所更新的话，取消掉之前的任务。
     if (existingCallbackNode !== null) {
       cancelCallback(existingCallbackNode);
       root.callbackNode = null;
@@ -682,12 +683,12 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
       // 任务已经被调度，检查它的优先级
       if (existingCallbackPriority === newCallbackPriority) {
         // The priority hasn't changed. Exit.
-        // 优先级未发生变化，退出
+        // 前后优先级一样，未发生变化，退出
         return;
       }
       // The task ID is the same but the priority changed. Cancel the existing
       // callback. We'll schedule a new one below.
-      // 任务ID相同，但是优先级变化了，取消掉已经存在的回调，然后在下边重新调度一个任务
+      // 任务ID相同，但是优先级变化了，取消掉之前的调度，然后在下边重新调度一个任务
     }
     cancelCallback(existingCallbackNode);
   }
