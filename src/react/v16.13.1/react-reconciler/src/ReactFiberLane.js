@@ -71,15 +71,16 @@ export const NoLanePriority: LanePriority = 0;
 
 const TotalLanes = 31;
 
-export const NoLanes: Lanes = /*                        */ 0b0000000000000000000000000000000;
-export const NoLane: Lane = /*                          */ 0b0000000000000000000000000000000;
+// 利用 Math.abs() 可将Lane转换为10进制
+export const NoLanes: Lanes = /*                        */ 0b0000000000000000000000000000000; // 0
+export const NoLane: Lane = /*                          */ 0b0000000000000000000000000000000; // 0
 
-export const SyncLane: Lane = /*                        */ 0b0000000000000000000000000000001;
+export const SyncLane: Lane = /*                        */ 0b0000000000000000000000000000001; // 1
 const SyncUpdateRangeEnd = 1;
-export const SyncBatchedLane: Lane = /*                 */ 0b0000000000000000000000000000010;
+export const SyncBatchedLane: Lane = /*                 */ 0b0000000000000000000000000000010; // 2
 const SyncBatchedUpdateRangeEnd = 2;
 
-export const InputDiscreteHydrationLane: Lane = /*      */ 0b0000000000000000000000000000100;
+export const InputDiscreteHydrationLane: Lane = /*      */ 0b0000000000000000000000000000100; // 4
 const InputDiscreteLanes: Lanes = /*                    */ 0b0000000000000000000000000011100;
 const InputDiscreteUpdateRangeStart = 3;
 const InputDiscreteUpdateRangeEnd = 5;
@@ -126,11 +127,13 @@ let return_highestLanePriority: LanePriority = DefaultLanePriority;
 let return_updateRangeEnd: number = -1;
 
 function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
+  // lanes中是否有同步优先级的任务
   if ((SyncLane & lanes) !== NoLanes) {
     return_highestLanePriority = SyncLanePriority;
     return_updateRangeEnd = SyncUpdateRangeEnd;
     return SyncLane;
   }
+  // lanes中是否有批量同步的优先级
   if ((SyncBatchedLane & lanes) !== NoLanes) {
     return_highestLanePriority = SyncBatchedLanePriority;
     return_updateRangeEnd = SyncBatchedUpdateRangeEnd;
@@ -347,7 +350,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   }
 
   // If there are higher priority lanes, we'll include them even if they are suspended.
-  // 如果有更高优先级的lanes，即使它们被暂停，我们也会包括它们。
+  // 如果有更高优先级的lanes，即使它们被暂停，也会被包含在内。
   nextLanes = pendingLanes & equalOrHigherPriorityLanes;
 
   // If we're already in the middle of a render, switching lanes will interrupt
@@ -607,6 +610,7 @@ export function findTransitionLane(
 function findLane(start, end, skipLanes) {
   // This finds the first bit between the `start` and `end` positions that isn't
   // in `skipLanes`.
+  // 找出第一个范围在start和end之间但却不在skipLanes中的字节
   // TODO: This will always favor the rightmost bits. That's usually fine
   // because any bit that's pending will be part of `skipLanes`, so we'll do our
   // best to avoid accidental entanglement. However, lanes that are pending
@@ -622,7 +626,20 @@ function findLane(start, end, skipLanes) {
 
 function getLowestPriorityLane(lanes: Lanes): Lane {
   // This finds the most significant non-zero bit.
+  // 找到最重要的非零位
+  /**
+   * Math.clz32() 函数返回一个数字在转换成 32 无符号整形数字的二进制形式后,
+   * 开头的 0 的个数, 比如 1000000 转换成 32 位无符号整形数字的二进制形式后
+   * 是 00000000000011110100001001000000, 开头的 0 的个数是 12 个, 则
+   * Math.clz32(1000000) 返回 12.
+   *
+   * @From MDN https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32
+   *
+   * 1 << index 实际上是计算 2 的 index次方
+  *
+  * */
   const index = 31 - clz32(lanes);
+
   return index < 0 ? NoLanes : 1 << index;
 }
 
@@ -640,6 +657,7 @@ export function includesSomeLane(a: Lanes | Lane, b: Lanes | Lane) {
 
 export function isSubsetOfLanes(set: Lanes, subset: Lanes | Lane) {
   /*
+  * 校验set中有没有subset
   * 按位或 &：对每个 bit 执行 & 操作, 如果相同位数的 bit 都为 1, 则结果为 1
   *
   *         set   &  subset === subset
@@ -647,7 +665,7 @@ export function isSubsetOfLanes(set: Lanes, subset: Lanes | Lane) {
   * 十进制  1010  &  0010   = 0010
   *
   * 上述操作是在1010（Lanes）中尝试取0010（Lane）的子集，如果子集等于 0010 （Lane）本身，说明
-  * Lanes 中包含 Lane
+  * set 中包含 subset
   *
   *
   * */
@@ -655,21 +673,27 @@ export function isSubsetOfLanes(set: Lanes, subset: Lanes | Lane) {
 }
 
 export function mergeLanes(a: Lanes | Lane, b: Lanes | Lane): Lanes {
+  // | 可实现授权的功能。可理解成此函数的返回值是 a 和 b。
+  // 也就是相当于把 a 和 b合并成一个Lanes（优先级分组），生成
+  // 一个新的优先级范围
   return a | b;
 }
 
 export function removeLanes(set: Lanes, subset: Lanes | Lane): Lanes {
+  // 从一个优先级组中删除某个优先级
   return set & ~subset;
 }
 
 // Seems redundant, but it changes the type from a single lane (used for
 // updates) to a group of lanes (used for flushing work).
+// 看起来有些多余，但它将类型从单个lane(用于更新)更改为一组Lanes(用于刷新工作)。
 export function laneToLanes(lane: Lane): Lanes {
   return lane;
 }
 
 export function higherPriorityLane(a: Lane, b: Lane) {
   // This works because the bit ranges decrease in priority as you go left.
+  // 优先级是从从右往左递减，数越小，优先级越低。没想通，因为这里总是返回优先级低的
   return a !== NoLane && a < b ? a : b;
 }
 
@@ -689,10 +713,20 @@ export function markRootUpdated(root: FiberRoot, updateLane: Lane) {
   // when considering updates across different priority levels, but isn't
   // sufficient for updates within the same priority, since we want to treat
   // those updates as parallel.
-
+  // 我们需要一种方式来决定渲染哪个lanes以及在哪个批处理中渲染它。当前是用的是与之前的过期时间模
+  // 式相同的方式：对于优先级相同或者较低的lane进行重新处理。但是不要在不包含较低优先级更新的情况下处理
+  // 高优先级更新。当考虑跨不同优先级级别的更新时，这种方法很合适，但对于相同优先级的更新来说，这是不够的，
+  // 因为我们希望对这些update并行处理。
   // Unsuspend any update at equal or lower priority.
-  const higherPriorityLanes = updateLane - 1; // Turns 0b1000 into 0b0111
+  //取消同等或较低优先级的更新。
 
+  const higherPriorityLanes = updateLane - 1; // Turns 0b1000 into 0b0111
+  //        0b1000
+  //        0b0111
+  //        0b1011
+  // -------------
+  // result 0b1111
+  // 将 updateLane 放到 suspendedLanes 和 pingedLanes中
   root.suspendedLanes &= higherPriorityLanes;
   root.pingedLanes &= higherPriorityLanes;
 }
@@ -723,6 +757,19 @@ export function markRootPinged(
 }
 
 export function markRootExpired(root: FiberRoot, expiredLanes: Lanes) {
+  /**
+   * root.expiredLanes |= expiredLanes & root.pendingLanes
+   * 这种形式相当于 root.expiredLanes = root.expiredLanes | (expiredLanes & root.pendingLanes)
+   * 目的是将pendingLanes 合并到 root.expiredLanes 中
+   *
+   * 例如：
+                                      expiredLanes = 0101
+                                 root.pendingLanes = 0100
+   const result = expiredLanes & root.pendingLanes = 0100
+
+                                 root.expiredLanes = 0010
+    root.expiredLanes = root.expiredLanes | result = 0110
+   * */
   root.expiredLanes |= expiredLanes & root.pendingLanes;
 }
 
@@ -739,6 +786,16 @@ export function markRootMutableRead(root: FiberRoot, updateLane: Lane) {
 }
 
 export function markRootFinished(root: FiberRoot, remainingLanes: Lanes) {
+  // 从root.pendingLanes中删除剩余的lanes（remainingLanes）
+  /**
+     * const a = 0b100
+       const b = 0b010
+       const c = a | b // 此时c是包含 a 和 b 的
+
+       // -- c = 0b110
+            ~b = 0b101
+    c = c & ~b = 0b100 // 此时的c只有a
+   * */
   const noLongerPendingLanes = root.pendingLanes & ~remainingLanes;
 
   root.pendingLanes = remainingLanes;
@@ -753,14 +810,44 @@ export function markRootFinished(root: FiberRoot, remainingLanes: Lanes) {
   root.entangledLanes &= remainingLanes;
 
   const expirationTimes = root.expirationTimes;
+  /**
+   * 假设 lanes = 0b0000000000000000000000000011100      // 十进制为10
+   *     index = pickArbitraryLaneIndex(lanes)          // index = 4
+   *                       // 1 为 0b0000000000000000000000000000001
+   *     lane = 1 << 4  //        0b0000000000000000000000000001000
+   * 经过
+   * lanes &= ~lane
+   * 的位运算
+   *
+   * lanes =0b0000000000000000000000000010100
+   *
+   * 我们只看后几位
+   * 开始的   lanes 为 11100
+   * 算出的    lane 为 01000
+   * 最终的结果为       10100
+   * ...
+   * 最终计算到lanes 为 00000 结束
+   * -----------------------------------------------------
+   * 补充说明：
+   *
+   * lanes &= ~lane
+   * 等价于
+   * lanes = lanes & ~lane
+   *
+   * 例：
+   *          lane = 0100
+   *         ~lane = 1011
+   *         lanes = 0101
+   * lanes & ~lane = 0001
+   * 相当于将 lane 从 lanes 中删除，直到删除到lanes全部是0
+
+   * */
   let lanes = noLongerPendingLanes;
   while (lanes > 0) {
     const index = pickArbitraryLaneIndex(lanes);
     const lane = 1 << index;
-
     // Clear the expiration time
     expirationTimes[index] = NoTimestamp;
-
     lanes &= ~lane;
   }
 }

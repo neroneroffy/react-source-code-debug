@@ -210,10 +210,14 @@ export type Fiber = {|
   lastEffect: Fiber | null,
 
   // Represents a time in the future by which this work should be completed.
+  // 表示任务的过期时间
   // Does not include work found in its subtree.
   expirationTime: ExpirationTime,
 
   // This is used to quickly determine if a subtree has no pending changes.
+  // 结合expirationTime，被用来判断子树是否有更新
+  // expirationTime代表他本身是否有更新，如果他本身有更新，那么他的更新可能会影响子树；
+  // childExpirationTime表示他的子树是否产生了更新；如果两个都没有，那么子树是不需要更新的。
   childExpirationTime: ExpirationTime,
 
   // This is a pooled version of a Fiber. Every fiber that gets updated will

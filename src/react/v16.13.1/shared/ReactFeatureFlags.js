@@ -119,4 +119,6 @@ export const enableLegacyFBSupport = false;
 // not currently rendering. We treat them the same as if they came from an
 // interleaved event. Remove this flag once we have migrated to the
 // new behavior.
+// 官方不推荐在渲染阶段产生更新，但是如果出现这种情况，通过选择一个当前没有渲染的lane，将它推迟到
+// 稍后的渲染中，把它作为过渡的处理即可，在迁移到新特性之后，将会被移除
 export const deferRenderPhaseUpdateToNextBatch = true;

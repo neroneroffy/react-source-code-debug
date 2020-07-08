@@ -548,7 +548,7 @@ function markUpdateLaneFromFiberToRoot(
   lane: Lane,
 ): FiberRoot | null {
   // Update the source fiber's lanes
-  // mergeLanes对两个参数进行位运算，获取
+  // 更新当前fiber的优先级
   fiber.lanes = mergeLanes(fiber.lanes, lane);
   let alternate = fiber.alternate;
   if (alternate !== null) {
@@ -563,7 +563,7 @@ function markUpdateLaneFromFiberToRoot(
     }
   }
   // Walk the parent path to the root and update the child expiration time.
-  // 遍历父路径到root，并更新子节点的过期时间。
+  // 一直向上遍历到root，并更新子节点的过期时间。
   let node = fiber.return;
   let root = null;
   if (node === null && fiber.tag === HostRoot) {
@@ -593,6 +593,7 @@ function markUpdateLaneFromFiberToRoot(
 
   if (root !== null) {
     // Mark that the root has a pending update.
+    // 将update放到root的pending update中
     markRootUpdated(root, lane);
     if (workInProgressRoot === root) {
       // Received an update to a tree that's in the middle of rendering. Mark
@@ -604,6 +605,7 @@ function markUpdateLaneFromFiberToRoot(
         deferRenderPhaseUpdateToNextBatch ||
         (executionContext & RenderContext) === NoContext
       ) {
+        // 假设现在没处在渲染阶段，把lane放进workInProgressRootUpdatedLanes中
         workInProgressRootUpdatedLanes = mergeLanes(
           workInProgressRootUpdatedLanes,
           lane,
@@ -616,6 +618,12 @@ function markUpdateLaneFromFiberToRoot(
         // effect of interrupting the current render and switching to the update.
         // TODO: Make sure this doesn't override pings that happen while we've
         // already started rendering.
+
+        /**
+         * root已经挂起并延迟，这意味着这次渲染肯定不会完成。由于我们有一个新的update，在标记下
+         * 一个update之前将它标记为挂起。这样做的效果是中断当前的渲染并切换到更新。
+         * TODO 确保这不会覆盖在我们之前已经开始渲染的工作。
+        * */
         markRootSuspended(root, workInProgressRootRenderLanes);
       }
     }
@@ -982,6 +990,7 @@ function markRootSuspended(root, suspendedLanes) {
   // rarely, since we try to avoid it) updated during the render phase.
   // TODO: Lol maybe there's a better way to factor this besides this
   // obnoxiously named function :)
+  // 当挂起时，需要把那些在渲染阶段被触发或者被更新的lanes除去。
   suspendedLanes = removeLanes(suspendedLanes, workInProgressRootPingedLanes);
   suspendedLanes = removeLanes(suspendedLanes, workInProgressRootUpdatedLanes);
   markRootSuspended_dontCallThisOneDirectly(root, suspendedLanes);
