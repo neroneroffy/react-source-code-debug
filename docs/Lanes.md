@@ -54,3 +54,4 @@ Lanes是一种不透明类型。你只能在ReactFiberLane模块中执行直接�
 * fiber.expirationTime -> fiber.lanes
 * fiber.childExpirationTime -> fiber.childLanes
 * root.firstPendingTime and root.lastPendingTime -> fiber.pendingLanes
+

@@ -11,7 +11,7 @@ import type {Thenable, Wakeable} from 'shared/ReactTypes';
 import type {Fiber, FiberRoot} from './ReactInternalTypes';
 import type {Lanes, Lane} from './ReactFiberLane';
 import type {ReactPriorityLevel} from './ReactInternalTypes';
-import type {Interaction} from 'scheduler/src/Tracing';
+import type {Interaction} from '../../scheduler/src/Tracing';
 import type {SuspenseConfig} from './ReactFiberSuspenseConfig';
 import type {SuspenseState} from './ReactFiberSuspenseComponent.new';
 import type {Effect as HookEffect} from './ReactFiberHooks.new';
@@ -47,9 +47,9 @@ import {
 } from './SchedulerWithReactIntegration.new';
 
 // The scheduler is imported here *only* to detect whether it's been mocked
-import * as Scheduler from 'scheduler';
+import * as Scheduler from '../../scheduler';
 
-import {__interactionsRef, __subscriberRef} from 'scheduler/tracing';
+import {__interactionsRef, __subscriberRef} from '../../scheduler/tracing';
 
 import {
   prepareForCommit,

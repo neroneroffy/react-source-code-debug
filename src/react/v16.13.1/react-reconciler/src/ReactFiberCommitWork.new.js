@@ -25,7 +25,7 @@ import type {Wakeable} from 'shared/ReactTypes';
 import type {ReactPriorityLevel} from './ReactInternalTypes';
 import type {OffscreenState} from './ReactFiberOffscreenComponent';
 
-import {unstable_wrap as Schedule_tracing_wrap} from 'scheduler/tracing';
+import {unstable_wrap as Schedule_tracing_wrap} from '../../scheduler/tracing';
 import {
   enableSchedulerTracing,
   enableProfilerTimer,

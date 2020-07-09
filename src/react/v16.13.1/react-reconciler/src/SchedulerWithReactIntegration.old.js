@@ -11,8 +11,8 @@ import type {ReactPriorityLevel} from './ReactInternalTypes';
 
 // Intentionally not named imports because Rollup would use dynamic dispatch for
 // CommonJS interop named imports.
-import * as Scheduler from 'scheduler';
-import {__interactionsRef} from 'scheduler/tracing';
+import * as Scheduler from '../../scheduler';
+import {__interactionsRef} from '../../scheduler/tracing';
 import {enableSchedulerTracing} from 'shared/ReactFeatureFlags';
 import invariant from 'shared/invariant';
 

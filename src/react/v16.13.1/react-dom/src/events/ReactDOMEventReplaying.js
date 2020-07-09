@@ -23,7 +23,7 @@ import {
   unstable_scheduleCallback as scheduleCallback,
   unstable_NormalPriority as NormalPriority,
   unstable_getCurrentPriorityLevel as getCurrentPriorityLevel,
-} from 'scheduler';
+} from '../../../scheduler';
 import {
   getNearestMountedFiber,
   getContainerFromFiber,

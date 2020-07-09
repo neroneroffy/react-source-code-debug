@@ -13,7 +13,7 @@ import {unstable_batchedUpdates as batchedUpdates} from 'react-dom';
 import {
   unstable_trace as trace,
   unstable_wrap as wrap,
-} from 'scheduler/tracing';
+} from '../../../../scheduler/tracing';
 
 export default function InteractionTracing() {
   const [count, setCount] = useState(0);

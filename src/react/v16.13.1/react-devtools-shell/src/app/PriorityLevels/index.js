@@ -13,7 +13,7 @@ import {
   unstable_IdlePriority as IdlePriority,
   unstable_LowPriority as LowPriority,
   unstable_runWithPriority as runWithPriority,
-} from 'scheduler';
+} from '../../../../scheduler';
 
 export default function PriorityLevels() {
   const [defaultPriority, setDefaultPriority] = useState<boolean>(false);

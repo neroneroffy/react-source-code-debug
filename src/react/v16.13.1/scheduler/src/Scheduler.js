@@ -344,7 +344,6 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     }
   } else {
     newTask.sortIndex = expirationTime;
-    console.log(newTask);
     push(taskQueue, newTask);
     if (enableProfiling) {
       markTaskStart(newTask, currentTime);

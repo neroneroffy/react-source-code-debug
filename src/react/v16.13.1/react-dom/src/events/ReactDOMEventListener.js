@@ -15,7 +15,7 @@ import type {DOMTopLevelEventType} from '../events/TopLevelEventTypes';
 
 // Intentionally not named imports because Rollup would use dynamic dispatch for
 // CommonJS interop named imports.
-import * as Scheduler from 'scheduler';
+import * as Scheduler from '../../../scheduler';
 
 import {DEPRECATED_dispatchEventForResponderEventSystem} from './DeprecatedDOMEventResponderSystem';
 import {
