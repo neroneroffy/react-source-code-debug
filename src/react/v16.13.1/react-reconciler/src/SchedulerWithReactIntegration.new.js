@@ -11,7 +11,7 @@ import type {ReactPriorityLevel} from './ReactInternalTypes';
 
 // Intentionally not named imports because Rollup would use dynamic dispatch for
 // CommonJS interop named imports.
-import * as Scheduler from 'scheduler';
+import * as Scheduler from '../../scheduler';
 import {__interactionsRef} from 'scheduler/tracing';
 import {enableSchedulerTracing} from 'shared/ReactFeatureFlags';
 import invariant from 'shared/invariant';
@@ -100,17 +100,25 @@ export function getCurrentPriorityLevel(): ReactPriorityLevel {
 }
 
 function reactPriorityToSchedulerPriority(reactPriorityLevel) {
+  /**
+  * NoPriority = 0
+    ImmediatePriority = 1
+    UserBlockingPriority = 2
+    NormalPriority = 3
+    LowPriority = 4
+    IdlePriority = 5
+   * */
   switch (reactPriorityLevel) {
     case ImmediatePriority:
-      return Scheduler_ImmediatePriority;
+      return Scheduler_ImmediatePriority;    // 1
     case UserBlockingPriority:
-      return Scheduler_UserBlockingPriority;
+      return Scheduler_UserBlockingPriority; // 2
     case NormalPriority:
-      return Scheduler_NormalPriority;
+      return Scheduler_NormalPriority;       // 3
     case LowPriority:
-      return Scheduler_LowPriority;
+      return Scheduler_LowPriority;          // 4
     case IdlePriority:
-      return Scheduler_IdlePriority;
+      return Scheduler_IdlePriority;         // 5
     default:
       invariant(false, 'Unknown priority level.');
   }
@@ -136,23 +144,37 @@ export function scheduleCallback(
 export function scheduleSyncCallback(callback: SchedulerCallback) {
   // Push this callback into an internal queue. We'll flush these either in
   // the next tick, or earlier if something calls `flushSyncCallbackQueue`.
-  //在下次调度或调用 刷新同步回调队列 的时候刷新callback队列
+  // 把回调放入内部队列，在下次调度或调用
+  // flushSyncCallbackQueue的时候刷新
+  // callback队列
+
+  /*
+  * 使用syncQueue，说明：
+  * 第一：同步的更新调度如果新产生了一个，就会被放入队列
+  * 第二：队列已有的调度会被统一处理（遍历队列依次执行调度）
+  * */
 
   //如果同步队列为空的话，则初始化同步队列，
   //并在下次调度的一开始就刷新队列
   if (syncQueue === null) {
     syncQueue = [callback];
     // Flush the queue in the next tick, at the earliest.
+    // 最快在下一次执行的时候刷新队列
+    // 当前生成的调度任务
     immediateQueueCallbackNode = Scheduler_scheduleCallback(
-      //赋予调度立即执行的高权限
+      // 因为是同步调度，所以赋予立即
+      // 执行的高优先级
       Scheduler_ImmediatePriority,
       flushSyncCallbackQueueImpl,
     );
-    //如果同步队列不为空的话，则将callback入队
   } else {
+    // 如果同步队列不为空的话 ，则将callback入队
     // Push onto existing queue. Don't need to schedule a callback because
     // we already scheduled one when we created the queue.
-    // 在入队的时候，不必去调度callback，因为在创建队列的时候就已经调度了
+    // 在入队的时候，不必去调度callback，因为在创
+    // 建队列的时候就已经开始调度了，并且调度是依次
+    // 执行的，所以最终会执行到当前的这个callback
+
     syncQueue.push(callback);
   }
   return fakeCallbackNode;
@@ -166,14 +188,18 @@ export function cancelCallback(callbackNode: mixed) {
 
 export function flushSyncCallbackQueue() {
   if (immediateQueueCallbackNode !== null) {
+    // 将上一个任务（可理解成为最后一个任务）取消掉
     const node = immediateQueueCallbackNode;
     immediateQueueCallbackNode = null;
     Scheduler_cancelCallback(node);
   }
+  // 重新开始执行
   flushSyncCallbackQueueImpl();
 }
 
 function flushSyncCallbackQueueImpl() {
+  // 此函数用于执行同步更新队列（syncQueue）
+  // 中的任务执行函数
   if (!isFlushingSyncQueue && syncQueue !== null) {
     // Prevent re-entrancy.
     isFlushingSyncQueue = true;
@@ -183,6 +209,8 @@ function flushSyncCallbackQueueImpl() {
       const queue = syncQueue;
       runWithPriority(ImmediatePriority, () => {
         for (; i < queue.length; i++) {
+          // 这里的callback。就是 performSyncWorkOnRoot。
+          // 在root上执行同步任务
           let callback = queue[i];
           do {
             callback = callback(isSync);
@@ -192,10 +220,12 @@ function flushSyncCallbackQueueImpl() {
       syncQueue = null;
     } catch (error) {
       // If something throws, leave the remaining callbacks on the queue.
+      // 如果抛出了错误，将其余的更新任务保留在队列中
       if (syncQueue !== null) {
         syncQueue = syncQueue.slice(i + 1);
       }
       // Resume flushing in the next tick
+      // 用新的syncQueue继续更新
       Scheduler_scheduleCallback(
         Scheduler_ImmediatePriority,
         flushSyncCallbackQueue,

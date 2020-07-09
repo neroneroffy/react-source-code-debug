@@ -718,7 +718,7 @@ export function markRootUpdated(root: FiberRoot, updateLane: Lane) {
   // 高优先级更新。当考虑跨不同优先级级别的更新时，这种方法很合适，但对于相同优先级的更新来说，这是不够的，
   // 因为我们希望对这些update并行处理。
   // Unsuspend any update at equal or lower priority.
-  //取消同等或较低优先级的更新。
+  // 取消同等或较低优先级的更新。
 
   const higherPriorityLanes = updateLane - 1; // Turns 0b1000 into 0b0111
   //        0b1000

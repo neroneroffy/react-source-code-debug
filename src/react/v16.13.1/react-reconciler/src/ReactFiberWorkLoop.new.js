@@ -482,15 +482,21 @@ export function scheduleUpdateOnFiber(
       (executionContext & (RenderContext | CommitContext)) === NoContext
     ) {
       // Register pending interactions on the root to avoid losing traced interaction data.
-      // 没处在渲染过程中，没有进行批量更新，在root上注册那些待处理的交互，来避免丢失已跟踪的交互数据
+      // 没处在渲染过程中，没有进行批量更新，在root
+      // 上注册那些待处理的交互，来避免丢失已跟踪的
+      // 交互数据
       schedulePendingInteractions(root, lane);
       // This is a legacy edge case. The initial mount of a ReactDOM.render-ed
       // root inside of batchedUpdates should be synchronous, but layout updates
       // should be deferred until the end of the batch.
-      // 初始挂载，ReactDOM渲染的root节点的批量更新应该是同步的，但布局更新应该延迟到批处理结束。
+      // 初始挂载，ReactDOM渲染的root节点的批量更新
+      // 应该是同步的，但布局更新应该延迟到批处理结束。
       performSyncWorkOnRoot(root);
     } else {
-      // 更新组件时，会走此流程
+      // 更新组件时，需要确保root组件已经被调度。
+      // 如被已经被调度了，则检查它的优先级有没有变化
+      // 有变化，就取消上一个调度，重新安排一个调度任务
+      // 没变化则直接退出
       ensureRootIsScheduled(root, eventTime);
       schedulePendingInteractions(root, lane);
       if (executionContext === NoContext) {
@@ -638,17 +644,20 @@ function markUpdateLaneFromFiberToRoot(
 // the next level that the root has work on. This function is called on every
 // update, and right before exiting a task.
 /**
- * 使用此函数为root节点调度任务。每个root节点只有一个任务;如果任务已经被调度，
- * 我们将检查以确保现有任务的到期时间与root节点工作的下一个级别的到期时间相同。
- * 在每次更新时以及退出任务之前都会调用此函数。
-*
+ * 使用此函数为root节点调度任务。每个root节点
+ * 只有一个任务；如果任务已经被调度，将进行校验
+ * 以确保现有任务的过时间与root节点所处理的下
+ * 一个级别的过期时间相同。在每次更新时以及退出
+ * 任务之前都会调用此函数。
 * */
 function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // 先取到上一次调度的callbackNode
   const existingCallbackNode = root.callbackNode;
   // Check if any lanes are being starved by other work. If so, mark them as
   // expired so we know to work on those next.
-  // 检查是否有lanes被其他任务被占用，如果有的话，把它们标记为过期，这样，我们就知道接下来要做什么了
+  // 检查是否有lanes被其他任务被占用，如果有的话，
+  // 把它们标记为过期，这样，我们就知道接下来要做
+  // 什么了
   markStarvedLanesAsExpired(root, currentTime);
 
   // Determine the next lanes to work on, and their priority.
@@ -671,7 +680,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
       root.callbackId = NoLanes;
     }
     return;
-}
+  }
 
   // Check if there's an existing task. We may be able to reuse it.
   // 检查是否存在现有任务，没准可以直接复用它们
@@ -688,7 +697,8 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
       }
       // The task ID is the same but the priority changed. Cancel the existing
       // callback. We'll schedule a new one below.
-      // 任务ID相同，但是优先级变化了，取消掉之前的调度，然后在下边重新调度一个任务
+      // 任务ID相同，但是优先级变化了，取消掉
+      // 之前的调度，然后在下边重新调度一个任务
     }
     cancelCallback(existingCallbackNode);
   }

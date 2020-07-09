@@ -131,7 +131,6 @@ function flushWork(hasTimeRemaining, initialTime) {
     isHostTimeoutScheduled = false;
     cancelHostTimeout();
   }
-
   isPerformingWork = true;
   const previousPriorityLevel = currentPriorityLevel;
   try {
@@ -294,7 +293,7 @@ function timeoutForPriorityLevel(priorityLevel) {
 
 function unstable_scheduleCallback(priorityLevel, callback, options) {
   var currentTime = getCurrentTime();
-
+  // 确定当前时间 startTime 和延迟更新时间 timeout
   var startTime;
   var timeout;
   if (typeof options === 'object' && options !== null) {
@@ -326,7 +325,8 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
   if (enableProfiling) {
     newTask.isQueued = false;
   }
-
+  // 如果是延迟任务则将 newTask 放入延迟调度队列并执行 requestHostTimeout
+  // 如果是正常任务则将 newTask 放入正常调度队列并执行 requestHostCallback
   if (startTime > currentTime) {
     // This is a delayed task.
     newTask.sortIndex = startTime;
@@ -344,6 +344,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     }
   } else {
     newTask.sortIndex = expirationTime;
+    console.log(newTask);
     push(taskQueue, newTask);
     if (enableProfiling) {
       markTaskStart(newTask, currentTime);
