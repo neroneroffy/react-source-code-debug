@@ -1192,6 +1192,13 @@ export function discreteUpdates<A, B, C, D, R>(
   c: C,
   d: D,
 ): R {
+  /*
+  * fn: dispatchEvent
+  * a: 'click'
+  * b: 1
+  * c: App组件的原生DOM节点
+  * d: 事件对象
+  * */
   const prevExecutionContext = executionContext;
   executionContext |= DiscreteEventContext;
   try {

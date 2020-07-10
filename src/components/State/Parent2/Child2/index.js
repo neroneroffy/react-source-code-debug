@@ -30,24 +30,7 @@ class Child2 extends Component {
     // })
   }
   render() {
-    return <div className={'p2-child'}>
-      Child2 ClassComponent
-      <p>
-        <button onClick={this.add}>+</button>
-        {this.state.count}
-      </p>
-      <div className={'sub-child-wrapper'}>
-        <SubChild1/>
-        <SubChild2/>
-      </div>
-      {
-        this.state.domList.map(item => {
-          return <div key={item}>
-            item
-          </div>
-        })
-      }
-    </div>
+    return <h1 onClick={this.add}>{this.state.count}</h1>
   }
 }
 
