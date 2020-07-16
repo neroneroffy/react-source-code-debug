@@ -127,21 +127,25 @@ let return_highestLanePriority: LanePriority = DefaultLanePriority;
 let return_updateRangeEnd: number = -1;
 
 function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
-  // lanes中是否有同步优先级的任务
+  // 相关commit https://github.com/facebook/react/pull/19302
   if ((SyncLane & lanes) !== NoLanes) {
+    // 如果lanes中有同步优先级的任务
     return_highestLanePriority = SyncLanePriority;
     return_updateRangeEnd = SyncUpdateRangeEnd;
     return SyncLane;
   }
-  // lanes中是否有批量同步的优先级
   if ((SyncBatchedLane & lanes) !== NoLanes) {
+    // 如果lanes中有批量同步的优先级
     return_highestLanePriority = SyncBatchedLanePriority;
     return_updateRangeEnd = SyncBatchedUpdateRangeEnd;
     return SyncBatchedLane;
   }
+  // 选出lanes中与InputDiscreteLanes重合的非0位
   const inputDiscreteLanes = InputDiscreteLanes & lanes;
   if (inputDiscreteLanes !== NoLanes) {
+    // 判断条件的含义是如果InputDiscreteLanes中含有lanes
     if (inputDiscreteLanes & InputDiscreteHydrationLane) {
+      // 如果InputDiscreteLanes 中包含 InputDiscreteHydrationLane
       return_highestLanePriority = InputDiscreteHydrationLanePriority;
       return_updateRangeEnd = InputDiscreteUpdateRangeStart;
       return InputDiscreteHydrationLane;
@@ -416,11 +420,13 @@ function computeExpirationTime(lane: Lane, currentTime: number) {
   const priority = return_highestLanePriority;
   if (priority >= InputContinuousLanePriority) {
     // User interactions should expire slightly more quickly.
+    // 用户交互的过期时间应该更快
     return currentTime + 1000;
   } else if (priority >= TransitionLongLanePriority) {
     return currentTime + 5000;
   } else {
     // Anything idle priority or lower should never expire.
+    // 任何空闲或更低的优先级都不应该过期。
     return NoTimestamp;
   }
 }
@@ -430,9 +436,8 @@ export function markStarvedLanesAsExpired(
   currentTime: number,
 ): void {
   // TODO: This gets called every time we yield. We can optimize by storing
-  // the earliest expiration time on the root. Then use that to quickly bail out
-  // of this function.
-  // root节点上最早的过期时间，然后****
+  // the earliest expiration time on the root. Then use that to quickly bail out of this function.
+  // root节点上最早的过期时间，然后用它来快速跳出该函数
   const pendingLanes = root.pendingLanes;
   const suspendedLanes = root.suspendedLanes;
   const pingedLanes = root.pingedLanes;
@@ -442,30 +447,38 @@ export function markStarvedLanesAsExpired(
   // expiration time. If so, we'll assume the update is being starved and mark
   // it as expired to force it to finish.
 
-  // 遍历待处理的lanes，检查是否到了它们的过期时间，如果这样的话，
-  // 我们假设更新即将到期，然后把它们标记未过期来强制结束
+  // 遍历待处理的lanes，检查是否到了过期时间，如果过期，
+  // 将这个更新视为被占用并把它们标记成过期，强制更新
   let lanes = pendingLanes;
   while (lanes > 0) {
     const index = pickArbitraryLaneIndex(lanes);
+    //     1   = 0b0000000000000000000000000000001
+    // lanes   = 0b0000000000000000000000000011100
+    // index   = 4
+    //  1 << 4 = 0b0000000000000000000000000001000
     const lane = 1 << index;
-
+    //    lane = 0b0000000000000000000000000001000
     const expirationTime = expirationTimes[index];
     if (expirationTime === NoTimestamp) {
       // Found a pending lane with no expiration time. If it's not suspended, or
       // if it's pinged, assume it's CPU-bound. Compute a new expiration time
       // using the current time.
+      // 发现一个没有过期时间并且待处理的lane，如果它没被挂起，或者它被触发
       if (
         (lane & suspendedLanes) === NoLanes ||
         (lane & pingedLanes) !== NoLanes
       ) {
         // Assumes timestamps are monotonically increasing.
+        // 假设时间戳是单调递增的
         expirationTimes[index] = computeExpirationTime(lane, currentTime);
       }
     } else if (expirationTime <= currentTime) {
       // This lane expired
+      // 已经过期，将lane并入到expiredLanes中，而lane是等于传入的lanes的，所以实现了将lanes标记为过期
       root.expiredLanes |= lane;
     }
-
+    // 将lane从lanes中删除，每循环一次删除一个，直到lanes清空成0
+    // lanes = 0b0000000000000000000000000010100
     lanes &= ~lane;
   }
 }
