@@ -332,7 +332,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
       中的1的位置，例如：
       nextLanes为------- 0b001100
       计算结果 ---------- 0b001111
-      证明了equalOrHigherPriorityLanes中的优先级相对于nextLanes的优先级相等或较高
+      证明了equalOrHigherPriorityLanes中的优先级相对于nextLanes的相等或较高
     * */
   } else {
     // Do not work on any idle work until all the non-idle work has finished,
