@@ -290,6 +290,7 @@ export function lanePriorityToSchedulerPriority(
 
 export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   // Early bailout if there's no pending work left.
+  // 在没有剩余任务的时候，跳出更新
   const pendingLanes = root.pendingLanes;
   if (pendingLanes === NoLanes) {
     return_highestLanePriority = NoLanePriority;
@@ -305,11 +306,34 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   const pingedLanes = root.pingedLanes;
 
   // Check if any work has expired.
-  // 检查是否有任务过期
+  // 检查是否有过期的任务
   if (expiredLanes !== NoLanes) {
     nextLanes = expiredLanes;
+    // 已经过期了，就需要把优先级设置为同步，来让更新立即执行
     nextLanePriority = return_highestLanePriority = SyncLanePriority;
     equalOrHigherPriorityLanes = (getLowestPriorityLane(nextLanes) << 1) - 1;
+    /*
+    * 位运算中，减1，将非0位的右侧都变为1
+      0b001000 - 1 = 0b000111
+      equalOrHigherPriorityLanes 意为相对于nextLanes优先级较高或相等的位，
+      具体的意思解释如下：
+      以同步优先级           SyncLane = 0b0000000000000000000000000000001
+      和屏幕隐藏的优先级 OffscreenLane = 0b1000000000000000000000000000000
+      为例，SyncLane肯定高于OffscreenLane，可见1越靠左，优先级越低。
+
+      回到代码中，getLowestPriorityLane(nextLanes)做的事情就是找到nextLanes中
+      最低优先级的位置。getLowestPriorityLane(nextLanes) << 1 又将这个位置向左
+      挪了一位，这样当前这个位置（假设为P）的右边如果有位置是1就表示比nextLanes的最低
+      优先级要高。
+
+      接下来的 - 1操作将位置P的右侧全部都置为1，举例如下：
+      0b001000 - 1 = 0b000111
+      位置P在nextLanes最左侧的1（非0位）的左边一位，所以P右侧的那些1肯定包含nextLanes
+      中的1的位置，例如：
+      nextLanes为------- 0b001100
+      计算结果 ---------- 0b001111
+      证明了equalOrHigherPriorityLanes中的优先级相对于nextLanes的优先级相等或较高
+    * */
   } else {
     // Do not work on any idle work until all the non-idle work has finished,
     // even if the work is suspended.
@@ -452,9 +476,9 @@ export function markStarvedLanesAsExpired(
   let lanes = pendingLanes;
   while (lanes > 0) {
     const index = pickArbitraryLaneIndex(lanes);
-    //     1   = 0b0000000000000000000000000000001
-    // lanes   = 0b0000000000000000000000000011100
-    // index   = 4
+    //       1 = 0b0000000000000000000000000000001
+    //   lanes = 0b0000000000000000000000000011100
+    //   index = 4
     //  1 << 4 = 0b0000000000000000000000000001000
     const lane = 1 << index;
     //    lane = 0b0000000000000000000000000001000
@@ -463,7 +487,8 @@ export function markStarvedLanesAsExpired(
       // Found a pending lane with no expiration time. If it's not suspended, or
       // if it's pinged, assume it's CPU-bound. Compute a new expiration time
       // using the current time.
-      // 发现一个没有过期时间并且待处理的lane，如果它没被挂起，或者它被触发
+      // 发现一个没有过期时间并且待处理的lane，如果它没被挂起或者被触发，那么将它视为CPU相关的任务，
+      // 用当前时间计算一个新的过期时间
       if (
         (lane & suspendedLanes) === NoLanes ||
         (lane & pingedLanes) !== NoLanes
@@ -474,12 +499,12 @@ export function markStarvedLanesAsExpired(
       }
     } else if (expirationTime <= currentTime) {
       // This lane expired
-      // 已经过期，将lane并入到expiredLanes中，而lane是等于传入的lanes的，所以实现了将lanes标记为过期
+      // 已经过期，将lane并入到expiredLanes中，实现了将lanes标记为过期
       root.expiredLanes |= lane;
     }
     // 将lane从lanes中删除，每循环一次删除一个，直到lanes清空成0
-    // lanes = 0b0000000000000000000000000010100
     lanes &= ~lane;
+    // 此时 lanes = 0b0000000000000000000000000010100
   }
 }
 
@@ -641,15 +666,14 @@ function getLowestPriorityLane(lanes: Lanes): Lane {
   // This finds the most significant non-zero bit.
   // 找到最重要的非零位
   /**
-   * Math.clz32() 函数返回一个数字在转换成 32 无符号整形数字的二进制形式后,
-   * 开头的 0 的个数, 比如 1000000 转换成 32 位无符号整形数字的二进制形式后
-   * 是 00000000000011110100001001000000, 开头的 0 的个数是 12 个, 则
-   * Math.clz32(1000000) 返回 12.
-   *
    * @From MDN https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32
+   * Math.clz32() 函数返回一个数字在转换成 32 无符号整形数字的二进制形式后,
+   * 开头的 0 的个数, 比如 0b0000000000000000000000011100000, 开头的
+   * 0 的个数是 24 个, 则
+   * Math.clz32(0b0000000000000000000000011100000) 返回 24.
+   *        1 => 0b0000000000000000000000000000001
+   * 1 << 24  =  0b0000001000000000000000000000000
    *
-   * 1 << index 实际上是计算 2 的 index次方
-  *
   * */
   const index = 31 - clz32(lanes);
 
