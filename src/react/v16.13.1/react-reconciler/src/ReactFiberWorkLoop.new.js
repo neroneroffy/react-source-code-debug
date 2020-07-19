@@ -656,8 +656,8 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // Check if any lanes are being starved by other work. If so, mark them as
   // expired so we know to work on those next.
   // 检查是否有lanes被其他任务被占用，如果有的话，
-  // 把它们标记为过期，这样，我们就知道接下来要做
-  // 什么了
+  // 把它们标记为过期，这样就可以保证它们可以立刻
+  // 被更新
   markStarvedLanesAsExpired(root, currentTime);
 
   // Determine the next lanes to work on, and their priority.

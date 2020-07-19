@@ -313,39 +313,54 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
     nextLanePriority = return_highestLanePriority = SyncLanePriority;
     equalOrHigherPriorityLanes = (getLowestPriorityLane(nextLanes) << 1) - 1;
     /*
-    * 位运算中，减1，将非0位的右侧都变为1
-      0b001000 - 1 = 0b000111
+    * 位运算中，减1，可以将非0位的右侧都变为1
+      例如：0b001000 - 1 = 0b000111
       equalOrHigherPriorityLanes 意为相对于nextLanes优先级较高或相等的位，
       具体的意思解释如下：
-      以同步优先级           SyncLane = 0b0000000000000000000000000000001
+      以同步优先级            SyncLane = 0b0000000000000000000000000000001
+                                                                         ^
       和屏幕隐藏的优先级 OffscreenLane = 0b1000000000000000000000000000000
+                                           ^
       为例，SyncLane肯定高于OffscreenLane，可见1越靠左，优先级越低。
 
       回到代码中，getLowestPriorityLane(nextLanes)做的事情就是找到nextLanes中
       最低优先级的位置。getLowestPriorityLane(nextLanes) << 1 又将这个位置向左
-      挪了一位，这样当前这个位置（假设为P）的右边如果有位置是1就表示比nextLanes的最低
-      优先级要高。
+      挪了一位，这样当前这个位置（假设为P）的右边如果有位置是1就表示比nextLanes
+      的最低优先级要高。
 
-      接下来的 - 1操作将位置P的右侧全部都置为1，举例如下：
+      接下来的减1操作将位置P的右侧全部都置为1，举例如下：
       0b001000 - 1 = 0b000111
       位置P在nextLanes最左侧的1（非0位）的左边一位，所以P右侧的那些1肯定包含nextLanes
       中的1的位置，例如：
-      nextLanes为------- 0b001100
+      nextLanes为-------- 0b001100
       计算结果 ---------- 0b001111
       证明了equalOrHigherPriorityLanes中的优先级相对于nextLanes相等或较高
     * */
   } else {
+    // 如果没有过期的任务，就检查有没有被挂起的任务，如果有挂起的任务，
+    // nextLanes就被赋值成挂起的任务里优先级最高的。要是没有，
     // Do not work on any idle work until all the non-idle work has finished,
     // even if the work is suspended.
-    // 不要在任何空闲任务上工作，直到所有非空闲任务完成
+    // 不要在任何空闲任务上工作，直到所有非空闲任务完成，即使任务被挂起
+
     const nonIdlePendingLanes = pendingLanes & NonIdleLanes;
     if (nonIdlePendingLanes !== NoLanes) {
+      // 未被阻塞的lanes，它等于有优先级的lanes中除去被挂起的lanes
+      // & ~ 相当于删除
       const nonIdleUnblockedLanes = nonIdlePendingLanes & ~suspendedLanes;
+
+      // 如果有任务被阻塞了
       if (nonIdleUnblockedLanes !== NoLanes) {
+        // 那么从这些被阻塞的任务中挑出最重要的
         nextLanes = getHighestPriorityLanes(nonIdleUnblockedLanes);
         nextLanePriority = return_highestLanePriority;
+        // return_updateRangeEnd 在上边调用getHighestPriorityLanes时候已经被赋值成了
+        // 最高优先级（如“0b0000000000000000000000000011100”）从右数到最左侧的非零
+        // 位的位置（如上边的优先级，return_updateRangeEnd就是5）
+        // equalOrHigherPriorityLanes依然计算的是相对于nextLanes相等或较高的优先级
         equalOrHigherPriorityLanes = (1 << return_updateRangeEnd) - 1;
       } else {
+        // 如果没有任务被阻塞，从正在处理的lanes中找到优先级最高的
         const nonIdlePingedLanes = nonIdlePendingLanes & pingedLanes;
         if (nonIdlePingedLanes !== NoLanes) {
           nextLanes = getHighestPriorityLanes(nonIdlePingedLanes);
@@ -355,13 +370,15 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
       }
     } else {
       // The only remaining work is Idle.
-      // 唯一剩下的任务是空闲的。
+      // 剩下的任务是闲置的优先级不高的任务。unblockedLanes是未被阻塞的闲置任务
       const unblockedLanes = pendingLanes & ~suspendedLanes;
       if (unblockedLanes !== NoLanes) {
+        // 从这些未被阻塞的闲置任务中挑出最重要的
         nextLanes = getHighestPriorityLanes(unblockedLanes);
         nextLanePriority = return_highestLanePriority;
         equalOrHigherPriorityLanes = (1 << return_updateRangeEnd) - 1;
       } else {
+        // pingedLanes中已经都是那些闲置的，优先级不高的任务了
         if (pingedLanes !== NoLanes) {
           nextLanes = getHighestPriorityLanes(pingedLanes);
           nextLanePriority = return_highestLanePriority;
@@ -380,6 +397,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   // If there are higher priority lanes, we'll include them even if they are suspended.
   // 如果有更高优先级的lanes，即使它们被暂停，也会被包含在内。
   nextLanes = pendingLanes & equalOrHigherPriorityLanes;
+  // nextLanes 实际上是待处理的lanes中优先级较高的那些lanes
 
   // If we're already in the middle of a render, switching lanes will interrupt
   // it and we'll lose our progress. We should only do this if the new lanes are
