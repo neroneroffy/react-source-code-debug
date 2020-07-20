@@ -318,9 +318,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
       equalOrHigherPriorityLanes 意为相对于nextLanes优先级较高或相等的位，
       具体的意思解释如下：
       以同步优先级            SyncLane = 0b0000000000000000000000000000001
-                                                                         ^
       和屏幕隐藏的优先级 OffscreenLane = 0b1000000000000000000000000000000
-                                           ^
       为例，SyncLane肯定高于OffscreenLane，可见1越靠左，优先级越低。
 
       回到代码中，getLowestPriorityLane(nextLanes)做的事情就是找到nextLanes中
@@ -428,6 +426,10 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   // in a batch that does not also include the other lane. Typically we do this
   // when multiple updates have the same source, and we only want to respond to
   // the most recent event from that source.
+  /*
+  * 当不允许在不包括其他通道的批处理中渲染时，一个通道被称为与另一个通道纠缠在一起。通常，当多个更
+  * 新具有相同的源时，我们会这样做，并且我们只想响应来自该源的最新事件。
+  * */
   //
   // Note that we apply entanglements *after* checking for partial work above.
   // This means that if a lane is entangled during an interleaved event while
@@ -435,10 +437,18 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   // entanglement is usually "best effort": we'll try our best to render the
   // lanes in the same batch, but it's not worth throwing out partially
   // completed work in order to do it.
+  /*
+  * 注意，我们在检查了上面的部分工作之后应用了纠缠。
+    这意味着如果一个lane在交替事件中被纠缠，而它已经被渲染，我们不会中断它。这是有意为之，因为纠缠通常
+    是“最好的努力”:我们将尽最大努力在同一批中渲染lanes，但不值得为了这样做而放弃部分完成的工作。
+  * */
   //
   // For those exceptions where entanglement is semantically important, like
   // useMutableSource, we should ensure that there is no partial work at the
   // time we apply the entanglement.
+  /*
+  * 对于那些纠缠在语义上很重要的例外，比如useMutableSource，我们应该确保在应用纠缠时没有部分工作。
+  * */
   const entangledLanes = root.entangledLanes;
   if (entangledLanes !== NoLanes) {
     const entanglements = root.entanglements;
@@ -484,7 +494,6 @@ export function markStarvedLanesAsExpired(
   const suspendedLanes = root.suspendedLanes;
   const pingedLanes = root.pingedLanes;
   const expirationTimes = root.expirationTimes;
-
   // Iterate through the pending lanes and check if we've reached their
   // expiration time. If so, we'll assume the update is being starved and mark
   // it as expired to force it to finish.

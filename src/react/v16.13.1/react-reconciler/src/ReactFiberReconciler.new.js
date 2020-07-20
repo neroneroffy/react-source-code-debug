@@ -264,7 +264,6 @@ export function updateContainer(
   }
   const suspenseConfig = requestCurrentSuspenseConfig();
   const lane = requestUpdateLane(current, suspenseConfig);
-
   const context = getContextForSubtree(parentComponent);
   if (container.context === null) {
     container.context = context;
@@ -294,7 +293,6 @@ export function updateContainer(
   // being called "element".
   // 第一次渲染时，element作为update的payload
   update.payload = {element};
-
   callback = callback === undefined ? null : callback;
   if (callback !== null) {
     if (__DEV__) {

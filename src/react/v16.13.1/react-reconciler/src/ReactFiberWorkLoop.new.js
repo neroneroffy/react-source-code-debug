@@ -667,9 +667,9 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
     root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
   );
   // This returns the priority level computed during the `getNextLanes` call.
-  //
+  // returnNextLanesPriority的返回值在上边调用getNextLanes的时候会被计算出来
   const newCallbackPriority = returnNextLanesPriority();
-
+  // 没有新任务，退出调度
   if (newCallbackId === NoLanes) {
     // Special case: There's nothing to work on.
     // 不需要有所更新的话，取消掉之前的任务。
@@ -690,6 +690,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
     if (newCallbackId === existingCallbackId) {
       // This task is already scheduled. Let's check its priority.
       // 任务已经被调度，检查它的优先级
+      // 新旧任务的优先级相等，且旧任务的优先级等于新任务的优先级，退出调度
       if (existingCallbackPriority === newCallbackPriority) {
         // The priority hasn't changed. Exit.
         // 前后优先级一样，未发生变化，退出
@@ -697,12 +698,11 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
       }
       // The task ID is the same but the priority changed. Cancel the existing
       // callback. We'll schedule a new one below.
-      // 任务ID相同，但是优先级变化了，取消掉
+      // 任务相同，但是优先级变化了，取消掉
       // 之前的调度，然后在下边重新调度一个任务
     }
     cancelCallback(existingCallbackNode);
   }
-
   // Schedule a new callback.
   let newCallbackNode;
   if (newCallbackPriority === SyncLanePriority) {
@@ -3274,7 +3274,6 @@ function scheduleInteractions(
   if (!enableSchedulerTracing) {
     return;
   }
-
   if (interactions.size > 0) {
     const pendingInteractionMap = root.pendingInteractionMap;
     const pendingInteractions = pendingInteractionMap.get(lane);
