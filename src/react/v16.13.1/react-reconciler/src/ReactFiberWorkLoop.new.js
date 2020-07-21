@@ -505,11 +505,10 @@ export function scheduleUpdateOnFiber(
         // scheduleCallbackForFiber to preserve the ability to schedule a callback
         // without immediately flushing it. We only do this for user-initiated
         // updates, to preserve historical behavior of legacy mode.
-        /** 机翻待整理
-         * 现在刷新同步工作，除非我们已经在工作或在批处理内部。这是有意在scheduleUpdateOnFiber
-         * 而不是scheduleCallbackForFiber中进行的，以保持调度回调而不立即刷新它的能力。我们只
-         * 对用户发起的更新这样做，以保留遗留模式的历史行为。
+        /**
+         * 只有在执行上下文为空的时候，才去刷新同步回调队列，这样可以保证刚才调度的回调不会立即执行
          * */
+        // 刷新同步回调队列
         flushSyncCallbackQueue();
       }
     }
@@ -1092,7 +1091,7 @@ function performSyncWorkOnRoot(root) {
 
   // Before exiting, make sure there's a callback scheduled for the next
   // pending level.
-  // 退出之前，确保为下一个pending级别安排了一个回调
+  // 再次对fiberRoot进行调度(退出之前保证fiberRoot没有需要调度的任务)
   ensureRootIsScheduled(root, now());
   return null;
 }

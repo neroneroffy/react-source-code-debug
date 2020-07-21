@@ -324,7 +324,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
       回到代码中，getLowestPriorityLane(nextLanes)做的事情就是找到nextLanes中
       最低优先级的位置。getLowestPriorityLane(nextLanes) << 1 又将这个位置向左
       挪了一位，这样当前这个位置（假设为P）的右边如果有位置是1就表示比nextLanes
-      的最低优先级要高。
+      的最低优先级相等或者高。
 
       接下来的减1操作将位置P的右侧全部都置为1，举例如下：
       0b001000 - 1 = 0b000111
@@ -336,7 +336,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
     * */
   } else {
     // 如果没有过期的任务，就检查有没有被挂起的任务，如果有挂起的任务，
-    // nextLanes就被赋值成挂起的任务里优先级最高的。要是没有，
+    // nextLanes就被赋值成挂起的任务里优先级最高的。
     // Do not work on any idle work until all the non-idle work has finished,
     // even if the work is suspended.
     // 不要在任何空闲任务上工作，直到所有非空闲任务完成，即使任务被挂起
