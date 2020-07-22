@@ -475,7 +475,6 @@ export function scheduleUpdateOnFiber(
   // priority as an argument to that function and this one.
   const priorityLevel = getCurrentPriorityLevel();
   // 获取到当前的优先级
-  console.log(lane);
   if (lane === SyncLane) {
     if (
       // Check if we're inside unbatchedUpdates

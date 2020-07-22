@@ -19,6 +19,7 @@ export let forceFrameRate;
 if (
   // If Scheduler runs in a non-DOM environment, it falls back to a naive
   // implementation using setTimeout.
+  // 如果在非DOM环境运行，使用setTimeout来实现
   typeof window === 'undefined' ||
   // Check if MessageChannel is supported, too.
   typeof MessageChannel !== 'function'
@@ -116,6 +117,8 @@ if (
   // thread, like user events. By default, it yields multiple times per frame.
   // It does not attempt to align with frame boundaries, since most tasks don't
   // need to be frame aligned; for those that do, use requestAnimationFrame.
+  // 如果主线程上有其他工作(如用户事件)，调度器会周期性地产生结果。默认情况下，每帧生成多次。它不尝
+  // 试对齐帧的边界，因为大多数任务不需要对齐帧;如果需要，请使用requestAnimationFrame。
   let yieldInterval = 5;
   let deadline = 0;
 

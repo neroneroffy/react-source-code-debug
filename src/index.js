@@ -6,9 +6,9 @@ import App from './App';
 const root = document.getElementById('root')
 
 // Concurrent mode
-ReactDOM.createRoot(root).render(<App />);
+// ReactDOM.createRoot(root).render(<App />);
 
 // Sync mode
-// ReactDOM.render(<App />, root);
+ReactDOM.render(<App />, root);
 
 console.log('React 源码调试，当前版本：' + React.version);
