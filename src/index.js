@@ -3,14 +3,12 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 
-/*ReactDOM.createRoot(
-  document.getElementById('root')
-).render(<App />);*/
+const root = document.getElementById('root')
 
-ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-  document.getElementById('root')
-);
+// Concurrent mode
+ReactDOM.createRoot(root).render(<App />);
+
+// Sync mode
+// ReactDOM.render(<App />, root);
+
 console.log('React 源码调试，当前版本：' + React.version);

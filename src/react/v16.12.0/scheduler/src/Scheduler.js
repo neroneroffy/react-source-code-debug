@@ -440,4 +440,25 @@ export const unstable_Profiling = enableProfiling
       sharedProfilingBuffer,
     }
   : null;
-export * from './forks/SchedulerHostConfig.mock';
+
+export {
+  unstable_flushAllWithoutAsserting,
+  unstable_flushNumberOfYields,
+  unstable_flushExpired,
+  unstable_clearYields,
+  unstable_flushUntilNextPaint,
+  unstable_flushAll,
+  unstable_yieldValue,
+  unstable_advanceTime
+} from "./forks/SchedulerHostConfig.mock.js";
+
+export {
+  requestHostCallback,
+  requestHostTimeout,
+  cancelHostTimeout,
+  shouldYieldToHost,
+  getCurrentTime,
+  forceFrameRate,
+  requestPaint
+} from "./forks/SchedulerHostConfig.default.js";
+

@@ -475,6 +475,7 @@ export function scheduleUpdateOnFiber(
   // priority as an argument to that function and this one.
   const priorityLevel = getCurrentPriorityLevel();
   // 获取到当前的优先级
+  console.log(lane);
   if (lane === SyncLane) {
     if (
       // Check if we're inside unbatchedUpdates
@@ -1009,14 +1010,15 @@ function markRootSuspended(root, suspendedLanes) {
 
 // This is the entry point for synchronous tasks that don't go through Scheduler
 // 这是不经过Scheduler的同步任务的入口点
+
 function performSyncWorkOnRoot(root) {
   invariant(
     (executionContext & (RenderContext | CommitContext)) === NoContext,
     'Should not already be working.',
   );
-
+  // 刷新被动的副作用
   flushPassiveEffects();
-
+  console.log('root', root);
   let lanes;
   let exitStatus; // 声明一个状态，来保存render阶段完成时的状态，对某些错误做特定处理
   if (
@@ -1563,6 +1565,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 /** @noinline */
 function workLoopSync() {
   // Already timed out, so perform work without checking if we need to yield.
+  // 已经超时了，所以不用检查是否需要让出执行权
   while (workInProgress !== null) {
     performUnitOfWork(workInProgress);
   }
@@ -1599,16 +1602,20 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
   executionContext = prevExecutionContext;
 
   // Check if the tree has completed.
+  // 判断渲染是否结束
   if (workInProgress !== null) {
     // Still work remaining.
     return RootIncomplete;
   } else {
     // Completed the tree.
     // Set this to null to indicate there's no in-progress render.
+    // 完成渲染之后，将workInProgressRoot 和 workInProgressRoot上正在渲染的lanes置为空，
+    // 表示渲染已经结束
     workInProgressRoot = null;
     workInProgressRootRenderLanes = NoLanes;
 
     // Return the final exit status.
+    // 返回最终的结束状态
     return workInProgressRootExitStatus;
   }
 }

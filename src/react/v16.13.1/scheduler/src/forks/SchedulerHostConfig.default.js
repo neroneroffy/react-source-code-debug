@@ -45,7 +45,6 @@ if (
     return Date.now() - initialTime;
   };
   requestHostCallback = function(cb) {
-    console.log(123);
     if (_callback !== null) {
       // Protect against re-entrancy.
       setTimeout(requestHostCallback, 0, cb);
