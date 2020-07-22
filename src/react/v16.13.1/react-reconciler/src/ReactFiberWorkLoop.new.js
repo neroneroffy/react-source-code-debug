@@ -270,6 +270,7 @@ let workInProgressRootIncludedLanes: Lanes = NoLanes;
 // includes unprocessed updates, not work in bailed out children.
 let workInProgressRootSkippedLanes: Lanes = NoLanes;
 // Lanes that were updated (in an interleaved event) during this render.
+// 在交替事件中更新的lanes
 let workInProgressRootUpdatedLanes: Lanes = NoLanes;
 // Lanes that were pinged (in an interleaved event) during this render.
 let workInProgressRootPingedLanes: Lanes = NoLanes;
@@ -1024,7 +1025,7 @@ function performSyncWorkOnRoot(root) {
   ) {
     // There's a partial tree, and at least one of its lanes has expired. Finish
     // rendering it before rendering the rest of the expired work.
-    // 这是一个不完整的tree，至少有一个lanes已经过期了，在剩余的过期任务渲染之前完成渲染
+    // 这是一个不完整的tree，至少有一个lanes已经过期了，在渲染剩余的过期任务之前完成渲染
     lanes = workInProgressRootRenderLanes;
     exitStatus = renderRootSync(root, lanes);
     if (
@@ -1037,10 +1038,14 @@ function performSyncWorkOnRoot(root) {
       // For example, when unhiding a hidden tree, we include all the lanes
       // that were previously skipped when the tree was hidden. That set of
       // lanes is a superset of the lanes we started rendering with.
+      // 本次渲染包含渲染阶段被更新的lanes，例如，当显示一个隐藏的树的时候，将会包含
+      // 这棵树当时被隐藏时跳过的所有lanes。这组lanes是开始渲染时的lanes的超集。
       //
       // Note that this only happens when part of the tree is rendered
       // concurrently. If the whole tree is rendered synchronously, then there
       // are no interleaved events.
+      // 只有当树的一部分是并发渲染的时候才会发生这种情况，如果整棵树是同步渲染的，
+      // 将不会发生交叉事件
       lanes = getNextLanes(root, lanes);
       exitStatus = renderRootSync(root, lanes);
     }
@@ -1048,13 +1053,13 @@ function performSyncWorkOnRoot(root) {
     lanes = getNextLanes(root, NoLanes);
     exitStatus = renderRootSync(root, lanes);
   }
-
+  // 有错误的情况
   if (root.tag !== LegacyRoot && exitStatus === RootErrored) {
     executionContext |= RetryAfterError;
 
     // If an error occurred during hydration,
     // discard server response and fall back to client side render.
-    // 一旦脱水过程中出现了错误，放弃服务端返回的内容并启用客户端渲染。
+    // 一旦hydrate过程中出现了错误，放弃服务端返回的内容并启用客户端渲染。
     // 这是服务端渲染相关的逻辑，ReactDOM.hydrate会复用服务端发来的HTML结构。
     if (root.hydrate) {
       root.hydrate = false;
@@ -1065,15 +1070,16 @@ function performSyncWorkOnRoot(root) {
     // synchronously to block concurrent data mutations, and we'll includes
     // all pending updates are included. If it still fails after the second
     // attempt, we'll give up and commit the resulting tree.
-    // 如果有错误，尝试再次渲染，同步渲染来组织并发的数据突变。这将包括所有等待的更新，如果在第二次尝试后
-    // 仍然失败，放弃直接提交当前已经渲染到tree。
+    // 如果有错误，再重新渲染一次，使用同步渲染来阻止并发的数据变化。这将包括所有
+    // 等待处理的更新，如果在第二次尝试后仍然失败，那么直接放弃，然后提交当前已
+    // 经渲染的tree。
     lanes = getLanesToRetrySynchronouslyOnError(root);
     if (lanes !== NoLanes) {
       exitStatus = renderRootSync(root, lanes);
     }
   }
 
-  if (exitStatus === RootFatalErrored) {
+  if (exitStatus === RootFatalErrored)  {
     const fatalError = workInProgressRootFatalError;
     prepareFreshStack(root, NoLanes);
     markRootSuspended(root, lanes);

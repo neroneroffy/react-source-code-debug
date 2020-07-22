@@ -64,6 +64,7 @@ var taskQueue = [];
 var timerQueue = [];
 
 // Incrementing id counter. Used to maintain insertion order.
+// 任务的计数器，用于维护任务的插入顺序
 var taskIdCounter = 1;
 
 // Pausing the scheduler is useful for debugging.
@@ -344,6 +345,8 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     }
   } else {
     newTask.sortIndex = expirationTime;
+    // taskQueue是最小堆，而堆内又是根据sortIndex（也就是expirationTime）进行排序的。
+    // 可以保证优先级最高（expirationTime最小）的任务排在前面被优先处理。
     push(taskQueue, newTask);
     if (enableProfiling) {
       markTaskStart(newTask, currentTime);
@@ -351,7 +354,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     }
     // Schedule a host callback, if needed. If we're already performing work,
     // wait until the next time we yield.
-    // 调度一个主线程回调，如果已经执行了一个任务，等到下一次的时候再执行回调。
+    // 调度一个主线程回调，如果已经执行了一个任务，等到下一次交还执行权的时候再执行回调。
     if (!isHostCallbackScheduled && !isPerformingWork) {
       isHostCallbackScheduled = true;
       requestHostCallback(flushWork);
