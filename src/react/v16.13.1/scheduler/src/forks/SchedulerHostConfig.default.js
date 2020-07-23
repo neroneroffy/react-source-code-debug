@@ -145,15 +145,21 @@ if (
         // regardless, since there could be a pending paint that wasn't
         // accompanied by a call to `requestPaint`, or other main thread tasks
         // like network events.
+        // 没有剩余时间了，需要向主线程交回控制权。来让浏览器能够执行高优先级的任务，主要是绘制和
+        // 用户输入，如果以上两个任务中有需要处理的，应该交出执行权。但是如果两个都无需处理，这样
+        // 我们就可以在保持响应的同时，减少让出的次数。但是无论如何最终都会让出控制权，因为在未来
+        // 必定会进行页面的绘制，或者其他主线程任务，如网络事件。
         if (needsPaint || scheduling.isInputPending()) {
           // There is either a pending paint or a pending input.
           return true;
         }
         // There's no pending input. Only yield if we've reached the max
         // yield interval.
+        // 当没有主线程任务时，只在到了醉倒的让出间隔的时候，再交回控制权
         return currentTime >= maxYieldInterval;
       } else {
         // There's still time left in the frame.
+        // 在当前这一帧仍然有剩余时间，不应交回控制权
         return false;
       }
     };

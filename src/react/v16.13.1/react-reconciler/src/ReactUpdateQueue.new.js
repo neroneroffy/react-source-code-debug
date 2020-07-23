@@ -513,7 +513,7 @@ export function processUpdateQueue<State>(
     // 待更新队列是环状的，断开第一个和最后一个之间的关联，此时的队列就不是环状队列了
     const lastPendingUpdate = pendingQueue;
     const firstPendingUpdate = lastPendingUpdate.next;
-    lastPendingUpdate.next = null; // 将队列最后一个元素指向null，实行断开环状队列
+    lastPendingUpdate.next = null; // 将队列最后一个元素指向null，实现断开环状队列
     // Append pending updates to base queue
     // base queue中没有更新，直接被赋值为待更新队列（pendingQueue），否则追加到base queue之后
     if (lastBaseUpdate === null) {

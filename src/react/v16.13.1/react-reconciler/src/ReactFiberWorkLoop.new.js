@@ -475,7 +475,6 @@ export function scheduleUpdateOnFiber(
   // priority as an argument to that function and this one.
   const priorityLevel = getCurrentPriorityLevel();
   // 获取到当前的优先级
-  console.log(lane);
   if (lane === SyncLane) {
     if (
       // Check if we're inside unbatchedUpdates
@@ -731,11 +730,13 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 
 // This is the entry point for every concurrent task, i.e. anything that
 // goes through Scheduler.
+// 这是每个并发任务进入调度的入口
 function performConcurrentWorkOnRoot(root, didTimeout) {
   // Since we know we're in a React event, we can clear the current
   // event time. The next update will compute a new event time.
   currentEventTime = NoTimestamp;
   currentEventWipLanes = NoLanes;
+
   currentEventPendingLanes = NoLanes;
 
   invariant(

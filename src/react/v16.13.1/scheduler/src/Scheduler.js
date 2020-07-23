@@ -81,6 +81,7 @@ var isHostTimeoutScheduled = false;
 
 function advanceTimers(currentTime) {
   // Check for tasks that are no longer delayed and add them to the queue.
+  // 检查过期任务队列中不应再被推迟的，放到taskQueue中
   let timer = peek(timerQueue);
   while (timer !== null) {
     if (timer.callback === null) {
@@ -174,6 +175,7 @@ function workLoop(hasTimeRemaining, initialTime) {
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
       // This currentTask hasn't expired, and we've reached the deadline.
+      // 当前任务没有过期，但是已经超出时间片了，需要中断任务交回执行权
       break;
     }
     const callback = currentTask.callback;

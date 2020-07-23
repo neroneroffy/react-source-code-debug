@@ -126,6 +126,39 @@ module.exports = function(webpackEnv) {
     }
     return loaders;
   };
+  let alias = {
+    // Support React Native Web
+    // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
+    /*'react-native': 'react-native-web',
+    // Allows for better profiling with ReactDevTools
+    ...(isEnvProductionProfile && {
+      'react-dom$': 'react-dom/profiling',
+      'scheduler/tracing': 'scheduler/tracing-profiling',
+    }),
+    ...(modules.webpackAliases || {}),*/
+    'react': path.resolve(__dirname, `../src/react/${REACT_VERSION}/react`),
+
+    'react-dom': path.resolve(__dirname, `../src/react/${REACT_VERSION}/react-dom`),
+
+    'legacy-events': path.resolve(__dirname, `../src/react/${REACT_VERSION}/legacy-events`),
+
+    'shared': path.resolve(__dirname, `../src/react/${REACT_VERSION}/shared`),
+
+    'scheduler': path.resolve(__dirname, `../src/react/${REACT_VERSION}/scheduler`),
+
+    'react-reconciler': path.resolve(__dirname, `../src/react/${REACT_VERSION}/react-reconciler`),
+  }
+  if (REACT_VERSION === 'Lanes') {
+    alias.react = path.resolve(__dirname, `../src/react/Lanes/react`)
+    alias['react-dom'] = path.resolve(__dirname, `../src/react/Lanes/react-dom`)
+    alias['legacy-events'] = path.resolve(__dirname, `../src/react/v16.13.1/legacy-events`)
+    alias['shared'] = path.resolve(__dirname, `../src/react/v16.13.1/shared`)
+    alias['scheduler'] = path.resolve(__dirname, `../src/react/v16.13.1/scheduler`)
+    alias['react-reconciler'] = path.resolve(__dirname, `../src/react/v16.13.1/react-reconciler`)
+  }
+  if (REACT_VERSION === 'none') {
+    alias = {}
+  }
   return {
     mode: isEnvProduction ? 'production' : isEnvDevelopment && 'development',
     // Stop compilation early in production
@@ -286,28 +319,7 @@ module.exports = function(webpackEnv) {
       extensions: paths.moduleFileExtensions
         .map(ext => `.${ext}`)
         .filter(ext => useTypeScript || !ext.includes('ts')),
-      alias: {
-        // Support React Native Web
-        // https://www.smashingmagazine.com/2016/08/a-glimpse-into-the-future-with-react-native-for-web/
-        /*'react-native': 'react-native-web',
-        // Allows for better profiling with ReactDevTools
-        ...(isEnvProductionProfile && {
-          'react-dom$': 'react-dom/profiling',
-          'scheduler/tracing': 'scheduler/tracing-profiling',
-        }),
-        ...(modules.webpackAliases || {}),*/
-        'react': path.resolve(__dirname, `../src/react/${REACT_VERSION}/react`),
-
-        'react-dom': path.resolve(__dirname, `../src/react/${REACT_VERSION}/react-dom`),
-
-        'legacy-events': path.resolve(__dirname, `../src/react/${REACT_VERSION}/legacy-events`),
-
-        'shared': path.resolve(__dirname, `../src/react/${REACT_VERSION}/shared`),
-
-        'scheduler': path.resolve(__dirname, `../src/react/${REACT_VERSION}/scheduler`),
-
-        'react-reconciler': path.resolve(__dirname, `../src/react/${REACT_VERSION}/react-reconciler`),
-      },
+      alias,
       plugins: [
         // Adds support for installing with Plug'n'Play, leading to faster installs and adding
         // guards against forgotten dependencies and such.
