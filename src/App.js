@@ -8,7 +8,7 @@ function App() {
     <div className="App">
       react
       <State/>
-      <TabToggle/>
+      {/*<TabToggle/>*/}
     </div>
   );
 }
