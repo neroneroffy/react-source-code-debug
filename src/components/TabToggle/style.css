@@ -1,0 +1,59 @@
+.navigation {
+    display: flex;
+}
+
+.link {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    border: none;
+    height: 3rem;
+    padding: 0 2.5rem;
+    margin: 0 0.25rem;
+    border-radius: 0.25rem;
+    text-decoration: none;
+    background: grey;
+    color: #ffffff;
+    font-size: 1rem;
+    cursor: pointer;
+    text-align: center;
+}
+
+.link.active {
+    background: blue;
+}
+
+.link.pending {
+    background: rgb(53, 140, 253);
+}
+
+.content {
+}
+
+.spinnerContainer {
+    height: 3rem;
+    position: relative;
+    margin-left: 0.5rem;
+}
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner:after {
+    content: "";
+    box-sizing: border-box;
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    width: 20px;
+    height: 20px;
+    margin-top: -10px;
+    margin-left: -10px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    animation: spinner 0.6s linear infinite;
+}

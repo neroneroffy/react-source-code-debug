@@ -757,7 +757,7 @@ export function laneToLanes(lane: Lane): Lanes {
 
 export function higherPriorityLane(a: Lane, b: Lane) {
   // This works because the bit ranges decrease in priority as you go left.
-  // 优先级是从从右往左递减，数越小，优先级越低。没想通，因为这里总是返回优先级低的
+  // 优先级在位中是从从右往左递减，优先级越低。
   return a !== NoLane && a < b ? a : b;
 }
 
