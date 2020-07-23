@@ -1,23 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="BookmarkManager">
-    <bookmark url="file://$PROJECT_DIR$/src/components/State/Parent2/Child2/index.js" line="21" mnemonic="9" />
-    <bookmark url="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberLane.js" line="308" />
-    <bookmark url="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberWorkLoop.new.js" line="733" />
-    <bookmark url="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberWorkLoop.new.js" line="652" />
-    <bookmark url="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberWorkLoop.new.js" line="1631" />
-  </component>
   <component name="ChangeListManager">
     <list default="true" id="9dffbd15-c0f9-4597-a2ca-cbd93034ecc8" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberBeginWork.new.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberBeginWork.new.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberWorkLoop.new.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberWorkLoop.new.js" afterDir="false" />
     </list>
-    <ignored path="$PROJECT_DIR$/.tmp/" />
-    <ignored path="$PROJECT_DIR$/temp/" />
-    <ignored path="$PROJECT_DIR$/tmp/" />
-    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
-    <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -25,179 +13,6 @@
   </component>
   <component name="FavoritesManager">
     <favorites_list name="react-source-code-debug-env" />
-  </component>
-  <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="ReactFiberWorkLoop.new.js" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberWorkLoop.new.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="154">
-              <caret line="1797" column="6" lean-forward="true" selection-start-line="1797" selection-start-column="6" selection-end-line="1797" selection-end-column="6" />
-              <folding>
-                <element signature="e#24012#24307#0" />
-                <element signature="e#24545#25127#0" />
-                <element signature="e#25229#25481#0" />
-                <element signature="e#29787#36344#0" />
-                <element signature="e#36395#36918#0" />
-                <element signature="e#36920#37000#0" />
-                <element signature="e#37066#40417#0" />
-                <element signature="e#40476#40659#0" />
-                <element signature="e#40717#40747#0" />
-                <element signature="e#40788#41783#0" />
-                <element signature="e#41836#41939#0" />
-                <element signature="e#41980#42420#0" />
-                <element signature="e#42480#42816#0" />
-                <element signature="e#42881#43215#0" />
-                <element signature="e#43324#43863#0" />
-                <element signature="e#43930#44313#0" />
-                <element signature="e#44368#45234#0" />
-                <element signature="e#45291#45662#0" />
-                <element signature="e#45724#45958#0" />
-                <element signature="e#46005#46114#0" />
-                <element signature="e#46174#47570#0" />
-                <element signature="e#47618#50020#0" />
-                <element signature="e#50855#50944#0" />
-                <element signature="e#50989#51032#0" />
-                <element signature="e#51150#52303#0" />
-                <element signature="e#52370#52471#0" />
-                <element signature="e#52514#52628#0" />
-                <element signature="e#52686#53668#0" />
-                <element signature="e#53703#53814#0" />
-                <element signature="e#54176#55478#0" />
-                <element signature="e#55595#55782#0" />
-                <element signature="e#55845#57213#0" />
-                <element signature="e#57262#57413#0" />
-                <element signature="e#57467#58412#0" />
-                <element signature="e#58467#63633#0" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ReactFiberCompleteWork.new.js" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberCompleteWork.new.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="73">
-              <caret line="651" column="9" selection-start-line="651" selection-start-column="9" selection-end-line="651" selection-end-column="9" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/.gitignore">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="162">
-              <caret line="6" lean-forward="true" selection-start-line="6" selection-end-line="6" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ReactFiberBeginWork.new.js" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberBeginWork.new.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="570">
-              <caret line="923" column="27" selection-start-line="923" selection-start-column="27" selection-end-line="923" selection-end-column="27" />
-              <folding>
-                <element signature="n#!!doc" expanded="true" />
-                <element signature="e#28322#28776#0" />
-                <element signature="e#98333#99190#0" />
-                <element signature="e#99305#101133#0" />
-                <element signature="e#101305#101776#0" />
-                <element signature="e#102641#109845#0" />
-                <element signature="e#103113#103268#0" />
-                <element signature="e#103277#103440#0" />
-                <element signature="e#103449#104180#0" />
-                <element signature="e#104189#106968#0" />
-                <element signature="e#106977#109100#0" />
-                <element signature="e#109142#109837#0" />
-                <element signature="e#109938#110562#0" />
-                <element signature="e#110572#110607#0" />
-                <element signature="e#111237#111464#0" />
-                <element signature="e#111469#111921#0" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ReactFiberClassComponent.new.js" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberClassComponent.new.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="27">
-              <caret line="987" column="9" selection-start-line="987" selection-start-column="9" selection-end-line="987" selection-end-column="9" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ReactUpdateQueue.new.js" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactUpdateQueue.new.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="405">
-              <caret line="487" column="16" selection-start-line="487" selection-start-column="16" selection-end-line="487" selection-end-column="16" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ReactFiberLane.js" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberLane.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="189">
-              <caret line="44" column="23" lean-forward="true" selection-start-line="44" selection-start-column="23" selection-end-line="44" selection-end-column="23" />
-              <folding>
-                <element signature="e#11085#11118#0" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Scheduler.js" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/Scheduler.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="622">
-              <caret line="123" column="41" lean-forward="true" selection-start-line="123" selection-start-column="41" selection-end-line="123" selection-end-column="41" />
-              <folding>
-                <element signature="e#1960#2600#0" />
-                <element signature="e#2638#3038#0" />
-                <element signature="e#3090#4207#0" />
-                <element signature="e#4258#5851#0" />
-                <element signature="e#5228#5456#0" />
-                <element signature="e#5916#6340#0" />
-                <element signature="e#6379#6963#0" />
-                <element signature="e#7006#7386#0" />
-                <element signature="e#7436#7807#0" />
-                <element signature="e#7878#9968#0" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="SchedulerHostConfig.mock.js" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/forks/SchedulerHostConfig.mock.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="297">
-              <caret line="99" lean-forward="true" selection-start-line="99" selection-end-line="99" />
-              <folding>
-                <element signature="n#!!block;n#requestHostCallback#0" />
-                <element signature="n#!!block;n#cancelHostCallback#0" />
-                <element signature="n#!!block;n#requestHostTimeout#0" />
-                <element signature="n#!!block;n#cancelHostTimeout#0" />
-                <element signature="n#!!block;n#shouldYieldToHost#0" />
-                <element signature="n#!!block;n#getCurrentTime#0" />
-                <element signature="n#!!block;n#forceFrameRate#0" />
-                <element signature="n#!!block;n#reset#0" />
-                <element signature="n#!!block;n#unstable_flushNumberOfYields#0" />
-                <element signature="n#!!block;n#unstable_flushUntilNextPaint#0" />
-                <element signature="n#!!block;n#unstable_flushExpired#0" />
-                <element signature="n#!!block;n#unstable_flushAllWithoutAsserting#0" />
-                <element signature="n#!!block;n#unstable_clearYields#0" />
-                <element signature="n#!!block;n#unstable_flushAll#0" />
-                <element signature="n#!!block;n#unstable_yieldValue#0" />
-                <element signature="n#!!block;n#unstable_advanceTime#0" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -207,109 +22,8 @@
       </list>
     </option>
   </component>
-  <component name="FindInProjectRecents">
-    <findStrings>
-      <find>unstable_scheduleCallback</find>
-      <find>flushAll</find>
-      <find>flushMockScheduler</find>
-      <find>logo192</find>
-      <find>request</find>
-      <find>ensureR</find>
-      <find>scheduledHostCallback</find>
-      <find>taskQueue</find>
-      <find>shouldYieldToHost</find>
-      <find>needsPaint</find>
-      <find>isInputPending</find>
-      <find>hasTimeRemaining</find>
-      <find>workLoop</find>
-      <find>alias</find>
-      <find>requestHostCallback</find>
-      <find>lane</find>
-      <find>lanes</find>
-      <find>flushWork</find>
-      <find>originalBeginWork</find>
-      <find>function beginWork</find>
-      <find>case ClassComponent</find>
-      <find>updateClassComponent</find>
-      <find>child = updateClassComponent</find>
-      <find>ensureRootIsScheduled</find>
-      <find>beginWork</find>
-      <find>performUnitOfWork</find>
-      <find>workLoopConcurrent</find>
-      <find>renderRootConcurrent</find>
-      <find>performConcurrentWorkOnRoot</find>
-      <find>completeWork</find>
-    </findStrings>
-    <replaceStrings>
-      <replace />
-    </replaceStrings>
-    <dirStrings>
-      <dir>F:\web\react-source-code-debug-env\src\react\v16.13.1</dir>
-    </dirStrings>
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-  </component>
-  <component name="IdeDocumentHistory">
-    <option name="CHANGED_PATHS">
-      <list>
-        <option value="$PROJECT_DIR$/src/react/packages/scheduler/src/SchedulerHostConfig.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-dom/index.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/shared/ReactFeatureFlags.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-reconciler/src/ReactFiberWorkLoop.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-reconciler/src/ReactFiberClassComponent.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-reconciler/src/ReactFiberBeginWork.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-reconciler/src/ReactUpdateQueue.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-reconciler/src/ReactFiberReconciler.new.js" />
-        <option value="$USER_HOME$/Documents/WeChat Files/wxid_xiemk5vk846321/FileStorage/File/2020-07/sms-marketing.vue" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-reconciler/src/SchedulerWithReactIntegration.new.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-reconciler/src/ReactInternalTypes.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-reconciler/src/ReactFiberWorkLoop.new.js" />
-        <option value="$PROJECT_DIR$/src/react/packages/react-reconciler/src/ReactFiberLane.js" />
-        <option value="$PROJECT_DIR$/docs/Lanes.md" />
-        <option value="$PROJECT_DIR$/src/react/v16.12.0/react-reconciler/src/ReactUpdateQueue.js" />
-        <option value="$PROJECT_DIR$/docs/setStateOverview.md" />
-        <option value="$PROJECT_DIR$/docs/位运算.md" />
-        <option value="$PROJECT_DIR$/src/react/v16.12.0/react-reconciler/src/ReactFiber.js" />
-        <option value="$PROJECT_DIR$/docs/test.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberCompleteWork.new.js" />
-        <option value="$PROJECT_DIR$/src/components/State/index.js" />
-        <option value="$PROJECT_DIR$/src/components/State/Parent2/Child2/index.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.12.0/react-reconciler/src/SchedulerWithReactIntegration.js" />
-        <option value="$PROJECT_DIR$/config/env.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/Tracing.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/forks/SchedulerHostConfig.mock.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberRoot.new.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-noop-renderer/src/createReactNoop.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-dom/src/client/ReactDOMRoot.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiber.new.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberReconciler.new.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberLane.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/SchedulerWithReactIntegration.new.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/SchedulerHostConfig.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.12.0/scheduler/src/Scheduler.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.12.0/scheduler/src/SchedulerHostConfig.js" />
-        <option value="$PROJECT_DIR$/public/manifest.json" />
-        <option value="$PROJECT_DIR$/src/App.css" />
-        <option value="$PROJECT_DIR$/public/index.css" />
-        <option value="$PROJECT_DIR$/public/index.html" />
-        <option value="$PROJECT_DIR$/src/index.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/forks/SchedulerHostConfig.default.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/Scheduler.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/shared/ReactFeatureFlags.js" />
-        <option value="$PROJECT_DIR$/package.json" />
-        <option value="$PROJECT_DIR$/config/webpack.config.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactUpdateQueue.new.js" />
-        <option value="$PROJECT_DIR$/README.md" />
-        <option value="$PROJECT_DIR$/src/App.js" />
-        <option value="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberWorkLoop.new.js" />
-        <option value="$PROJECT_DIR$/.gitignore" />
-      </list>
-    </option>
-  </component>
-  <component name="JsBuildToolGruntFileManager" detection-done="true" sorting="DEFINITION_ORDER" />
-  <component name="JsBuildToolPackageJson" detection-done="true" sorting="DEFINITION_ORDER">
-    <package-json value="$PROJECT_DIR$/package.json" />
   </component>
   <component name="JsFlowSettings">
     <service-enabled>true</service-enabled>
@@ -317,109 +31,12 @@
     <other-services-enabled>true</other-services-enabled>
     <auto-save>true</auto-save>
   </component>
-  <component name="JsGulpfileManager">
-    <detection-done>true</detection-done>
-    <sorting>DEFINITION_ORDER</sorting>
-  </component>
-  <component name="NodeModulesDirectoryManager">
-    <handled-path value="$PROJECT_DIR$/node_modules" />
-  </component>
-  <component name="NodePackageJsonFileManager">
-    <packageJsonPaths>
-      <path value="$PROJECT_DIR$/package.json" />
-      <path value="$PROJECT_DIR$/src/react/Lanes/react-dom/package.json" />
-      <path value="$PROJECT_DIR$/src/react/Lanes/react/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/babel-plugin-react-jsx/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/create-subscription/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/dom-event-testing-library/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/eslint-plugin-react-hooks/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/jest-mock-scheduler/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/jest-react/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/legacy-events/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-art/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-cache/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-debug-tools/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-devtools-core/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-devtools-extensions/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-devtools-inline/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-devtools-shared/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-devtools-shared/src/node_modules/react-window/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-devtools-shell/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-devtools/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-dom/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-flight-dom-webpack/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-flight/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-interactions/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-is/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-native-renderer/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-noop-renderer/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-reconciler/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-refresh/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-server/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react-test-renderer/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/react/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/scheduler/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/shared/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.12.0/use-subscription/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/create-subscription/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/dom-event-testing-library/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/eslint-plugin-react-hooks/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/jest-mock-scheduler/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/jest-react/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-art/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-cache/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-client/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-debug-tools/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-devtools-core/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-devtools-extensions/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-devtools-inline/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-devtools-shared/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-devtools-shared/src/node_modules/react-window/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-devtools-shell/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-devtools/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-dom/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-fetch/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-interactions/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-is/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-native-renderer/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-noop-renderer/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-refresh/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-server/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-test-renderer/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-transport-dom-relay/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react-transport-dom-webpack/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/react/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/scheduler/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/shared/package.json" />
-      <path value="$PROJECT_DIR$/src/react/v16.13.1/use-subscription/package.json" />
-    </packageJsonPaths>
-  </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="1912" />
-    <option name="y" value="-8" />
-    <option name="width" value="1936" />
-    <option name="height" value="1056" />
-  </component>
+  <component name="ProjectId" id="1f5dkTx5ctwhTOAcRqeq558SD3E" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
-  <component name="ProjectView">
-    <navigator proportions="" version="1">
-      <foldersAlwaysOnTop value="true" />
-    </navigator>
-    <panes>
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="react-source-code-debug-env" type="b2602c69:ProjectViewProjectNode" />
-              <item name="react-source-code-debug-env" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
-      <pane id="Scope" />
-    </panes>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
@@ -429,7 +46,7 @@
     <property name="node.js.detected.package.prettier" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
     <property name="node.js.path.for.package.prettier" value="project" />
-    <property name="node.js.selected.package.eslint" value="F:\web\react-source-code-debug-env\node_modules\eslint" />
+    <property name="node.js.selected.package.eslint" value="F:/web/react-source-code-debug-env/node_modules/eslint" />
     <property name="node.js.selected.package.prettier" value="" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
@@ -448,25 +65,27 @@
       <recent name="F:\web\react-source-code-debug-env\src\components\State" />
     </key>
   </component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
-  </component>
   <component name="RunManager">
-    <configuration name="test.js" type="NodeJSConfigurationType" factoryName="Node.js" temporary="true" nameIsGenerated="true" path-to-js-file="test.js" working-dir="$PROJECT_DIR$/docs" />
+    <configuration name="test.js" type="NodeJSConfigurationType" temporary="true" nameIsGenerated="true" path-to-js-file="test.js" working-dir="$PROJECT_DIR$/docs">
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
         <item itemvalue="Node.js.test.js" />
       </list>
     </recent_temporary>
+  </component>
+  <component name="ServiceViewManager">
+    <option name="viewStates">
+      <list>
+        <serviceView>
+          <treeState>
+            <expand />
+            <select />
+          </treeState>
+        </serviceView>
+      </list>
+    </option>
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -496,11 +115,9 @@
       <workItem from="1595294793972" duration="10310000" />
       <workItem from="1595400561281" duration="12226000" />
       <workItem from="1595468449404" duration="20922000" />
+      <workItem from="1595512037404" duration="5760000" />
     </task>
     <servers />
-  </component>
-  <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="269988000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -511,526 +128,17 @@
       <is-autoscroll-to-source value="true" />
     </todo-panel>
   </component>
-  <component name="ToolWindowManager">
-    <frame x="1912" y="-8" width="1936" height="1056" extended-state="6" />
-    <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4986631" visible="true" weight="0.3661749" />
-      <window_info anchor="bottom" id="TODO" order="6" weight="0.3293348" />
-      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
-      <window_info anchor="bottom" id="Find" order="1" />
-      <window_info id="npm" order="2" side_tool="true" />
-      <window_info anchor="bottom" id="Version Control" order="7" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.2355507" />
-      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="7" visible="true" weight="0.18429662" />
-      <window_info id="Favorites" order="2" sideWeight="0.5013369" side_tool="true" visible="true" weight="0.3661749" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
-      <window_info anchor="bottom" id="TypeScript" order="8" />
-      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
-      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
-      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-    </layout>
-  </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
   </component>
-  <component name="VcsContentAnnotationSettings">
-    <option name="myLimit" value="2678400000" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <option name="time" value="30" />
-    </breakpoint-manager>
-  </component>
-  <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberDevToolsHook.new.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="293">
-          <caret line="23" column="20" selection-start-line="23" selection-start-column="20" selection-end-line="23" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactTypeOfMode.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="297">
-          <caret line="18" column="40" lean-forward="true" selection-start-line="18" selection-start-column="40" selection-end-line="18" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/node_modules/react/index.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="135">
-          <caret line="5" column="37" selection-start-line="5" selection-start-column="37" selection-end-line="5" selection-end-column="37" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/node_modules/scheduler/cjs/scheduler.development.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="291">
-          <caret line="14" column="15" lean-forward="true" selection-start-line="14" selection-start-column="15" selection-end-line="14" selection-end-column="15" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/node_modules/scheduler/cjs/scheduler-unstable_mock.development.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1321">
-          <caret line="53" column="15" lean-forward="true" selection-start-line="53" selection-start-column="15" selection-end-line="53" selection-end-column="15" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/node_modules/react/umd/react.development.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="241">
-          <caret line="10" lean-forward="true" selection-start-line="10" selection-end-line="10" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/node_modules/react/cjs/react.development.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="260">
-          <caret line="2216" column="85" selection-start-line="2216" selection-start-column="77" selection-end-line="2216" selection-end-column="85" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-dom/src/client/ReactDOMRoot.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="185">
-          <caret line="46" column="8" selection-start-line="46" selection-start-column="8" selection-end-line="46" selection-end-column="8" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#2354#2852#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberReconciler.new.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="262">
-          <caret line="194" selection-start-line="194" selection-end-line="194" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberReconciler.old.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="243">
-          <caret line="88" column="38" lean-forward="true" selection-start-line="88" selection-start-column="38" selection-end-line="88" selection-end-column="38" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/forks/SchedulerFeatureFlags.www.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="297">
-          <caret line="11" column="46" lean-forward="true" selection-start-line="11" selection-start-column="46" selection-end-line="11" selection-end-column="46" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/unstable_mock.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="459">
-          <caret line="17" column="19" selection-start-line="17" selection-start-column="2" selection-end-line="17" selection-end-column="19" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/README.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
-        <state split_layout="SPLIT">
-          <first_editor relative-caret-position="243">
-            <caret line="9" lean-forward="true" selection-start-line="9" selection-end-line="9" />
-          </first_editor>
-          <second_editor>
-            <markdownNavigatorState />
-          </second_editor>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/SchedulerHostConfig.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="297">
-          <caret line="18" lean-forward="true" selection-start-line="18" selection-end-line="18" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.12.0/scheduler/src/Scheduler.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="260">
-          <caret line="441" column="9" lean-forward="true" selection-start-line="441" selection-start-column="9" selection-end-line="441" selection-end-column="9" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/public/manifest.json">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="216">
-          <caret line="8" column="5" selection-start-line="8" selection-start-column="5" selection-end-line="8" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/App.css">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="135">
-          <caret line="5" lean-forward="true" selection-end-line="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/public/index.css" />
-    <entry file="file://$PROJECT_DIR$/public/index.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="216">
-          <caret line="8" column="24" lean-forward="true" selection-start-line="8" selection-start-column="24" selection-end-line="8" selection-end-column="24" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/index.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="162">
-          <caret line="6" lean-forward="true" selection-start-line="6" selection-end-line="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/webpackDevServer.config.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="27">
-          <caret line="1" lean-forward="true" selection-start-line="1" selection-end-line="1" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.12.0/scheduler/src/SchedulerHostConfig.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="108">
-          <caret line="11" column="24" selection-start-line="11" selection-start-column="24" selection-end-line="11" selection-end-column="24" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/forks/SchedulerHostConfig.default.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-5">
-          <caret line="52" column="15" selection-start-line="52" selection-start-column="6" selection-end-line="52" selection-end-column="15" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/SchedulerMinHeap.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="356">
-          <caret line="32" column="30" selection-start-line="32" selection-start-column="30" selection-end-line="32" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/SchedulerFeatureFlags.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="297">
-          <caret line="11" lean-forward="true" selection-start-line="11" selection-end-line="11" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/Lanes/react/index.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="189">
-          <caret line="7" lean-forward="true" selection-start-line="7" selection-end-line="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/Lanes/react-dom/cjs/react-dom.development.js">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/Lanes/react/cjs/react.development.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="27">
-          <caret line="10" selection-start-line="10" selection-end-line="10" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/env.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="41">
-          <caret line="86" column="33" selection-start-line="86" selection-start-column="33" selection-end-line="86" selection-end-column="33" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/Lanes/react/README.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
-        <state split_layout="SPLIT">
-          <first_editor />
-          <second_editor>
-            <markdownNavigatorState />
-          </second_editor>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/shared/ReactSharedInternals.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="405">
-          <caret line="15" column="23" selection-start-line="15" selection-start-column="23" selection-end-line="15" selection-end-column="23" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/shared/ReactFeatureFlags.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="122">
-          <caret line="93" column="29" lean-forward="true" selection-start-line="93" selection-start-column="29" selection-end-line="93" selection-end-column="29" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/package.json">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="81">
-          <caret line="61" column="35" lean-forward="true" selection-start-line="61" selection-start-column="35" selection-end-line="61" selection-end-column="35" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.12.0/react-reconciler/src/ReactUpdateQueue.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="297">
-          <caret line="248" column="31" lean-forward="true" selection-start-line="248" selection-start-column="31" selection-end-line="248" selection-end-column="31" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/SchedulerProfiling.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="194">
-          <caret line="200" column="16" selection-start-line="200" selection-start-column="16" selection-end-line="200" selection-end-column="16" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/README.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;MarkdownPreviewEditor]">
-        <state split_layout="SPLIT">
-          <first_editor relative-caret-position="155">
-            <caret line="15" selection-start-line="15" selection-end-line="15" />
-          </first_editor>
-          <second_editor>
-            <markdownNavigatorState />
-          </second_editor>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/package-lock.json">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="114">
-          <caret line="123" column="58" lean-forward="true" selection-start-line="123" selection-start-column="58" selection-end-line="123" selection-end-column="58" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/SchedulerWithReactIntegration.new.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="216">
-          <caret line="18" column="7" lean-forward="true" selection-start-line="18" selection-start-column="7" selection-end-line="18" selection-end-column="7" />
-          <folding>
-            <element signature="e#1282#1881#0" />
-            <element signature="n#!!block;n#flushSyncCallbackQueueImpl#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/webpack.config.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="449">
-          <caret line="156" column="27" selection-start-line="156" selection-start-column="11" selection-end-line="156" selection-end-column="27" />
-          <folding>
-            <element signature="e#3407#5341#0" />
-            <element signature="e#5509#5810#0" />
-            <element signature="e#6968#8772#0" />
-            <element signature="e#8792#12009#0" />
-            <element signature="e#8844#11412#0" />
-            <element signature="e#8919#10653#0" />
-            <element signature="e#10740#11402#0" />
-            <element signature="e#12453#12522#0" />
-            <element signature="e#14009#14728#0" />
-            <element signature="e#14756#14964#0" />
-            <element signature="e#14978#23283#0" />
-            <element signature="e#23298#29806#0" />
-            <element signature="e#29988#30170#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/App.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="405">
-          <caret line="15" column="19" lean-forward="true" selection-start-line="15" selection-start-column="19" selection-end-line="15" selection-end-column="19" />
-          <folding>
-            <element signature="e#0#26#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/forks/SchedulerHostConfig.mock.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="297">
-          <caret line="99" lean-forward="true" selection-start-line="99" selection-end-line="99" />
-          <folding>
-            <element signature="n#!!block;n#requestHostCallback#0" />
-            <element signature="n#!!block;n#cancelHostCallback#0" />
-            <element signature="n#!!block;n#requestHostTimeout#0" />
-            <element signature="n#!!block;n#cancelHostTimeout#0" />
-            <element signature="n#!!block;n#shouldYieldToHost#0" />
-            <element signature="n#!!block;n#getCurrentTime#0" />
-            <element signature="n#!!block;n#forceFrameRate#0" />
-            <element signature="n#!!block;n#reset#0" />
-            <element signature="n#!!block;n#unstable_flushNumberOfYields#0" />
-            <element signature="n#!!block;n#unstable_flushUntilNextPaint#0" />
-            <element signature="n#!!block;n#unstable_flushExpired#0" />
-            <element signature="n#!!block;n#unstable_flushAllWithoutAsserting#0" />
-            <element signature="n#!!block;n#unstable_clearYields#0" />
-            <element signature="n#!!block;n#unstable_flushAll#0" />
-            <element signature="n#!!block;n#unstable_yieldValue#0" />
-            <element signature="n#!!block;n#unstable_advanceTime#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/scheduler/src/Scheduler.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="622">
-          <caret line="123" column="41" lean-forward="true" selection-start-line="123" selection-start-column="41" selection-end-line="123" selection-end-column="41" />
-          <folding>
-            <element signature="e#1960#2600#0" />
-            <element signature="e#2638#3038#0" />
-            <element signature="e#3090#4207#0" />
-            <element signature="e#4258#5851#0" />
-            <element signature="e#5228#5456#0" />
-            <element signature="e#5916#6340#0" />
-            <element signature="e#6379#6963#0" />
-            <element signature="e#7006#7386#0" />
-            <element signature="e#7436#7807#0" />
-            <element signature="e#7878#9968#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberLane.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="189">
-          <caret line="44" column="23" lean-forward="true" selection-start-line="44" selection-start-column="23" selection-end-line="44" selection-end-column="23" />
-          <folding>
-            <element signature="e#11085#11118#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactUpdateQueue.new.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="405">
-          <caret line="487" column="16" selection-start-line="487" selection-start-column="16" selection-end-line="487" selection-end-column="16" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberClassComponent.new.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="27">
-          <caret line="987" column="9" selection-start-line="987" selection-start-column="9" selection-end-line="987" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberBeginWork.new.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="570">
-          <caret line="923" column="27" selection-start-line="923" selection-start-column="27" selection-end-line="923" selection-end-column="27" />
-          <folding>
-            <element signature="n#!!doc" expanded="true" />
-            <element signature="e#28322#28776#0" />
-            <element signature="e#98333#99190#0" />
-            <element signature="e#99305#101133#0" />
-            <element signature="e#101305#101776#0" />
-            <element signature="e#102641#109845#0" />
-            <element signature="e#103113#103268#0" />
-            <element signature="e#103277#103440#0" />
-            <element signature="e#103449#104180#0" />
-            <element signature="e#104189#106968#0" />
-            <element signature="e#106977#109100#0" />
-            <element signature="e#109142#109837#0" />
-            <element signature="e#109938#110562#0" />
-            <element signature="e#110572#110607#0" />
-            <element signature="e#111237#111464#0" />
-            <element signature="e#111469#111921#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/.gitignore">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="162">
-          <caret line="6" lean-forward="true" selection-start-line="6" selection-end-line="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberCompleteWork.new.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="73">
-          <caret line="651" column="9" selection-start-line="651" selection-start-column="9" selection-end-line="651" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/.idea/react-source-code-debug-env.iml">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/.idea/workspace.xml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-13446">
-          <caret line="9" column="38" lean-forward="true" selection-start-line="9" selection-start-column="38" selection-end-line="9" selection-end-column="38" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/react/v16.13.1/react-reconciler/src/ReactFiberWorkLoop.new.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="154">
-          <caret line="1797" column="6" lean-forward="true" selection-start-line="1797" selection-start-column="6" selection-end-line="1797" selection-end-column="6" />
-          <folding>
-            <element signature="e#24012#24307#0" />
-            <element signature="e#24545#25127#0" />
-            <element signature="e#25229#25481#0" />
-            <element signature="e#29787#36344#0" />
-            <element signature="e#36395#36918#0" />
-            <element signature="e#36920#37000#0" />
-            <element signature="e#37066#40417#0" />
-            <element signature="e#40476#40659#0" />
-            <element signature="e#40717#40747#0" />
-            <element signature="e#40788#41783#0" />
-            <element signature="e#41836#41939#0" />
-            <element signature="e#41980#42420#0" />
-            <element signature="e#42480#42816#0" />
-            <element signature="e#42881#43215#0" />
-            <element signature="e#43324#43863#0" />
-            <element signature="e#43930#44313#0" />
-            <element signature="e#44368#45234#0" />
-            <element signature="e#45291#45662#0" />
-            <element signature="e#45724#45958#0" />
-            <element signature="e#46005#46114#0" />
-            <element signature="e#46174#47570#0" />
-            <element signature="e#47618#50020#0" />
-            <element signature="e#50855#50944#0" />
-            <element signature="e#50989#51032#0" />
-            <element signature="e#51150#52303#0" />
-            <element signature="e#52370#52471#0" />
-            <element signature="e#52514#52628#0" />
-            <element signature="e#52686#53668#0" />
-            <element signature="e#53703#53814#0" />
-            <element signature="e#54176#55478#0" />
-            <element signature="e#55595#55782#0" />
-            <element signature="e#55845#57213#0" />
-            <element signature="e#57262#57413#0" />
-            <element signature="e#57467#58412#0" />
-            <element signature="e#58467#63633#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
+  <component name="WindowStateProjectService">
+    <state x="2857" y="331" width="672" height="677" key="run.anything.popup" timestamp="1595512707546">
+      <screen x="1920" y="0" width="2560" height="1400" />
+    </state>
+    <state x="2857" y="331" width="672" height="677" key="run.anything.popup/0.0.1920.1040/1920.0.2560.1400@1920.0.2560.1400" timestamp="1595512707546" />
+    <state x="2863" y="315" width="672" height="678" key="search.everywhere.popup" timestamp="1595513609892">
+      <screen x="1920" y="0" width="2560" height="1400" />
+    </state>
+    <state x="2863" y="315" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040/1920.0.2560.1400@1920.0.2560.1400" timestamp="1595513609892" />
   </component>
 </project>

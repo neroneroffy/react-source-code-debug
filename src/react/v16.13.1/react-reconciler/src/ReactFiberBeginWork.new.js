@@ -237,10 +237,10 @@ export function reconcileChildren(
   renderLanes: Lanes,
 ) {
   if (current === null) {
-    // If this is a fresh new component that hasn't been rendered yet, we
-    // won't update its child set by applying minimal side-effects. Instead,
-    // we will add them all to the child before it gets rendered. That means
-    // we can optimize this reconciliation pass by not tracking side-effects.
+  // If this is a fresh new component that hasn't been rendered yet, we
+  // won't update its child set by applying minimal side-effects. Instead,
+  // we will add them all to the child before it gets rendered. That means
+  // we can optimize this reconciliation pass by not tracking side-effects.
     workInProgress.child = mountChildFibers(
       workInProgress,
       null,
@@ -890,7 +890,6 @@ function updateClassComponent(
     hasContext = false;
   }
   prepareToReadContext(workInProgress, renderLanes);
-
   const instance = workInProgress.stateNode;
   let shouldUpdate;
   if (instance === null) {
@@ -899,21 +898,26 @@ function updateClassComponent(
       // inside a non-concurrent tree, in an inconsistent state. We want to
       // treat it like a new mount, even though an empty version of it already
       // committed. Disconnect the alternate pointers.
+      /*
+      * 没有实例的类组件只有在非并发树中以不一致的状态挂起时才挂载。我们希望将
+      * 其视为一个新的挂载，即使已经提交了一个空版本。断开备用指针的连接。
+      * */
       current.alternate = null;
       workInProgress.alternate = null;
       // Since this is conceptually a new fiber, schedule a Placement effect
       // 因为这在概念上是一个新的Fiber，设置一个Placement 的effect
       workInProgress.effectTag |= Placement;
     }
+    // instance为Fiber节点对应的React组件实例，为null的话，说明需要构造组件实例
     // In the initial pass we might need to construct the instance.
-    // 初始过程，需要构造实例
     constructClassInstance(workInProgress, Component, nextProps);
-    // 挂载
     mountClassInstance(workInProgress, Component, nextProps, renderLanes);
     shouldUpdate = true;
   } else if (current === null) {
     // In a resume, we'll already have an instance we can reuse.
-    // 在重新开启时，已经有了一个可以复用的实例
+    // 这种情况发生在当任务被恢复时，由于该workInProgress节点的更新任务之前被取消
+    // 了，也就是此前并未更新成功，所以workInProgress的alternate（也就是current）
+    // 为null，此时直接复用之前挂载的类组件实例。
     shouldUpdate = resumeMountClassInstance(
       workInProgress,
       Component,
@@ -921,6 +925,7 @@ function updateClassComponent(
       renderLanes,
     );
   } else {
+    // current不为null,说明组件已经被挂载过，此时直接更新。
     shouldUpdate = updateClassInstance(
       current,
       workInProgress,
@@ -970,15 +975,15 @@ function finishClassComponent(
   if (!shouldUpdate && !didCaptureError) {
     // Context providers should defer to sCU for rendering
     // Context providers 的渲染行为应该依照shouldComponentUpdate的返回值
+    // 如果不应更新，复用原有节点
     if (hasContext) {
       invalidateContextProvider(workInProgress, Component, false);
     }
-
     return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
   }
 
   const instance = workInProgress.stateNode;
-
+  // instance为组件实例
   // Rerender
   ReactCurrentOwner.current = workInProgress;
   let nextChildren;
@@ -990,8 +995,9 @@ function finishClassComponent(
     // unmount all the children. componentDidCatch will schedule an update to
     // re-render a fallback. This is temporary until we migrate everyone to
     // the new API.
-    // 如果捕获到错误并且getDerivedStateFromError未定义，卸载掉所有子节点，componentDidCatch将会调度一个更新
-    // 来重新渲染到之前的状态（有可能不准确？）这只是暂时的。
+    // 如果捕获到错误并且getDerivedStateFromError未定义，卸载掉所有子节点，
+    // componentDidCatch将会调度一个更新来重新渲染到之前的状态（有可能不准
+    // 确？）这只是暂时的。
     // TODO: Warn in a future release.
     nextChildren = null;
 
@@ -1015,6 +1021,7 @@ function finishClassComponent(
       }
       setIsRendering(false);
     } else {
+      // 调用类组件实例的render函数，获取子节点
       nextChildren = instance.render();
     }
   }
@@ -2981,11 +2988,18 @@ function bailoutOnAlreadyFinishedWork(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ): Fiber | null {
+  /*
+  * bailoutOnAlreadyFinishedWork表示复用之前的节点，做的事情有：
+  * 1、跳过workInProgress上的更新
+  * 2、子节点没有更新，直接跳出不做处理
+  * 3、子节点需要更新，复制一下子节点，再return出去便于接下来的处理
+  * */
   if (current !== null) {
     // Reuse previous dependencies
     workInProgress.dependencies = current.dependencies;
   }
 
+  // react-dev-tools 性能分析工具Profiler相关
   if (enableProfilerTimer) {
     // Don't update "base" render times for bailouts.
     stopProfilerTimerIfRunning(workInProgress);
@@ -3075,6 +3089,10 @@ function beginWork(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ): Fiber | null {
+  /*
+  * current：当前处理的Fiber节点的上一次更新时的Fiber，就是workInProgress.alternate
+  * workInProgress： 当前处理的Fiber节点
+  * */
   const updateLanes = workInProgress.lanes;
 
   if (__DEV__) {
@@ -3094,7 +3112,11 @@ function beginWork(
       );
     }
   }
-
+  /*
+  * 在第一次渲染时，root是第一次更新，所以它没有上一次更新的Fiber节点，但更新时就不一样了。
+  * 表现在workInProgress树的构建过程中就是，第一次渲染时，除了rootFiber，其余的子节点要根据
+  * fiber.tag创建出来，更新时，如果fiber上无需更新，那么可以直接复用已有节点。
+  * */
   if (current !== null) {
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
@@ -3105,6 +3127,7 @@ function beginWork(
       // Force a re-render if the implementation changed due to hot reload:
       (__DEV__ ? workInProgress.type !== current.type : false)
     ) {
+      // 如果props或者context发生了变化，标记一下说明需要更新
       // If props or context changed, mark the fiber as having performed work.
       // This may be unset if the props are determined to be equal later (memo).
       didReceiveUpdate = true;
@@ -3284,6 +3307,7 @@ function beginWork(
           return updateOffscreenComponent(current, workInProgress, renderLanes);
         }
       }
+      // bailoutOnAlreadyFinishedWork 跳过已完成的fiber任务
       return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
     } else {
       if ((current.effectTag & ForceUpdateForLegacySuspense) !== NoEffect) {
@@ -3295,6 +3319,11 @@ function beginWork(
         // nor legacy context. Set this to false. If an update queue or context
         // consumer produces a changed value, it will set this to true. Otherwise,
         // the component will assume the children have not changed and bail out.
+        /*
+        * 当前这个fiber计划进行更新，但是没有新的props或者context，所以didReceiveUpdate设置为false。
+        * 如果更新队列或者context 的consumer产生了一个改变的值，它将将其设置为true。否则，组件将假定
+        * 子组件没有更改并退出。
+        * */
         didReceiveUpdate = false;
       }
     }

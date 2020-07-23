@@ -1650,7 +1650,6 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
   if (next === null) {
     // If this doesn't spawn new work, complete the current work.
-    // 如果不再chan
     // complete阶段
     completeUnitOfWork(unitOfWork);
   } else {
