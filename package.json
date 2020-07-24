@@ -143,6 +143,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-flow-strip-types": "^7.10.1",
-    "cross-env": "^7.0.2"
+    "cross-env": "^7.0.2",
+    "flow-bin": "^0.129.0"
   }
 }

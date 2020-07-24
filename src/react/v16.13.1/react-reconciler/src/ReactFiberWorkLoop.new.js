@@ -1662,6 +1662,10 @@ function performUnitOfWork(unitOfWork: Fiber): void {
 function completeUnitOfWork(unitOfWork: Fiber): void {
   // Attempt to complete the current unit of work, then move to the next
   // sibling. If there are no more siblings, return to the parent fiber.
+  /*
+  * 尝试完成当前的工作单元，然后去处理下一个兄弟节点，如果没有兄弟节点，return到上级
+  * Fiber节点
+  * */
   let completedWork = unitOfWork;
   do {
     // The current, flushed, state of this fiber is the alternate. Ideally
@@ -1672,6 +1676,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
     // Check if the work completed or if something threw.
     if ((completedWork.effectTag & Incomplete) === NoEffect) {
+      // 当前工作单元（Fiber）的任务已经完成，那么
       setCurrentDebugFiberInDEV(completedWork);
       let next;
       if (
@@ -1689,6 +1694,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
       if (next !== null) {
         // Completing this fiber spawned new work. Work on that next.
+        // 当前的工作单元完成后产生了新的任务，对应着任务暂停的情况，
         workInProgress = next;
         return;
       }
@@ -1703,6 +1709,10 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         // Append all the effects of the subtree and this fiber onto the effect
         // list of the parent. The completion order of the children affects the
         // side-effect order.
+        /*
+        * effectList是一条单向链表，每完成一个工作单元上的任务，都要将它产生的effect链表并入
+        * 上级工作单元。
+        * */
         if (returnFiber.firstEffect === null) {
           returnFiber.firstEffect = completedWork.firstEffect;
         }
@@ -1719,6 +1729,11 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         // schedule our own side-effect on our own list because if end up
         // reusing children we'll schedule this effect onto itself since we're
         // at the end.
+        /*
+        * 如果这个Fiber有副作用，我们会在子Fiber的副作用之后添加它。如果需要，我们可以通过对效果列
+        * 表进行多次传递，提前执行某些副作用。我们不想把自己的副作用放在自己的effect-list上，因为如
+        * 果最终复用了子Fiber，我们将把这个效果安排在自己身上，因为我们已经到了最后。
+        * */
         const effectTag = completedWork.effectTag;
 
         // Skip both NoWork and PerformedWork tags when creating the effect
@@ -1737,6 +1752,10 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
       // This fiber did not complete because something threw. Pop values off
       // the stack without entering the complete phase. If this is a boundary,
       // capture values if possible.
+      /*
+      * 这Fiber不完整，因为抛出了一些错误。在进入完成阶段之前从堆栈中弹出。如果这是一个边界，
+      * 尽可能捕获错误。
+      * */
       const next = unwindWork(completedWork, subtreeRenderLanes);
 
       // Because this fiber did not complete, don't reset its expiration time.
@@ -1746,6 +1765,8 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         // back here again.
         // Since we're restarting, remove anything that is not a host effect
         // from the effect tag.
+        // 如果完成此工作产生了新任务，则执行下一步，之后会再回到这里，由于需要重启，所以从effect
+        // 标签中删除所有不是host effect的effectTag。
         next.effectTag &= HostEffectMask;
         workInProgress = next;
         return;
@@ -1770,6 +1791,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
       if (returnFiber !== null) {
         // Mark the parent fiber as incomplete and clear its effect list.
+        // 将父Fiber的effect list清除，effectTag标记成未完成
         returnFiber.firstEffect = returnFiber.lastEffect = null;
         returnFiber.effectTag |= Incomplete;
       }

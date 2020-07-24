@@ -890,6 +890,7 @@ function completeWork(
 
       if ((workInProgress.effectTag & DidCapture) !== NoEffect) {
         // Something suspended. Re-render with the fallback children.
+        // 被挂起了，用之前的子节点重新渲染
         workInProgress.lanes = renderLanes;
         // Do not reset the effect list.
         if (
