@@ -175,7 +175,7 @@ function workLoop(hasTimeRemaining, initialTime) {
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
       // This currentTask hasn't expired, and we've reached the deadline.
-      // 当前任务没有过期，但是要么已经没有时间了，要么没有，需要中断任务交回执行权
+      // 当前任务没有过期，但是已经到了deadline，需要中断循环
       break;
     }
     const callback = currentTask.callback;
@@ -316,7 +316,6 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
   }
 
   var expirationTime = startTime + timeout;
-
   var newTask = {
     id: taskIdCounter++,
     callback,
@@ -357,6 +356,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     // Schedule a host callback, if needed. If we're already performing work,
     // wait until the next time we yield.
     // 调度一个主线程回调，如果已经执行了一个任务，等到下一次交还执行权的时候再执行回调。
+    // console.log(JSON.parse(JSON.stringify(taskQueue)));
     if (!isHostCallbackScheduled && !isPerformingWork) {
       isHostCallbackScheduled = true;
       requestHostCallback(flushWork);

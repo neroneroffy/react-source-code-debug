@@ -825,6 +825,7 @@ function performConcurrentWorkOnRoot(root, didTimeout) {
   }
 
   ensureRootIsScheduled(root, now());
+  // console.log('root.callbackNode', root.callbackNode);
   if (root.callbackNode === originalCallbackNode) {
     // The task node scheduled for this root is the same one that's
     // currently executed. Need to return a continuation.
@@ -1021,7 +1022,6 @@ function performSyncWorkOnRoot(root) {
   );
   // 刷新被动的副作用
   flushPassiveEffects();
-  console.log('root', root);
   let lanes;
   let exitStatus; // 声明一个状态，来保存render阶段完成时的状态，对某些错误做特定处理
   if (
@@ -1619,7 +1619,6 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
     // Set this to null to indicate there's no in-progress render.
     // 完成渲染之后，将workInProgressRoot 和 workInProgressRoot上正在渲染的lanes置为空，
     // 表示渲染已经结束
-    console.log(root);
     workInProgressRoot = null;
     workInProgressRootRenderLanes = NoLanes;
     // Return the final exit status.
@@ -1634,7 +1633,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
 /** @noinline */
 function workLoopConcurrent() {
   // Perform work until Scheduler asks us to yield
-  // 构建workInProgress Fiber树的循环
+  // 构建workInProgress Fiber树的循环，直到Scheduler通知需要让出执行权
   while (workInProgress !== null && !shouldYield()) {
     performUnitOfWork(workInProgress);
   }

@@ -218,11 +218,17 @@ if (
         } else {
           // If there's more work, schedule the next message event at the end
           // of the preceding one.
+          /*
+          * 如果还有任务，那么继续发出一个消息执行performWorkUntilDeadline
+          * */
           port.postMessage(null);
         }
       } catch (error) {
         // If a scheduler task throws, exit the current browser task so the
         // error can be observed.
+        /*
+        * 如果调度的任务报错了，退出当前的浏览器任务，以便观察到错误
+        * */
         port.postMessage(null);
         throw error;
       }
@@ -233,7 +239,6 @@ if (
     // reset this.
     needsPaint = false;
   };
-
   const channel = new MessageChannel();
   const port = channel.port2;
   channel.port1.onmessage = performWorkUntilDeadline;

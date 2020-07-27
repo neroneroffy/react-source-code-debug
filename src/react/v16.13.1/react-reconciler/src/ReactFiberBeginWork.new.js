@@ -3090,8 +3090,14 @@ function beginWork(
   renderLanes: Lanes,
 ): Fiber | null {
   /*
-  * current：当前处理的Fiber节点的上一次更新时的Fiber，就是workInProgress.alternate
+  * current：当前处理的Fiber节点的上一次更新时的Fiber，就是workInProgress.alternate。
   * workInProgress： 当前处理的Fiber节点
+  *
+  * 基于双缓冲的概念，current是当前展示出来给用户看到的对应的结构Fiber，
+  * workInProgress是正在后台构建的Fiber。由于本次更新完毕之后，workInProgress会
+  * 成为current，所以在下次更新时，current就是新构建的workInProgress上次更新时对
+  * 应的Fiber
+  *
   * */
   const updateLanes = workInProgress.lanes;
 
@@ -3321,7 +3327,7 @@ function beginWork(
         // the component will assume the children have not changed and bail out.
         /*
         * 当前这个fiber计划进行更新，但是没有新的props或者context，所以didReceiveUpdate设置为false。
-        * 如果更新队列或者context 的consumer产生了一个改变的值，它将将其设置为true。否则，组件将假定
+        * 如果更新队列或者context 的consumer产生了一个改变的值，它将把它设置为true。否则，组件将假定
         * 子组件没有更改并退出。
         * */
         didReceiveUpdate = false;

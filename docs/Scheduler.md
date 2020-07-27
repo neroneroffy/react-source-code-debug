@@ -1,6 +1,6 @@
 ## 让出执行权
-什么时候让出执行权？
-在当前这一帧没有剩余时间且检测到用户输入被打断的时候。
+哪些因素决定是否让出执行权？
+在需要绘制页面或者检测到用户输入被打断（用户输入属于高优先级任务）的时候。
 ```javascript
 shouldYieldToHost = function() {
   const currentTime = getCurrentTime();
@@ -20,6 +20,8 @@ shouldYieldToHost = function() {
   }
 };
 ```
-## 什么时候去判断是否让出控制权？
+## 何时判断让出控制权？
 构建workInProgress树的时候以及执行taskQueue队列中任务的时候。
 从root开始构建workInProgress树的整体行为是taskQueue队列中的一个任务。
+
+如果判断让出执行权之后，没有紧急的任务，那么继续执行任务
