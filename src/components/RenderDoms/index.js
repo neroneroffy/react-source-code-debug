@@ -9,7 +9,7 @@
  * @Time: 15:19
  */
 import React from 'react'
-
+import './indes.css'
 class RenderDoms extends React.Component {
   constructor(props) {
     super(props)
@@ -27,7 +27,7 @@ class RenderDoms extends React.Component {
     this.setState( prevState => ({ count: prevState.count + 2 }) )
   }
   render() {
-    return <div>
+    return <div className={"doms"}>
       <button ref={this.buttonRef} onClick={this.handleButtonClick}>增加2</button>
       <div>
         {Array.from(new Array(8000)).map( (v,index) =>

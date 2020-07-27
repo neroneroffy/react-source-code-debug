@@ -651,6 +651,7 @@ function markUpdateLaneFromFiberToRoot(
  * 任务之前都会调用此函数。
 * */
 function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
+  console.log(123);
   // 先取到上一次调度的callbackNode
   const existingCallbackNode = root.callbackNode;
   // Check if any lanes are being starved by other work. If so, mark them as

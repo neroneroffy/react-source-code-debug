@@ -1,0 +1,11 @@
+.doms {
+    width: 500px;
+    margin: 0 auto;
+    padding-top: 50px;
+    height: 1000px;
+    overflow: auto;
+}
+.doms div {
+    display: inline-block;
+    font-size: 40px;
+}
