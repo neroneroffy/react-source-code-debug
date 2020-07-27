@@ -473,6 +473,7 @@ if (supportsMutation) {
     const oldProps = current.memoizedProps;
     // If there are no effects associated with this node, then none of our children had any updates.
     // This guarantees that we can reuse all of them.
+    //如果节点上没有effect，代表着子节点没有任何更新，所以能直接复用
     const childrenUnchanged = workInProgress.firstEffect === null;
     if (childrenUnchanged && oldProps === newProps) {
       // No changes, just reuse the existing instance.

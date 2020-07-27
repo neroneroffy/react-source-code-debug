@@ -1,0 +1,33 @@
+.AppSibling  h1 {
+  margin-top: 0px;
+}
+.AppSibling {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  padding-top: 80px;
+}
+.AppSibling > span {
+  cursor: pointer;
+}
+.AppSibling:before {
+  content: 'AppSibling';
+  font-size: 20px;
+  position: absolute;
+  top: 0;
+  left: 25%;
+}
+.Child2:before {
+  content: 'Child2';
+  font-size: 20px;
+  position: absolute;
+  top: 0;
+  left: -240%;
+}
+.Child2 {
+  position: relative;
+  margin-left: 60px;
+  padding-top: 40px;
+
+}

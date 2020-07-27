@@ -1118,10 +1118,10 @@ function isHostParent(fiber: Fiber): boolean {
 }
 
 function getHostSibling(fiber: Fiber): ?Instance {
-  // We're going to search forward into the tree until we find a sibling host
-  // node. Unfortunately, if multiple insertions are done in a row we have to
-  // search past them. This leads to exponential search for the next sibling.
-  // TODO: Find a more efficient way to do this.
+// We're going to search forward into the tree until we find a sibling host
+// node. Unfortunately, if multiple insertions are done in a row we have to
+// search past them. This leads to exponential search for the next sibling.
+// TODO: Find a more efficient way to do this.
   let node: Fiber = fiber;
   siblings: while (true) {
     // If we didn't find anything, let's try the next sibling.
@@ -1163,6 +1163,7 @@ function getHostSibling(fiber: Fiber): ?Instance {
   }
 }
 
+// 插入DOM
 function commitPlacement(finishedWork: Fiber): void {
   if (!supportsMutation) {
     return;

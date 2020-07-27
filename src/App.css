@@ -1,5 +1,31 @@
+#root {
+  position: relative;
+}
+#root:before {
+  content: 'FiberRootNode';
+  font-size: 20px;
+  position: absolute;
+  top: 20px;
+  left: 30%;
+} {
+
+}
 .App {
   text-align: center;
-  width: 1000px;
+  width: 500px;
   margin: 0 auto;
+  padding-top: 100px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
 }
+.App:before {
+  content: 'FiberApp';
+  font-size: 20px;
+  position: absolute;
+  top: 20px;
+  left: 30%;
+}
+
+
