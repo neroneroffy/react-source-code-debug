@@ -175,7 +175,7 @@ function workLoop(hasTimeRemaining, initialTime) {
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
       // This currentTask hasn't expired, and we've reached the deadline.
-      // 当前任务没有过期，但是已经到了deadline，需要中断循环
+      // 当前任务没有过期，但是已经到了时间片的末尾，需要结束跳出循环
       break;
     }
     const callback = currentTask.callback;
@@ -187,7 +187,7 @@ function workLoop(hasTimeRemaining, initialTime) {
       const continuationCallback = callback(didUserCallbackTimeout);
       currentTime = getCurrentTime();
       if (typeof continuationCallback === 'function') {
-        // 检查callback的执行结果返回的是不是函数，如果返回的是函数，则将这个函数作为当前任务新的回调
+        // 检查callback的执行结果返回的是不是函数，如果返回的是函数，则将这个函数作为当前任务新的回调。
         // concurrent模式下，callback是performConcurrentWorkOnRoot，其内部根据当前调度的任务
         // 是否相同，来决定是否返回自身，如果相同，则说明还有任务没做完，返回自身，其作为新的callback
         // 被放到当前的task上。while循环完成一次之后，检查shouldYieldToHost，如果需要让出执行权，
@@ -401,6 +401,9 @@ function unstable_cancelCallback(task) {
   // Null out the callback to indicate the task has been canceled. (Can't
   // remove from the queue because you can't remove arbitrary nodes from an
   // array based heap, only the first one.)
+
+  // 将回调置为空，表示已经取消掉任务了。不能将它移除，因为不能在最小堆这种
+  // 数据结构中随意的移除除了第一个元素之外的元素
   task.callback = null;
 }
 

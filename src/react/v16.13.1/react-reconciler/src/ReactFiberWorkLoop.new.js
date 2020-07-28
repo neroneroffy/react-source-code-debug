@@ -690,17 +690,15 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
     if (newCallbackId === existingCallbackId) {
       // This task is already scheduled. Let's check its priority.
       // 任务已经被调度，检查它的优先级
-      // 新旧任务的优先级相等，且旧任务的优先级等于新任务的优先级，退出调度
+      // 新旧任务的优先级相等，且旧任务的优先级等于新任务的优先级，return ，不用对
+      // 现有的新任务做插队操作，因为优先级相同
       if (existingCallbackPriority === newCallbackPriority) {
-        // The priority hasn't changed. Exit.
-        // 前后优先级一样，未发生变化，退出
         return;
       }
       // The task ID is the same but the priority changed. Cancel the existing
       // callback. We'll schedule a new one below.
-      // 任务相同，但是优先级变化了，取消掉
-      // 之前的调度，然后在下边重新调度一个任务
     }
+    // 优先级变化了，取消之前的调度，然后在下边重新调度一个任务，实现高优先级插队
     cancelCallback(existingCallbackNode);
   }
   // Schedule a new callback.
