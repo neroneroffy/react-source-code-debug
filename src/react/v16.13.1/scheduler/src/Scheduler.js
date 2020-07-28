@@ -125,7 +125,6 @@ function flushWork(hasTimeRemaining, initialTime) {
   if (enableProfiling) {
     markSchedulerUnsuspended(initialTime);
   }
-
   // We'll need a host callback the next time work is scheduled.
   isHostCallbackScheduled = false;
   if (isHostTimeoutScheduled) {
@@ -165,6 +164,7 @@ function flushWork(hasTimeRemaining, initialTime) {
 function workLoop(hasTimeRemaining, initialTime) {
   let currentTime = initialTime;
   advanceTimers(currentTime);
+  // console.log(JSON.parse(JSON.stringify(taskQueue)));
   currentTask = peek(taskQueue);
   while (
     currentTask !== null &&
@@ -187,6 +187,13 @@ function workLoop(hasTimeRemaining, initialTime) {
       const continuationCallback = callback(didUserCallbackTimeout);
       currentTime = getCurrentTime();
       if (typeof continuationCallback === 'function') {
+        // 检查callback的执行结果返回的是不是函数，如果返回的是函数，则将这个函数作为当前任务新的回调
+        // concurrent模式下，callback是performConcurrentWorkOnRoot，其内部根据当前调度的任务
+        // 是否相同，来决定是否返回自身，如果相同，则说明还有任务没做完，返回自身，其作为新的callback
+        // 被放到当前的task上。while循环完成一次之后，检查shouldYieldToHost，如果需要让出执行权，
+        // 则中断循环，走到下方，判断currentTask不为null，返回true，说明还有任务，回到performWorkUntilDeadline
+        // 中，判断还有任务，继续port.postMessage(null)，调用监听函数performWorkUntilDeadline，
+        // 继续执行任务
         currentTask.callback = continuationCallback;
         markTaskYield(currentTask, currentTime);
       } else {

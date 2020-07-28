@@ -106,7 +106,7 @@
 // 会以不同的渲染优先级处理两次。我们还跟踪base state，表示被处理的队列中第一个update之前的状态。
 //
 // For example:
-//   baseState 是空字符串，下边是更新队列，从下边的例子来看，优先级是1 > 2的
+//   baseState 是空字符串，下边是更新队列，优先级是1 > 2的
 //   Given a base state of '', and the following queue of updates
 //
 //     A1 - B2 - C1 - D2
@@ -494,7 +494,6 @@ export function processUpdateQueue<State>(
   // This is always non-null on a ClassComponent or HostRoot
   // 对于类组件或HostRoot，这始终是非空的
   const queue: UpdateQueue<State> = (workInProgress.updateQueue: any);
-
   hasForceUpdate = false;
 
   if (__DEV__) {
@@ -599,7 +598,15 @@ export function processUpdateQueue<State>(
           newLastBaseUpdate = newLastBaseUpdate.next = clone;
         }
         // Update the remaining priority in the queue.
-        // 更新update queue的优先级
+        // 更新update queue的优先级。
+        /*
+        * 执行高优先级时，低优先级被中断。而能够让低优先级被恢复的核心逻辑就是最后一个过程（执行更新队列）
+        * 中对updateExpirationTime（低优先级更新的过期时间标记）和renderExpirationTime（高优先级
+        * 更新的过期时间标记）的判断。因为低优先级过期时间标记小于高优先级过期时间标记，即低优先级过期时间
+        * 大于高优先级过期时间（过期时间标记与过期时间成反比，下面会讲到），表明低优先级更新已经被插队，需
+        * 要重新执行。所以低优先级更新过期时间标记设为工作中类fiber的过期时间标记。
+        * */
+
         newLanes = mergeLanes(newLanes, updateLane);
       } else {
         // This update does have sufficient priority.

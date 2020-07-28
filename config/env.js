@@ -96,7 +96,7 @@ function getClientEnvironment(publicUrl) {
 
     "__DEV__": false,
 
-    "__PROFILE__": true,
+    "__PROFILE__": false,
 
     "__EXPERIMENTAL__": true,
 

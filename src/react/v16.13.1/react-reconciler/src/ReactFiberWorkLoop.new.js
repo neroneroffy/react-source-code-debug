@@ -651,7 +651,6 @@ function markUpdateLaneFromFiberToRoot(
  * 任务之前都会调用此函数。
 * */
 function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
-  console.log(123);
   // 先取到上一次调度的callbackNode
   const existingCallbackNode = root.callbackNode;
   // Check if any lanes are being starved by other work. If so, mark them as
@@ -2224,6 +2223,12 @@ function commitRootImpl(root, renderPriorityLevel) {
 
   // Always call this before exiting `commitRoot`, to ensure that any
   // additional work on this root is scheduled.
+  /*
+  * 每次commit阶段完成后，再执行一遍ensureRootIsScheduled，确保是否还有任务需要被调度。
+  * 例如，高优先级插队的更新完成后，最后commit掉，还会再执行一遍，保证之前跳过的低优先级任务
+  * 重新执行
+  *
+  * */
   ensureRootIsScheduled(root, now());
 
   if (hasUncaughtError) {
