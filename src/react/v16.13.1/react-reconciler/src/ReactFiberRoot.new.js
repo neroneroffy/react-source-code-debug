@@ -44,6 +44,9 @@ function FiberRootNode(containerInfo, tag, hydrate) {
 
   this.pendingLanes = NoLanes;
   this.suspendedLanes = NoLanes;
+  /*
+  * 当这棵子树从suspend的状态变为可用时，会被ping，pingedLanes 跟这有关
+  * */
   this.pingedLanes = NoLanes;
   this.expiredLanes = NoLanes;
   this.mutableReadLanes = NoLanes;

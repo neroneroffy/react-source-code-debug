@@ -100,7 +100,7 @@
 // updates are sometimes processed twice, at two separate priorities. We also
 // keep track of a base state, that represents the state before the first update in the queue is applied.
 
-// 尽管如此，优先级仍然很重要，当在渲染阶段处理更新队列时，渲染的结果只会包含具有足够优先级的更新。
+// 尽管如此，优先级仍然很重要，当在render阶段处理更新队列时，渲染的结果只会包含具有足够优先级的更新。
 // 如果因为优先级不足跳过了一个update，它将还是会在队列中，只不过稍后处理。
 // 关键在于这个被跳过的update之后的所有update不管优先级如何，都在队列里，这意味着高优先级的update有时候
 // 会以不同的渲染优先级处理两次。我们还跟踪base state，表示被处理的队列中第一个update之前的状态。
@@ -126,7 +126,6 @@
 //                                    because B2 was skipped.
 //     Updates: [B2, C1, D2]      <-  C1 was rebased on top of B2 C1的优先级在B2之上
 //     Result state: 'ABCD'
-//
 
 /**-----注：
  在这个例子中，C1就被处理了两次，印证了：高优先级的update有时候会以不同的渲染优先级处理两次。
@@ -568,7 +567,7 @@ export function processUpdateQueue<State>(
       const updateLane = update.lane;
       const updateEventTime = update.eventTime;
       // 优先级不足，将update添加到newBaseUpdateQueue中
-      // isSubsetOfLanes函数的意义是，判断updateLane是否在批处理渲染优先级（renderLanes）中
+      // isSubsetOfLanes函数的意义是，判断当前更新的优先级（updateLane）是否在渲染优先级（renderLanes）中
       // 如果不在，那么就说明优先级不足
       if (!isSubsetOfLanes(renderLanes, updateLane)) {
         // Priority is insufficient. Skip this update. If this is the first
@@ -600,11 +599,12 @@ export function processUpdateQueue<State>(
         // Update the remaining priority in the queue.
         // 更新update queue的优先级。
         /*
-        * 执行高优先级时，低优先级被中断。而能够让低优先级被恢复的核心逻辑就是最后一个过程（执行更新队列）
-        * 中对updateExpirationTime（低优先级更新的过期时间标记）和renderExpirationTime（高优先级
-        * 更新的过期时间标记）的判断。因为低优先级过期时间标记小于高优先级过期时间标记，即低优先级过期时间
-        * 大于高优先级过期时间（过期时间标记与过期时间成反比，下面会讲到），表明低优先级更新已经被插队，需
-        * 要重新执行。所以低优先级更新过期时间标记设为工作中类fiber的过期时间标记。
+        * 执行高优先级时，低优先级被中断。而能够让低优先级被恢复的核心逻辑就是当前这部分
+        * updateLane（当前产生的更新的优先级）renderLanes（root上渲染优先级）的判断
+        * 。因为如果当渲染优先级高于当前update的优先级时，表明低优先级的update已经被插
+        * 队，需要重新执行。所以低优先级的lane作为渲染优先级标记到workInProgress节点上。
+        *
+        * newLanes会在最后被赋值到workInProgress上
         * */
 
         newLanes = mergeLanes(newLanes, updateLane);
@@ -690,7 +690,6 @@ export function processUpdateQueue<State>(
     if (newLastBaseUpdate === null) {
       newBaseState = newState;
     }
-
     queue.baseState = ((newBaseState: any): State);
     queue.firstBaseUpdate = newFirstBaseUpdate;
     queue.lastBaseUpdate = newLastBaseUpdate;

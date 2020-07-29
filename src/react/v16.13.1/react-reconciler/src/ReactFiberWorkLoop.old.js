@@ -2675,7 +2675,10 @@ export function pingSuspendedRoot(
     // Received a ping at the same priority level at which we're currently
     // rendering. We might want to restart this render. This should mirror
     // the logic of whether or not a root suspends once it completes.
-
+    /*
+    * 接收到与我们当前渲染的优先级相同的ping。我们可能需要重新启动这个渲染。这应该反映根
+    * 完成后是否挂起的逻辑。
+    * */
     // TODO: If we're rendering sync either due to Sync, Batched or expired,
     // we should probably never restart.
 

@@ -289,6 +289,7 @@ export function lanePriorityToSchedulerPriority(
 }
 
 export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
+  // 该函数从pendingLanes中找出优先级最高的lane
   // Early bailout if there's no pending work left.
   // 在没有剩余任务的时候，跳出更新
   const pendingLanes = root.pendingLanes;
@@ -306,10 +307,10 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   const pingedLanes = root.pingedLanes;
 
   // Check if any work has expired.
-  // 检查是否有过期的任务
+  // 检查是否有更新已经过期
   if (expiredLanes !== NoLanes) {
     nextLanes = expiredLanes;
-    // 已经过期了，就需要把优先级设置为同步，来让更新立即执行
+    // 已经过期了，就需要把渲染优先级设置为同步，来让更新立即执行
     nextLanePriority = return_highestLanePriority = SyncLanePriority;
     equalOrHigherPriorityLanes = (getLowestPriorityLane(nextLanes) << 1) - 1;
     /*
@@ -318,7 +319,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
       equalOrHigherPriorityLanes 意为相对于nextLanes优先级较高或相等的位，
       具体的意思解释如下：
       以同步优先级            SyncLane = 0b0000000000000000000000000000001
-      和屏幕隐藏的优先级 OffscreenLane = 0b1000000000000000000000000000000
+      和屏幕隐藏的优先级  OffscreenLane = 0b1000000000000000000000000000000
       为例，SyncLane肯定高于OffscreenLane，可见1越靠左，优先级越低。
 
       回到代码中，getLowestPriorityLane(nextLanes)做的事情就是找到nextLanes中
@@ -335,11 +336,19 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
       证明了equalOrHigherPriorityLanes中的优先级相对于nextLanes相等或较高
     * */
   } else {
-    // 如果没有过期的任务，就检查有没有被挂起的任务，如果有挂起的任务，
+    // 如果任务都没有过期，就检查这些任务里有没有被挂起的任务，如果有挂起的任务，
     // nextLanes就被赋值成挂起的任务里优先级最高的。
     // Do not work on any idle work until all the non-idle work has finished,
     // even if the work is suspended.
-    // 不要在任何空闲任务上工作，直到所有非空闲任务完成，即使任务被挂起
+    // 即使具有优先级的任务被挂起，也不要处理空闲的任务，除非有优先级的任务都被处理完了
+
+    // nonIdlePendingLanes 是所有需要处理的优先级。然后判断这些优先级
+    // （nonIdlePendingLanes）是不是为空。
+    //
+    // 不为空的话，把被挂起任务的优先级踢出去，只剩下那些真正待处理的任务的优先级集合。
+    // 然后从这些优先级里找出最紧急的return出去。如果已经将挂起任务优先级踢出了之后还是
+    // 为空，那么就说明需要处理这些被挂起的任务了。将它们重启。pingedLanes是那些需要
+    // 重启的任务的优先级
 
     const nonIdlePendingLanes = pendingLanes & NonIdleLanes;
     if (nonIdlePendingLanes !== NoLanes) {
@@ -400,9 +409,12 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   // If we're already in the middle of a render, switching lanes will interrupt
   // it and we'll lose our progress. We should only do this if the new lanes are
   // higher priority.
-  /**
-   * 如果我们已经在渲染中，切换lanes会中断它，我们会失去我们的进程。
-   * 只有在新lanes有更高优先级的情况下，才应该这样做。
+  /*
+   * 翻译：如果已经在渲染过程中，切换lanes会中断渲染，将会丢失进程。
+   * 只有在新lanes有更高优先级的情况下，才应该这样做。（只有在高优先级的任务插队时，才会这样做？）
+   *
+   * 如果正在渲染，而且新任务的优先级不足，那么不管它，继续往下渲染，只有在新的优先级比当前的正在
+   * 渲染的优先级高的时候，才去打断（高优先级任务插队）
   * */
   if (
     wipLanes !== NoLanes &&
@@ -421,13 +433,14 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   }
 
   // Check for entangled lanes and add them to the batch.
+  // 检查entangled lanes并把它们加入到批处理中
   //
   // A lane is said to be entangled with another when it's not allowed to render
   // in a batch that does not also include the other lane. Typically we do this
   // when multiple updates have the same source, and we only want to respond to
   // the most recent event from that source.
   /*
-  * 当不允许在不包括其他通道的批处理中渲染时，一个通道被称为与另一个通道纠缠在一起。通常，当多个更
+  * 当一个lane禁止在不包括其他lane的批处理中渲染时，它被称为与另一个lane纠缠在一起。通常，当多个更
   * 新具有相同的源时，我们会这样做，并且我们只想响应来自该源的最新事件。
   * */
   //
@@ -488,7 +501,8 @@ export function markStarvedLanesAsExpired(
   currentTime: number,
 ): void {
   // TODO: This gets called every time we yield. We can optimize by storing
-  // the earliest expiration time on the root. Then use that to quickly bail out of this function.
+  // the earliest expiration time on the root. Then use that to quickly bail
+  // out of this function.
   // root节点上最早的过期时间，然后用它来快速跳出该函数
   const pendingLanes = root.pendingLanes;
   const suspendedLanes = root.suspendedLanes;
@@ -503,6 +517,7 @@ export function markStarvedLanesAsExpired(
   let lanes = pendingLanes;
   while (lanes > 0) {
     const index = pickArbitraryLaneIndex(lanes);
+    // console.log(index);
     //       1 = 0b0000000000000000000000000000001
     //   lanes = 0b0000000000000000000000000011100
     //   index = 4
@@ -514,14 +529,14 @@ export function markStarvedLanesAsExpired(
       // Found a pending lane with no expiration time. If it's not suspended, or
       // if it's pinged, assume it's CPU-bound. Compute a new expiration time
       // using the current time.
-      // 发现一个没有过期时间并且待处理的lane，如果它没被挂起或者被触发，那么将它视为CPU相关的任务，
+      // 发现一个没有过期时间并且待处理的lane，如果它没被挂起或者被触发，那么将它视为CPU密集型的任务，
       // 用当前时间计算一个新的过期时间
       if (
         (lane & suspendedLanes) === NoLanes ||
         (lane & pingedLanes) !== NoLanes
       ) {
         // Assumes timestamps are monotonically increasing.
-        // 假设时间戳是单调递增的
+        // 将时间戳视为单调递增的
         expirationTimes[index] = computeExpirationTime(lane, currentTime);
       }
     } else if (expirationTime <= currentTime) {

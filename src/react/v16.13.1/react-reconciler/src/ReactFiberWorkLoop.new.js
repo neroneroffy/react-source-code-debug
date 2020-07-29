@@ -316,6 +316,10 @@ let spawnedWorkDuringRender: null | Array<Lane | Lanes> = null;
 // If two updates are scheduled within the same event, we should treat their
 // event times as simultaneous, even if the actual clock time has advanced
 // between the first and second call.
+/*
+* 如果在同一个事件中调度了两次更新，我们应该将它们的事件时间视为同时发生的，即使在第一次和第
+* 二次调用之间实际的时钟时间已经提前。
+* */
 let currentEventTime: number = NoTimestamp;
 let currentEventWipLanes: Lanes = NoLanes;
 let currentEventPendingLanes: Lanes = NoLanes;
@@ -655,7 +659,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   const existingCallbackNode = root.callbackNode;
   // Check if any lanes are being starved by other work. If so, mark them as
   // expired so we know to work on those next.
-  // 检查是否有lanes被其他任务被占用，如果有的话，
+  // 检查是否有lanes被其他任务阻塞，如果有的话，
   // 把它们标记为过期，这样就可以保证它们可以立刻
   // 被更新
   markStarvedLanesAsExpired(root, currentTime);
@@ -686,6 +690,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // 检查是否存在现有任务，没准可以直接复用它
   const existingCallbackId = root.callbackId;
   const existingCallbackPriority = root.callbackPriority;
+  // console.log(newCallbackId, existingCallbackId);
   if (existingCallbackId !== NoLanes) {
     if (newCallbackId === existingCallbackId) {
       // This task is already scheduled. Let's check its priority.
@@ -731,8 +736,12 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 // 这是每个并发任务进入调度的入口，会被作为task放入taskQueue中，然后请求主线程回调来执行taskQueue中的任务
 function performConcurrentWorkOnRoot(root, didTimeout) {
   // Since we know we're in a React event, we can clear the current
+  // console.log(root.expirationTimes);
   // event time. The next update will compute a new event time.
   currentEventTime = NoTimestamp;
+  // currentEventTime 是事件触发时计算的事件，会被用来计算过期时间。如果在执行工作
+  // 循环，那么由于调度更新的时候已经计算了本次更新的过期时间，那么再计算就没有意义了，
+  // 下次更新的时候再计算
   currentEventWipLanes = NoLanes;
 
   currentEventPendingLanes = NoLanes;
@@ -746,8 +755,7 @@ function performConcurrentWorkOnRoot(root, didTimeout) {
   // in case they schedule additional work.
   flushPassiveEffects();
 
-  // Determine the next expiration time to work on, using the fields stored
-  // on the root.
+  // Determine the next expiration time to work on, using the fields stored on the root.
   let lanes = getNextLanes(
     root,
     root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
@@ -2741,9 +2749,14 @@ export function pingSuspendedRoot(
     // Received a ping at the same priority level at which we're currently
     // rendering. We might want to restart this render. This should mirror
     // the logic of whether or not a root suspends once it completes.
-
+    /*
+    * 接收到与我们当前渲染的优先级相同的ping。我们可能需要重新启动这个渲染。这应该反映root
+    * 完成后是否挂起的逻辑。
+    * */
     // TODO: If we're rendering sync either due to Sync, Batched or expired,
     // we should probably never restart.
+
+    // 如果由于同步、批处理或过期而进行同步渲染，可能永远都不应该重新启动。
 
     // If we're suspended with delay, we'll always suspend so we can always
     // restart. If we're suspended without any updates, it might be a retry.
@@ -2751,6 +2764,8 @@ export function pingSuspendedRoot(
     // whether we'll eventually process an update during this render pass,
     // but it's somewhat unlikely that we get to a ping before that, since
     // getting to the root most update is usually very fast.
+
+
     if (
       workInProgressRootExitStatus === RootSuspendedWithDelay ||
       (workInProgressRootExitStatus === RootSuspended &&
