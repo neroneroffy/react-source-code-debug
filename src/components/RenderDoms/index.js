@@ -21,7 +21,7 @@ class RenderDoms extends React.Component {
   componentDidMount() {
     const button = this.buttonRef.current
     setTimeout( () => this.setState( { count: 1 } ), 500 )
-    setTimeout( () => button.click(), 600)
+    setTimeout( () => button.click(), 550)
     //   A2是第一个setState产生的更新，A1是button.click()产生的更新。
     //   A后边的数字表示优先级，lane模型中，越小优先级越高，1 > 2。
     //   updateQueue：A2 - A1
@@ -40,6 +40,7 @@ class RenderDoms extends React.Component {
   }
   handleButtonClick = () => {
     this.setState( prevState => {
+      console.log('高优先级更新的前序state', prevState)
       return { count: prevState.count + 2 }
     } )
   }
@@ -47,7 +48,7 @@ class RenderDoms extends React.Component {
     return <div className={"doms"}>
       <button ref={this.buttonRef} onClick={this.handleButtonClick}>增加2</button>
       <div>
-        {Array.from(new Array(8000)).map( (v,index) =>
+        {Array.from(new Array(16000)).map( (v,index) =>
           <div key={index}>{this.state.count}</div>
         )}
       </div>

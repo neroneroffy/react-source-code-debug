@@ -690,6 +690,7 @@ export function processUpdateQueue<State>(
     if (newLastBaseUpdate === null) {
       newBaseState = newState;
     }
+    console.log('queue.baseState', queue.baseState);
     queue.baseState = ((newBaseState: any): State);
     queue.firstBaseUpdate = newFirstBaseUpdate;
     queue.lastBaseUpdate = newLastBaseUpdate;
