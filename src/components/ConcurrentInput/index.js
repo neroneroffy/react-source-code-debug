@@ -1,13 +1,4 @@
-/**
- * Licensed Materials - Property of tenxcloud.com
- * (C) Copyright 2019 TenxCloud. All Rights Reserved.
- * ----
- * page TrafficControl
- *
- * @author ZhouHaitao
- * @Date 2020/7/27 0027
- * @Time: 15:49
- */
+
 import React from 'react'
 
 class Concurrent extends React.Component {

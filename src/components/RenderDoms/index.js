@@ -1,13 +1,3 @@
-/**
- * Licensed Materials - Property of tenxcloud.com
- * (C) Copyright 2019 TenxCloud. All Rights Reserved.
- * ----
- * page TrafficControl
- *
- * @author ZhouHaitao
- * @Date 2020/7/27 0027
- * @Time: 15:19
- */
 import React from 'react'
 import './indes.css'
 class RenderDoms extends React.Component {
