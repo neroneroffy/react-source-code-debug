@@ -787,15 +787,15 @@ export function markRootUpdated(root: FiberRoot, updateLane: Lane) {
   // it's not practical to try every single possible combination. We need a
   // heuristic to decide which lanes to attempt to render, and in which batches.
   // For now, we use the same heuristic as in the old ExpirationTimes model:
-  // retry any lane at equal or lower priority, but don't try updates at higher
-  // priority without also including the lower priority updates. This works well
+  // retry any lane at equal or lower priority, but don't try updates at higher priority without also including the lower priority updates. This works well
   // when considering updates across different priority levels, but isn't
   // sufficient for updates within the same priority, since we want to treat
   // those updates as parallel.
+  // 理论上，对任何lane的任何更新都可以解除对其他lane的封锁。但是尝试每一个可能的组合是不实际的。
   // 我们需要一种方式来决定渲染哪个lanes以及在哪个批处理中渲染它。当前是用的是与之前的过期时间模
-  // 式相同的方式：对于优先级相同或者较低的lane进行重新处理。但是不要在不包含较低优先级更新的情况下处理
-  // 高优先级更新。当考虑跨不同优先级级别的更新时，这种方法很合适，但对于相同优先级的更新来说，这是不够的，
-  // 因为我们希望对这些update并行处理。
+  // 式相同的方式：对于优先级相同或者较低的lane进行重新处理。但是如果没有包含较低优先级的更新，
+  // 就不要尝试高优先级的更新。当考虑跨不同优先级级别的更新时，这种方法很合适，但对于相同优先级
+  // 的更新来说，这是不够的，因为我们希望对这些update并行处理。
   // Unsuspend any update at equal or lower priority.
   // 取消同等或较低优先级的更新。
 

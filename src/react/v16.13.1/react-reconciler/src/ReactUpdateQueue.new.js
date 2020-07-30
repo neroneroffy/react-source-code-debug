@@ -601,7 +601,7 @@ export function processUpdateQueue<State>(
         /*
         * 执行高优先级时，低优先级被中断。而能够让低优先级被恢复的核心逻辑就是当前这部分
         * updateLane（当前产生的更新的优先级）renderLanes（root上渲染优先级）的判断
-        * 。因为如果当渲染优先级高于当前update的优先级时，表明低优先级的update已经被插
+        * 。因为如果当渲染优先级高于当前update的优先级时，表明当前的update已经被插
         * 队，需要重新执行。所以低优先级的lane作为渲染优先级标记到workInProgress节点上。
         *
         * newLanes会在最后被赋值到workInProgress上

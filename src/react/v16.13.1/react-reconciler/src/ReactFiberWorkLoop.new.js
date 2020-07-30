@@ -247,9 +247,13 @@ let workInProgressRootRenderLanes: Lanes = NoLanes;
 // case where it's different from `workInProgressRootRenderLanes` is when we
 // enter a subtree that is hidden and needs to be unhidden: Suspense and
 // Offscreen component.
-//
+// 允许组件为它们的子树改变渲染的lanes。这是我们在root上执行的lanes的超集。和
+// workInProgressRootRenderLanes唯一的不同是当我们进入一个需要被显示的隐藏的子
+// 树的时候（被挂起或者屏幕之外的组件）
 // Most things in the work loop should deal with workInProgressRootRenderLanes.
+// 工作循环的大多数事情应该使用workInProgressRootRenderLanes
 // Most things in begin/complete phases should deal with subtreeRenderLanes.
+// 开始或者完成阶段应该使用subtreeRenderLanes
 let subtreeRenderLanes: Lanes = NoLanes;
 const subtreeRenderLanesCursor: StackCursor<Lanes> = createCursor(NoLanes);
 
@@ -606,11 +610,11 @@ function markUpdateLaneFromFiberToRoot(
     // 将update放到root的pending update中
     markRootUpdated(root, lane);
     if (workInProgressRoot === root) {
-      // Received an update to a tree that's in the middle of rendering. Mark
-      // that there was an interleaved update work on this root. Unless the
-      // `deferRenderPhaseUpdateToNextBatch` flag is off and this is a render
-      // phase update. In that case, we don't treat render phase updates as if
-      // they were interleaved, for backwards compat reasons.
+    // Received an update to a tree that's in the middle of rendering. Mark
+    // that there was an interleaved update work on this root. Unless the
+    // `deferRenderPhaseUpdateToNextBatch` flag is off and this is a render
+    // phase update. In that case, we don't treat render phase updates as if
+    // they were interleaved, for backwards compat reasons.
       if (
         deferRenderPhaseUpdateToNextBatch ||
         (executionContext & RenderContext) === NoContext
@@ -756,6 +760,9 @@ function performConcurrentWorkOnRoot(root, didTimeout) {
   flushPassiveEffects();
 
   // Determine the next expiration time to work on, using the fields stored on the root.
+  /*
+  * 获取的这个lanes会作为本次渲染的优先级
+  * */
   let lanes = getNextLanes(
     root,
     root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
