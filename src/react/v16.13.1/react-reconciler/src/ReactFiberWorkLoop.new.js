@@ -615,6 +615,13 @@ function markUpdateLaneFromFiberToRoot(
     // `deferRenderPhaseUpdateToNextBatch` flag is off and this is a render
     // phase update. In that case, we don't treat render phase updates as if
     // they were interleaved, for backwards compat reasons.
+      /*
+      * 当开始渲染的时候，由于会从根节点构建workInProgress树，所以 workInProgressRoot === root 说明了正在渲染(render + commit)，
+      * 此时收到了一个更新，除非' deferRenderPhaseUpdateToNextBatch'（将渲染阶段的更新推迟到下个批处理）
+      * 标志是关闭的并且更新是render阶段进来的。在这种情况下，由于向后兼容的原因，我们不会将渲染阶段更新当作交错处理。
+      *
+      * 翻译成人话：如果正在渲染的时候来了一个更新，要是我们希望立刻处理它而且此时正处于render阶段，
+      * */
       if (
         deferRenderPhaseUpdateToNextBatch ||
         (executionContext & RenderContext) === NoContext
