@@ -158,7 +158,7 @@
 // regardless of priority. Intermediate state may vary according to system
 // resources, but the final state is always the same.
 
-// 因为是按照update插入的顺序来依次处理更新，并且在跳过update时，重新设置高优先级的baseState。最终结果都是确定的，
+// 因为是按照update插入的顺序来依次处理更新，并且在跳过update时，重做高优先级的update。无论优先级如何，最终结果都是确定的，
 // 中间状态可能因为系统资源的不同而不同，但最终状态总是相同的
 
 /**
