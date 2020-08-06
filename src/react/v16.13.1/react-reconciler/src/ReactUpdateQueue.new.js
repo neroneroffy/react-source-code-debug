@@ -602,11 +602,13 @@ export function processUpdateQueue<State>(
         * 执行高优先级时，低优先级被中断。而能够让低优先级被恢复的核心逻辑就是当前这部分
         * updateLane（当前产生的更新的优先级）renderLanes（root上渲染优先级）的判断
         * 。因为如果当渲染优先级高于当前update的优先级时，表明当前的update已经被插
-        * 队，需要重新执行。所以低优先级的lane作为渲染优先级标记到workInProgress节点上。
+        * 队，需要重新执行。所以低优先级的lane标记到workInProgress节点上。
         *
         * newLanes会在最后被赋值到workInProgress上
+        *
+        * 会从root上的pendingLanes中找出下一个更新的优先级，这个优先级有可能就是之前被跳过的低优先级，
+        * 它作为渲染优先级。然后到了这里，wip的优先级符合要求，被更新掉。
         * */
-
         newLanes = mergeLanes(newLanes, updateLane);
       } else {
         // This update does have sufficient priority.
@@ -690,7 +692,6 @@ export function processUpdateQueue<State>(
     if (newLastBaseUpdate === null) {
       newBaseState = newState;
     }
-    console.log('queue.baseState', queue.baseState);
     queue.baseState = ((newBaseState: any): State);
     queue.firstBaseUpdate = newFirstBaseUpdate;
     queue.lastBaseUpdate = newLastBaseUpdate;
@@ -703,8 +704,8 @@ export function processUpdateQueue<State>(
     // shouldComponentUpdate is tricky; but we'll have to account for
     // that regardless.
     // （直译）将剩余的过期时间设置为队列中剩余的时间。这应该没问题，因为影响过期时间的只有props和context。
-    // 当开始处理队列时，我们已经在开始阶段的中间，所以我们已经处理了props。指定shouldComponentUpdate的组件中的context很棘手;
-    // 但无论如何，我们都要考虑到这一点。
+    // 当开始处理队列时，我们已经在开始阶段的中间，所以我们已经处理了props。指定shouldComponentUpdate的
+    // 组件中的context很棘手;但无论如何，我们都要考虑到这一点。
 
     markSkippedUpdateLanes(newLanes);
     workInProgress.lanes = newLanes;

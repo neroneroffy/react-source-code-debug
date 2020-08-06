@@ -274,7 +274,6 @@ let workInProgressRootIncludedLanes: Lanes = NoLanes;
 // includes unprocessed updates, not work in bailed out children.
 let workInProgressRootSkippedLanes: Lanes = NoLanes;
 // Lanes that were updated (in an interleaved event) during this render.
-// 在交替事件中更新的lanes
 let workInProgressRootUpdatedLanes: Lanes = NoLanes;
 // Lanes that were pinged (in an interleaved event) during this render.
 let workInProgressRootPingedLanes: Lanes = NoLanes;
@@ -607,7 +606,7 @@ function markUpdateLaneFromFiberToRoot(
 
   if (root !== null) {
     // Mark that the root has a pending update.
-    // 将update放到root的pending update中
+    // 标记根节点有一个等待的更新
     markRootUpdated(root, lane);
     if (workInProgressRoot === root) {
     // Received an update to a tree that's in the middle of rendering. Mark
@@ -616,17 +615,15 @@ function markUpdateLaneFromFiberToRoot(
     // phase update. In that case, we don't treat render phase updates as if
     // they were interleaved, for backwards compat reasons.
       /*
+      https://github.com/facebook/react/commit/47ebc90b08be7a2e6955dd3cfd468318e0b8fdfd
       * 当开始渲染的时候，由于会从根节点构建workInProgress树，所以 workInProgressRoot === root 说明了正在渲染(render + commit)，
-      * 此时收到了一个更新，除非' deferRenderPhaseUpdateToNextBatch'（将渲染阶段的更新推迟到下个批处理）
-      * 标志是关闭的并且更新是render阶段进来的。在这种情况下，由于向后兼容的原因，我们不会将渲染阶段更新当作交错处理。
-      *
-      * 翻译成人话：如果正在渲染的时候来了一个更新，要是我们希望立刻处理它而且此时正处于render阶段，
+      * 如果这个时候来了一个更新，那么除非需要将这个更新推迟到下次再处理，否则在root行标记一下有一个更新任务。
       * */
       if (
         deferRenderPhaseUpdateToNextBatch ||
         (executionContext & RenderContext) === NoContext
       ) {
-        // 假设现在没处在渲染阶段，把lane放进workInProgressRootUpdatedLanes中
+        // 假设现在没在渲染，或者需要将update推迟到下次再渲染，那么把lane放进workInProgressRootUpdatedLanes中
         workInProgressRootUpdatedLanes = mergeLanes(
           workInProgressRootUpdatedLanes,
           lane,
@@ -674,7 +671,6 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // 把它们标记为过期，这样就可以保证它们可以立刻
   // 被更新
   markStarvedLanesAsExpired(root, currentTime);
-
   // Determine the next lanes to work on, and their priority.
   // 确定下一个要完成的lanes，和它们的优先级
   const newCallbackId = getNextLanes(
@@ -1654,6 +1650,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
 function workLoopConcurrent() {
   // Perform work until Scheduler asks us to yield
   // 构建workInProgress Fiber树的循环，直到Scheduler通知需要让出执行权
+  // workInProgress会记录上一次处理到的fiber节点，方便让出执行权恢复后再继续处理
   while (workInProgress !== null && !shouldYield()) {
     performUnitOfWork(workInProgress);
   }

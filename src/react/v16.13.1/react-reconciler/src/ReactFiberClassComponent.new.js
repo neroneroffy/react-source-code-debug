@@ -993,7 +993,6 @@ function updateClassInstance(
   renderLanes: Lanes,
 ): boolean {
   const instance = workInProgress.stateNode;
-
   cloneUpdateQueue(current, workInProgress);
 
   const unresolvedOldProps = workInProgress.memoizedProps;
