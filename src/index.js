@@ -11,4 +11,4 @@ ReactDOM.createRoot(root).render(<App />);
 // Sync mode
 // ReactDOM.render(<App />, root);
 
-console.log('React 源码调试，当前版本：' + React.version);
+// console.log('React 源码调试，当前版本：' + React.version);

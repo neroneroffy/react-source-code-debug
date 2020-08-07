@@ -468,6 +468,7 @@ export function scheduleUpdateOnFiber(
   lane: Lane,
   eventTime: number,
 ) {
+  console.log('本轮渲染的渲染优先级：', lane);
   // 判断是否是无限循环的update
   checkForNestedUpdates();
   warnAboutRenderPhaseUpdatesInDEV(fiber);
@@ -746,7 +747,7 @@ function performConcurrentWorkOnRoot(root, didTimeout) {
   // console.log(root.expirationTimes);
   // event time. The next update will compute a new event time.
   currentEventTime = NoTimestamp;
-  // currentEventTime 是事件触发时计算的事件，会被用来计算过期时间。如果在执行工作
+  // currentEventTime 是事件触发时计算的时间，会被用来计算过期时间。如果在执行工作
   // 循环，那么由于调度更新的时候已经计算了本次更新的过期时间，那么再计算就没有意义了，
   // 下次更新的时候再计算
   currentEventWipLanes = NoLanes;
@@ -1976,7 +1977,7 @@ function commitRootImpl(root, renderPriorityLevel) {
   // pending time is whatever is left on the root fiber.
   let remainingLanes = mergeLanes(finishedWork.lanes, finishedWork.childLanes);
   markRootFinished(root, remainingLanes);
-
+  console.log('更新完成后的渲染优先级（root.pendingLanes）：', root.pendingLanes);
   // Clear already finished discrete updates in case that a later call of
   // `flushDiscreteUpdates` starts a useless render pass which may cancels
   // a scheduled timeout.

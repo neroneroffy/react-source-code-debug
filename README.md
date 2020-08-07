@@ -4,7 +4,7 @@
 npm install
 
 ### 启动React不同版本的调试环境：
-* 启动17.0.0-alpha.0（clone自关方仓库master分支）
+* 启动17.0.0-alpha.0（clone自官方仓库master分支）
 ```
  npm run dev:17.0.0-alpha.0
 ```

@@ -865,7 +865,7 @@ export function markRootMutableRead(root: FiberRoot, updateLane: Lane) {
 }
 
 export function markRootFinished(root: FiberRoot, remainingLanes: Lanes) {
-  // 从root.pendingLanes中删除剩余的lanes（remainingLanes）
+  // 从root.pendingLanes中删除remainingLanes
   /**
      * const a = 0b100
        const b = 0b010

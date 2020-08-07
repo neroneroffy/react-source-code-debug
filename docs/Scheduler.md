@@ -25,3 +25,4 @@ shouldYieldToHost = function() {
 从root开始构建workInProgress树的整体行为是taskQueue队列中的一个任务。
 
 如果判断让出执行权之后，没有紧急的任务，那么继续执行任务
+

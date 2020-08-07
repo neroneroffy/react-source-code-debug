@@ -610,6 +610,7 @@ export function processUpdateQueue<State>(
         * 它作为渲染优先级。然后到了这里，wip的优先级符合要求，被更新掉。
         * */
         newLanes = mergeLanes(newLanes, updateLane);
+        console.log('被跳过的WIP节点上边的优先级：', updateLane, '此时的渲染优先级：', renderLanes);
       } else {
         // This update does have sufficient priority.
         if (newLastBaseUpdate !== null) {

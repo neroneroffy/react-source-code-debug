@@ -1,6 +1,6 @@
 import React from 'react'
 import './indes.css'
-class RenderDoms extends React.Component {
+class TasksWithDifferentPriorities extends React.Component {
   constructor(props) {
     super(props)
     this.buttonRef = React.createRef();
@@ -11,8 +11,8 @@ class RenderDoms extends React.Component {
   componentDidMount() {
     const button = this.buttonRef.current
     setTimeout( () => this.setState( { count: 1 } ), 500 )
-    setTimeout( () => button.click(), 550)
-    //   A2是第一个setState产生的更新，A1是button.click()产生的更新。
+    setTimeout( () => button.click(), 600)
+    //   A2是常规优先级的更新，A1是button.click()产生高优先级的更新。
     //   A后边的数字表示优先级，lane模型中，越小优先级越高，1 > 2。
     //   updateQueue：A2 - A1
     //                1    +2
@@ -30,7 +30,6 @@ class RenderDoms extends React.Component {
   }
   handleButtonClick = () => {
     this.setState( prevState => {
-      console.log('高优先级更新的前序state', prevState)
       return { count: prevState.count + 2 }
     } )
   }
@@ -45,4 +44,4 @@ class RenderDoms extends React.Component {
     </div>
   }
 }
-export default RenderDoms
+export default TasksWithDifferentPriorities

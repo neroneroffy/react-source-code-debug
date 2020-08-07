@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import State from './components/State'
-import TabToggle from './components/TabToggle'
+import LanesDemo from './components/LanesDemo'
 import AppSibling from './components/AppSibling'
-import RenderDoms from './components/RenderDoms'
+import TasksWithDifferentPriorities from './components/TasksWithDifferentPriorities'
 import Concurrent from './components/ConcurrentInput'
 import './App.css';
 
@@ -16,7 +16,7 @@ function App() {
     </div>
   );
 */
-  return <RenderDoms/>
+  return <TasksWithDifferentPriorities/>
 }
 
 export default App;

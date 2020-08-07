@@ -71,7 +71,7 @@ function Content({ tab }) {
   return <h1>{tab.label}</h1>;
 }
 
-function TabToggle() {
+function LanesDemo() {
   const [activeTab, setActiveTab] = useState(tabs[0]);
   return (
     <>
@@ -96,4 +96,4 @@ function TabToggle() {
     </>
   );
 }
-export default TabToggle
+export default LanesDemo
