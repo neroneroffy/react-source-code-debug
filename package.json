@@ -66,6 +66,7 @@
   "scripts": {
     "dev:16.12.0": "cross-env REACT_VERSION=v16.12.0 node scripts/start.js",
     "dev:16.13.1": "cross-env REACT_VERSION=v16.13.1 node scripts/start.js",
+    "dev:17.0.0-alpha.0": "cross-env REACT_VERSION=v17.0.0-alpha.0 node scripts/start.js",
     "dev:lanes": "cross-env REACT_VERSION=Lanes node scripts/start.js",
     "dev": "cross-env REACT_VERSION=none node scripts/start.js",
     "build": "node scripts/build.js",

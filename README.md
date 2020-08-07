@@ -1,14 +1,18 @@
-这个项目是为了调试react源码而搭建的。
+这个项目是为了调试react源码而搭建的。[点击查看](https://github.com/neroneroffy/react-source-code-debug/tree/master/docs/setUpDebugEnv.md)搭建调试环境教程
 
 ### 安装依赖
 npm install
 
 ### 启动React不同版本的调试环境：
-* 启动clone自官方仓库master分支的代码
+* 启动17.0.0-alpha.0（clone自关方仓库master分支）
+```
+ npm run dev:17.0.0-alpha.0
+```
+* 启动16.13.1版本
 ```
  npm run dev:16.13.1
 ```
-* 启动最新的稳定版
+* 启动16.12.0版本
 ```
 npm run dev:16.12.0
 ```
