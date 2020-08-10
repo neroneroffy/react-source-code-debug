@@ -708,6 +708,9 @@ export function processUpdateQueue<State>(
     // 当开始处理队列时，我们已经在开始阶段的中间，所以我们已经处理了props。指定shouldComponentUpdate的
     // 组件中的context很棘手;但无论如何，我们都要考虑到这一点。
 
+    // 如果没有被跳过的任务，那么newLanes为空，随之workInProgress.lanes也会被置空，反之workInProgress.lanes有值。在随后的completeUnitOfWork阶段，
+    // 会向上收集workInProgress节点的lanes。最终这些lanes会被收集到root的childLanes中，而root的childLanes最终会被赋值到root.pendingLanes中。代表
+    // root中还有待处理的更新。如果此处的workInProgress.lanes不为空，说明最终的root中还有更新要被处理，会再调度一个任务进行处理。
     markSkippedUpdateLanes(newLanes);
     workInProgress.lanes = newLanes;
     workInProgress.memoizedState = newState;

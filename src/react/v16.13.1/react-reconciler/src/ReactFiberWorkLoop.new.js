@@ -474,6 +474,7 @@ export function scheduleUpdateOnFiber(
   warnAboutRenderPhaseUpdatesInDEV(fiber);
   // 找到rootFiber并遍历更新子节点的优先级
   const root = markUpdateLaneFromFiberToRoot(fiber, lane);
+  console.log('root.pendingLanes：', root.pendingLanes);
   if (root === null) {
     warnAboutUpdateOnUnmountedFiberInDEV(fiber);
     return null;
@@ -1662,7 +1663,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   // nothing should rely on this, but relying on it here means that we don't
   // need an additional field on the work in progress.
   const current = unitOfWork.alternate;
-  setCurrentDebugFiberInDEV(unitOfWork);
+  setCurrentDebugFiberInDEV(unitOfWork);``
 
   let next;
   // beginWork阶段
@@ -1913,6 +1914,7 @@ function resetChildLanes(completedWork: Fiber) {
     completedWork.treeBaseDuration = treeBaseDuration;
   } else {
     let child = completedWork.child;
+    // 向上收集子节点的lanes
     while (child !== null) {
       newChildLanes = mergeLanes(
         newChildLanes,
