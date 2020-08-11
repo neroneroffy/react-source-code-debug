@@ -875,10 +875,11 @@ function finishConcurrentRender(root, finishedWork, exitStatus, lanes) {
 
       // We have an acceptable loading state. We need to figure out if we
       // should immediately commit it or wait a bit.
-
+      // 加载状态可以被接受，需要考虑的是应该立即提交还是等一会再提交
       // If we have processed new updates during this render, we may now
       // have a new loading state ready. We want to ensure that we commit
       // that as soon as possible.
+      // 如果我们在渲染期间处理了新的更新，现在可能有一个新的加载状态准备好了。我们希望确保我们尽快commit。
       const hasNotProcessedNewUpdates =
         workInProgressRootLatestProcessedEventTime === NoTimestamp;
       if (
@@ -892,6 +893,11 @@ function finishConcurrentRender(root, finishedWork, exitStatus, lanes) {
         // and after that's fixed it can only be a retry. We're going to
         // throttle committing retries so that we don't show too many
         // loading states too quickly.
+        /*
+        * 如果我们在此过程中没有处理任何新的更新，那么这要么是对现有的回退状态的重试，
+        * 要么是对隐藏树的重试。隐藏的树不应该与其他工作批处理，在那之后，只能重试。
+        * 我们将限制提交重试，这样就不会太快地显示太多加载状态。
+        * */
         const msUntilTimeout =
           globalMostRecentFallbackTime + FALLBACK_THROTTLE_MS - now();
         // Don't bother with a very short suspense time.

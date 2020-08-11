@@ -287,7 +287,7 @@ export function createUpdate(
   return update;
 }
 
-export function  enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
+export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
   const updateQueue = fiber.updateQueue;
   if (updateQueue === null) {
     // Only occurs if the fiber has been unmounted.
