@@ -11,22 +11,25 @@
 这里以setState改变组件状态为例。
 1. 当调用setState时，创建update对象，意味着fiber节点产生更新，将其入队（放入updateQueue）。
 2. 进入调度，将1产生的update的优先级标记（update.lane）放入fiber.lanes中和root的pendingLanes中，
-并从fiber节点开始向上遍历，每次遍历将lane放在父节点的childLanes中，最终收集到root.childLanes中。
-3. 从root的pendingLanes中找出最紧急的那个优先级，作为本次渲染的渲染优先级（renderLanes），带着它进入render阶段更新。
-4. 进入beginWork阶段，开始构建workInProgress树，处理到当时产生update的fiber时，基于它创建workInProgress节点，处理节点上的updateQueue。
+并从fiber节点开始向上遍历，将lane放在父节点的childLanes中，最终收集到root.childLanes中。
+3. 调用ensureRootIsScheduled，从root的pendingLanes中找出最紧急的那个优先级，作为本次渲染的渲染优先级（renderLanes），带着它进入render阶段更新。
+4. 从beginWork开始，开始构建workInProgress树，处理到当时产生update的fiber时，基于它创建workInProgress节点，处理节点上的updateQueue，计算组件新的状态。
 这一步包含一个关键逻辑，决定了低优先级任务被跳过以及之后被重新执行，具体在下一节会讲到。
 5. 当beginWork处理到fiber树的叶子节点，开始completeUnitOfWork。这个阶段除了收集effectList，还将收集workInProgress节点上的lanes，最终
 收集到root的childLanes中。这与第二步的过程相似但截然不同。第二步中的childLanes是未经处理的lanes。这一步中的则是已经处理过的。收集起来，以便决定
 是否应再次发起调度进行处理。
 6. render阶段完成，进入commit阶段。将上一步中为root收集的childLanes作为remainingLanes，赋值给root.pendingLanes。然后更新DOM，本次React
 的更新任务完成。
-7. 更新完成后，再次调用ensureRootIsScheduled，执行步骤3获取渲染优先级，若渲染优先级为空，则中断，否则继续调度
+7. 更新完成后，再次调用ensureRootIsScheduled，执行步骤3获取渲染优先级，若渲染优先级为空，则中断，否则继续调度。
 
-以上七步串联了那几个更新相关的概念。每一步都是核心，而其中最重要的是对优先级标记lanes的操作。我们现在回过头来梳理一下那几个概念的关系。
+以上七步串联了那几个更新相关的概念。最重要的是对优先级标记（lanes）的操作。我们现在回过头来梳理一下那几个概念的关系。
 
-workInProgress维护的lanes最终会被收集到root.childLanes上。
-root除了维护着childLanes，还维护着pendingLanes。二者的关系是，在本次更新任务结束时，render阶段收集的childLanes会被赋值给pendingLanes。
-然后再次调用ensureRootIsScheduled，目的是检查pendingLanes中还有没有lane，有的话，再发起一次调度。
+产生的update对象的优先级标记（lane）会被放入root.pendingLanes和fiber.lanes。毫无疑问，root.pendingLanes中存储了所有待处理的update的优先级。
+
+于是，渲染优先级理（renderLanes）所应当地从它之中选出。当处理workInProgress的updateQueue时，会判断update的优先级标记（update.lane）是否包含
+在renderLanes之内。包含则会被处理，不包含则被跳过。处理与否也决定了处理过后的workInProgress节点的lanes是否包含刚刚的update.lane。
+
+workInProgress.lanes会在complete阶段被最终收集到root.childLanes，最终被赋值给root.pendingLanes。从而决定下一次是否应该发起调度。
 
 ## 高优先级任务插队，低优先级任务重做
 一旦交互或者任何事件触发了更新，就会产生一个update对象，并持有一个优先级。该update会被放入组件对应的fiber节点的updateQueue中。
