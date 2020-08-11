@@ -143,7 +143,6 @@ function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
   // 选出lanes中与InputDiscreteLanes重合的非0位
   const inputDiscreteLanes = InputDiscreteLanes & lanes;
   if (inputDiscreteLanes !== NoLanes) {
-    // 判断条件的含义是如果InputDiscreteLanes中含有lanes
     if (inputDiscreteLanes & InputDiscreteHydrationLane) {
       // 如果InputDiscreteLanes 中包含 InputDiscreteHydrationLane
       return_highestLanePriority = InputDiscreteHydrationLanePriority;

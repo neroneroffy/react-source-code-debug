@@ -699,7 +699,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // 检查是否存在现有任务，没准可以直接复用它
   const existingCallbackId = root.callbackId;
   const existingCallbackPriority = root.callbackPriority;
-  // console.log(newCallbackId, existingCallbackId);
+  console.log(newCallbackId, newCallbackPriority, existingCallbackId, existingCallbackPriority);
   if (existingCallbackId !== NoLanes) {
     if (newCallbackId === existingCallbackId) {
       // This task is already scheduled. Let's check its priority.
