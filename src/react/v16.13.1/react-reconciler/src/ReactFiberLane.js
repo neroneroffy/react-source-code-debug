@@ -351,9 +351,9 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
 
     const nonIdlePendingLanes = pendingLanes & NonIdleLanes;
     if (nonIdlePendingLanes !== NoLanes) {
+      const nonIdleUnblockedLanes = nonIdlePendingLanes & ~suspendedLanes;
       // 未被阻塞的lanes，它等于有优先级的lanes中除去被挂起的lanes
       // & ~ 相当于删除
-      const nonIdleUnblockedLanes = nonIdlePendingLanes & ~suspendedLanes;
 
       // 如果有任务被阻塞了
       if (nonIdleUnblockedLanes !== NoLanes) {
