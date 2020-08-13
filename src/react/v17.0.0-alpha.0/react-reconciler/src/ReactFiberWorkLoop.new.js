@@ -420,6 +420,10 @@ export function requestUpdateLane(
     // This behavior is only a fallback. The flag only exists until we can roll
     // out the setState warning, since existing code might accidentally rely on
     // the current behavior.
+
+    /*
+    * 当处在渲染阶段时，产生了一个更新
+    * */
     return pickArbitraryLane(workInProgressRootRenderLanes);
   }
 

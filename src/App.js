@@ -8,15 +8,13 @@ import './App.css';
 
 function App() {
   const [ count, setCount ] = useState(0)
-/*
   return (
     <div className="App">
       <span className={'app-span'} onClick={() => setCount(count + 1)}>App{count}</span>
-      {/!*<AppSibling count={count}/>*!/}
+      <AppSibling count={count}/>
     </div>
   );
-*/
-  return <TasksWithDifferentPriorities/>
+  // return <TasksWithDifferentPriorities/>
 }
 
 export default App;

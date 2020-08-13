@@ -23,18 +23,23 @@ class Child2 extends React.Component {
     this.setState({val: this.state.val + 1});
     // console.log(this.state.val);    // 第 2 次 log
 
-    setTimeout(() => {
-      this.setState({val: this.state.val + 1});
-      // console.log(this.state.val);  // 第 3 次 log
+    // setTimeout(() => {
+    //   this.setState({val: this.state.val + 1});
+    //   // console.log(this.state.val);  // 第 3 次 log
+    //
+    //   this.setState({val: this.state.val + 1});
+    //   // console.log(this.state.val);  // 第 4 次 log
+    // }, 0);
+  }
+  add = () => {
+    this.setState({val: 2});
+    this.setState({val: 6});
 
-      this.setState({val: this.state.val + 1});
-      // console.log(this.state.val);  // 第 4 次 log
-    }, 0);
   }
   render() {
     const { countFormParent } = this.props
-    return <div className={'Child2'}>
-      {countFormParent}
+    return <div className={'Child2'} onClick={this.add}>
+      {this.state.val}
     </div>
   }
 }

@@ -188,301 +188,6 @@ import invariant from 'shared/invariant';
 
 import {disableLogs, reenableLogs} from 'shared/ConsolePatchingDev';
 
-export type Update<State> = {|
-  // TODO: Temporary field. Will remove this by storing a map of
-  // transition -> event time on the root.
-  eventTime: number,
-  lane: Lane,
-  suspenseConfig: null | SuspenseConfig,
-
-  tag: 0 | 1 | 2 | 3,
-  payload: any,
-  callback: (() => mixed) | null,
-
-  next: Update<State> | null,
-|};
-
-type SharedQueue<State> = {|
-  pending: Update<State> | null,
-|};
-
-export type UpdateQueue<State> = {|
-  baseState: State,
-  firstBaseUpdate: Update<State> | null,
-  lastBaseUpdate: Update<State> | null,
-  shared: SharedQueue<State>,
-  effects: Array<Update<State>> | null,
-|};
-
-export const UpdateState = 0;
-export const ReplaceState = 1;
-export const ForceUpdate = 2;
-export const CaptureUpdate = 3;
-
-// Global state that is reset at the beginning of calling `processUpdateQueue`.
-// It should only be read right after calling `processUpdateQueue`, via
-// `checkHasForceUpdateAfterProcessing`.
-let hasForceUpdate = false;
-
-let didWarnUpdateInsideUpdate;
-let currentlyProcessingQueue;
-export let resetCurrentlyProcessingQueue;
-if (__DEV__) {
-  didWarnUpdateInsideUpdate = false;
-  currentlyProcessingQueue = null;
-  resetCurrentlyProcessingQueue = () => {
-    currentlyProcessingQueue = null;
-  };
-}
-
-export function initializeUpdateQueue<State>(fiber: Fiber): void {
-  const queue: UpdateQueue<State> = {
-    baseState: fiber.memoizedState,
-    firstBaseUpdate: null,
-    lastBaseUpdate: null,
-    shared: {
-      pending: null,
-    },
-    effects: null,
-  };
-  fiber.updateQueue = queue;
-}
-
-export function cloneUpdateQueue<State>(
-  current: Fiber,
-  workInProgress: Fiber,
-): void {
-  // Clone the update queue from current. Unless it's already a clone.
-  const queue: UpdateQueue<State> = (workInProgress.updateQueue: any);
-  const currentQueue: UpdateQueue<State> = (current.updateQueue: any);
-  if (queue === currentQueue) {
-    const clone: UpdateQueue<State> = {
-      baseState: currentQueue.baseState,
-      firstBaseUpdate: currentQueue.firstBaseUpdate,
-      lastBaseUpdate: currentQueue.lastBaseUpdate,
-      shared: currentQueue.shared,
-      effects: currentQueue.effects,
-    };
-    workInProgress.updateQueue = clone;
-  }
-}
-
-export function createUpdate(
-  eventTime: number,
-  lane: Lane,
-  suspenseConfig: null | SuspenseConfig,
-): Update<*> {
-  const update: Update<*> = {
-    eventTime,
-    lane,
-    suspenseConfig,
-
-    tag: UpdateState,
-    payload: null,
-    callback: null,
-
-    next: null,
-  };
-  return update;
-}
-
-export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
-  const updateQueue = fiber.updateQueue;
-  if (updateQueue === null) {
-    // Only occurs if the fiber has been unmounted.
-    return;
-  }
-
-  const sharedQueue: SharedQueue<State> = (updateQueue: any).shared;
-  const pending = sharedQueue.pending;
-  if (pending === null) {
-    // This is the first update. Create a circular list.
-    update.next = update;
-  } else {
-    update.next = pending.next;
-    pending.next = update;
-  }
-  sharedQueue.pending = update;
-
-  if (__DEV__) {
-    if (
-      currentlyProcessingQueue === sharedQueue &&
-      !didWarnUpdateInsideUpdate
-    ) {
-      console.error(
-        'An update (setState, replaceState, or forceUpdate) was scheduled ' +
-          'from inside an update function. Update functions should be pure, ' +
-          'with zero side-effects. Consider using componentDidUpdate or a ' +
-          'callback.',
-      );
-      didWarnUpdateInsideUpdate = true;
-    }
-  }
-}
-
-export function enqueueCapturedUpdate<State>(
-  workInProgress: Fiber,
-  capturedUpdate: Update<State>,
-) {
-  // Captured updates are updates that are thrown by a child during the render
-  // phase. They should be discarded if the render is aborted. Therefore,
-  // we should only put them on the work-in-progress queue, not the current one.
-  let queue: UpdateQueue<State> = (workInProgress.updateQueue: any);
-
-  // Check if the work-in-progress queue is a clone.
-  const current = workInProgress.alternate;
-  if (current !== null) {
-    const currentQueue: UpdateQueue<State> = (current.updateQueue: any);
-    if (queue === currentQueue) {
-      // The work-in-progress queue is the same as current. This happens when
-      // we bail out on a parent fiber that then captures an error thrown by
-      // a child. Since we want to append the update only to the work-in
-      // -progress queue, we need to clone the updates. We usually clone during
-      // processUpdateQueue, but that didn't happen in this case because we
-      // skipped over the parent when we bailed out.
-      let newFirst = null;
-      let newLast = null;
-      const firstBaseUpdate = queue.firstBaseUpdate;
-      if (firstBaseUpdate !== null) {
-        // Loop through the updates and clone them.
-        let update = firstBaseUpdate;
-        do {
-          const clone: Update<State> = {
-            eventTime: update.eventTime,
-            lane: update.lane,
-            suspenseConfig: update.suspenseConfig,
-
-            tag: update.tag,
-            payload: update.payload,
-            callback: update.callback,
-
-            next: null,
-          };
-          if (newLast === null) {
-            newFirst = newLast = clone;
-          } else {
-            newLast.next = clone;
-            newLast = clone;
-          }
-          update = update.next;
-        } while (update !== null);
-
-        // Append the captured update the end of the cloned list.
-        if (newLast === null) {
-          newFirst = newLast = capturedUpdate;
-        } else {
-          newLast.next = capturedUpdate;
-          newLast = capturedUpdate;
-        }
-      } else {
-        // There are no base updates.
-        newFirst = newLast = capturedUpdate;
-      }
-      queue = {
-        baseState: currentQueue.baseState,
-        firstBaseUpdate: newFirst,
-        lastBaseUpdate: newLast,
-        shared: currentQueue.shared,
-        effects: currentQueue.effects,
-      };
-      workInProgress.updateQueue = queue;
-      return;
-    }
-  }
-
-  // Append the update to the end of the list.
-  const lastBaseUpdate = queue.lastBaseUpdate;
-  if (lastBaseUpdate === null) {
-    queue.firstBaseUpdate = capturedUpdate;
-  } else {
-    lastBaseUpdate.next = capturedUpdate;
-  }
-  queue.lastBaseUpdate = capturedUpdate;
-}
-
-function getStateFromUpdate<State>(
-  workInProgress: Fiber,
-  queue: UpdateQueue<State>,
-  update: Update<State>,
-  prevState: State,
-  nextProps: any,
-  instance: any,
-): any {
-  switch (update.tag) {
-    case ReplaceState: {
-      const payload = update.payload;
-      if (typeof payload === 'function') {
-        // Updater function
-        if (__DEV__) {
-          enterDisallowedContextReadInDEV();
-        }
-        const nextState = payload.call(instance, prevState, nextProps);
-        if (__DEV__) {
-          if (
-            debugRenderPhaseSideEffectsForStrictMode &&
-            workInProgress.mode & StrictMode
-          ) {
-            disableLogs();
-            try {
-              payload.call(instance, prevState, nextProps);
-            } finally {
-              reenableLogs();
-            }
-          }
-          exitDisallowedContextReadInDEV();
-        }
-        return nextState;
-      }
-      // State object
-      return payload;
-    }
-    case CaptureUpdate: {
-      workInProgress.effectTag =
-        (workInProgress.effectTag & ~ShouldCapture) | DidCapture;
-    }
-    // Intentional fallthrough
-    case UpdateState: {
-      const payload = update.payload;
-      let partialState;
-      if (typeof payload === 'function') {
-        // Updater function
-        if (__DEV__) {
-          enterDisallowedContextReadInDEV();
-        }
-        partialState = payload.call(instance, prevState, nextProps);
-        if (__DEV__) {
-          if (
-            debugRenderPhaseSideEffectsForStrictMode &&
-            workInProgress.mode & StrictMode
-          ) {
-            disableLogs();
-            try {
-              payload.call(instance, prevState, nextProps);
-            } finally {
-              reenableLogs();
-            }
-          }
-          exitDisallowedContextReadInDEV();
-        }
-      } else {
-        // Partial state object
-        partialState = payload;
-      }
-      if (partialState === null || partialState === undefined) {
-        // Null and undefined are treated as no-ops.
-        return prevState;
-      }
-      // Merge the partial state and the previous state.
-      return Object.assign({}, prevState, partialState);
-    }
-    case ForceUpdate: {
-      hasForceUpdate = true;
-      return prevState;
-    }
-  }
-  return prevState;
-}
-
 export function processUpdateQueue<State>(
   workInProgress: Fiber,
   props: any,
@@ -494,43 +199,27 @@ export function processUpdateQueue<State>(
   const queue: UpdateQueue<State> = (workInProgress.updateQueue: any);
   hasForceUpdate = false;
 
-  if (__DEV__) {
-    currentlyProcessingQueue = queue.shared;
-  }
 
   let firstBaseUpdate = queue.firstBaseUpdate;
   let lastBaseUpdate = queue.lastBaseUpdate;
-
-  // firstBaseUpdate 和 lastBaseUpdate表示本次更新之前fiber节点中的update，可以理解为上次更新遗留下来的。
-  // 因为上次更新是，队列中的update有可能优先级不足，所以会被放到这两个字段中，等待这次更新中被处理。
-
-  // 下面对于更新队列链表的操作，实际上就是将本次更新的链表队列连接到上次的队列中，然后从头循环处理这个新链表。
-  // 因为上次如果有低优先级update被跳过的话，会在这次再被处理，所以这也正是低优先级任务会被重做的含义所在。
-
   // Check if there are pending updates. If so, transfer them to the base queue.
+  // 检查是否有待更新的update，有的话就把它们转换成base queue
   let pendingQueue = queue.shared.pending;
   if (pendingQueue !== null) {
     queue.shared.pending = null;
 
-    // 取到本次的更新队列
+    // The pending queue is circular. Disconnect the pointer between first and last so that it's non-circular.
+    // 待更新队列是环状的，断开第一个和最后一个之间的关联，此时的队列就不是环状队列了
     const lastPendingUpdate = pendingQueue;
     const firstPendingUpdate = lastPendingUpdate.next;
-
-    // 将上次更新的队列最后一个元素指向null，实现断开环状链表
-    // 然后接上这次的更新队列
-    lastPendingUpdate.next = null;
+    lastPendingUpdate.next = null; // 将队列最后一个元素指向null，实现断开环状队列
+    // Append pending updates to base queue
+    // base queue中没有更新，直接被赋值为待更新队列（pendingQueue），否则追加到base queue之后
     if (lastBaseUpdate === null) {
       firstBaseUpdate = firstPendingUpdate;
     } else {
       lastBaseUpdate.next = firstPendingUpdate;
     }
-    /*
-    * 以上的操作先分别获取了updateQueue的最后一个和第一个update，由于lastPendingUpdate是链表的最后一个元素，将它的next指向null来断开updateQueue。
-    * 此时firstPendingUpdate就可以代表新的待处理的非环状的单链表了。
-    * 然后，如果原来的fiber上有update（被跳过的情况），将新的链表接在原来那些update的后面。
-    * 没有的话，就将新链表赋值给firstBaseUpdate。
-    *
-    * */
     // 将base queue中的最后一个update赋值为Pending queue的最后一个元素，断开base queue的环结构
     lastBaseUpdate = lastPendingUpdate;
 
@@ -542,10 +231,7 @@ export function processUpdateQueue<State>(
     // 因为base queue是一个没有循环的单链接列表，所以可以向两个列表追加内容并利用结构共享的优势。
     // TODO: Pass `current` as argument
 
-    // 更新current上的firstBaseUpdate 和 lastBaseUpdate。
-    // 相当于将本次新的更新队列作为遗留的更新队列备份到current节点上
-    // 因为如果wip节点被丢弃了，那么下次再重新执行任务的时候，current节点
-    // 上的遗留更新队列会保有这次的update，因而被处理
+    // 更新workInProgress上的updateQueue。
     const current = workInProgress.alternate;
     if (current !== null) {
       // This is always non-null on a ClassComponent or HostRoot

@@ -1668,7 +1668,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   // nothing should rely on this, but relying on it here means that we don't
   // need an additional field on the work in progress.
   const current = unitOfWork.alternate;
-  setCurrentDebugFiberInDEV(unitOfWork);``
+  setCurrentDebugFiberInDEV(unitOfWork);
 
   let next;
   // beginWork阶段
@@ -1732,7 +1732,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         workInProgress = next;
         return;
       }
-      // 更新子节点的lanes优先级
+
       resetChildLanes(completedWork);
 
       if (
