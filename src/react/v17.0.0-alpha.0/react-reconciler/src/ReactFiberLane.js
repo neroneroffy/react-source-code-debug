@@ -262,7 +262,9 @@ export function lanePriorityToSchedulerPriority(
 }
 
 export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
+  // 该函数从pendingLanes中找出优先级最高的lane
   // Early bailout if there's no pending work left.
+  // 在没有剩余任务的时候，跳出更新
   const pendingLanes = root.pendingLanes;
   if (pendingLanes === NoLanes) {
     return_highestLanePriority = NoLanePriority;
@@ -277,19 +279,44 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   const pingedLanes = root.pingedLanes;
 
   // Check if any work has expired.
+  // 检查是否有更新已经过期
   if (expiredLanes !== NoLanes) {
     nextLanes = expiredLanes;
+    // 已经过期了，就需要把渲染优先级设置为同步，来让更新立即执行
     nextLanePriority = return_highestLanePriority = SyncLanePriority;
   } else {
+    // 如果任务都没有过期，就检查这些任务里有没有被挂起的任务，如果有挂起的任务，
+    // nextLanes就被赋值成挂起的任务里优先级最高的。
     // Do not work on any idle work until all the non-idle work has finished,
     // even if the work is suspended.
+    // 即使具有优先级的任务被挂起，也不要处理空闲的任务，除非有优先级的任务都被处理完了
+
+    // nonIdlePendingLanes 是所有需要处理的优先级。然后判断这些优先级
+    // （nonIdlePendingLanes）是不是为空。
+    //
+    // 不为空的话，把被挂起任务的优先级踢出去，只剩下那些真正待处理的任务的优先级集合。
+    // 然后从这些优先级里找出最紧急的return出去。如果已经将挂起任务优先级踢出了之后还是
+    // 为空，那么就说明需要处理这些被挂起的任务了。将它们重启。pingedLanes是那些需要
+    // 重启的任务的优先级
     const nonIdlePendingLanes = pendingLanes & NonIdleLanes;
     if (nonIdlePendingLanes !== NoLanes) {
+
+      // 未被阻塞的lanes，它等于有优先级的lanes中除去被挂起的lanes
+      // & ~ 相当于删除
       const nonIdleUnblockedLanes = nonIdlePendingLanes & ~suspendedLanes;
+
+      // 如果有任务被阻塞了
       if (nonIdleUnblockedLanes !== NoLanes) {
+
+        // 那么从这些被阻塞的任务中挑出最重要的
         nextLanes = getHighestPriorityLanes(nonIdleUnblockedLanes);
         nextLanePriority = return_highestLanePriority;
+        // return_updateRangeEnd 在上边调用getHighestPriorityLanes时候已经被赋值成了
+        // 最高优先级（如“0b0000000000000000000000000011100”）从右数到最左侧的非零
+        // 位的位置（如上边的优先级，return_updateRangeEnd就是5）
       } else {
+
+        // 如果没有任务被阻塞，从正在处理的lanes中找到优先级最高的
         const nonIdlePingedLanes = nonIdlePendingLanes & pingedLanes;
         if (nonIdlePingedLanes !== NoLanes) {
           nextLanes = getHighestPriorityLanes(nonIdlePingedLanes);
@@ -297,9 +324,13 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
         }
       }
     } else {
+
       // The only remaining work is Idle.
+      // 剩下的任务是闲置的优先级不高的任务。unblockedLanes是未被阻塞的闲置任务
       const unblockedLanes = pendingLanes & ~suspendedLanes;
       if (unblockedLanes !== NoLanes) {
+
+        // 从这些未被阻塞的闲置任务中挑出最重要的
         nextLanes = getHighestPriorityLanes(unblockedLanes);
         nextLanePriority = return_highestLanePriority;
       } else {
