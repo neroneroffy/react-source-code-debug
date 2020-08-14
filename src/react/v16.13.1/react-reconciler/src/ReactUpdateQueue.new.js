@@ -544,8 +544,8 @@ export function processUpdateQueue<State>(
 
     // 更新current上的firstBaseUpdate 和 lastBaseUpdate。
     // 相当于将本次新的更新队列作为遗留的更新队列备份到current节点上
-    // 因为如果wip节点被丢弃了，那么下次再重新执行任务的时候，current节点
-    // 上的遗留更新队列会保有这次的update，因而被处理
+    // 因为如果wip节点被丢弃了，那么下次再重新执行任务的时候，WIP复制
+    // 自current节点，它上的遗留更新队列会保有这次的update，因而被处理。
     const current = workInProgress.alternate;
     if (current !== null) {
       // This is always non-null on a ClassComponent or HostRoot
@@ -633,7 +633,8 @@ export function processUpdateQueue<State>(
           // 原因有二：
           // 第一，优先级足够；
           // 第二，newBaseQueueLast不为null说明已经有优先级不足的update了
-          // 所以要将其追加到newBaseQueue 队列尾部
+          // 所以要将其追加到newBaseQueue 队列尾部，这属于高优先级任务，追加到上次的低优先级任务队列的尾部
+          // 当低优先级任务重做是，会将这次放进去的高优任务再执行一遍，高优先级的任务会以不同的渲染优先级处理两次
           const clone: Update<State> = {
             eventTime: updateEventTime,
             // This update is going to be committed so we never want uncommit

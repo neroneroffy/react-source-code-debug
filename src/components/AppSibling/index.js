@@ -34,7 +34,6 @@ class Child2 extends React.Component {
   add = () => {
     this.setState({val: 2});
     this.setState({val: 6});
-
   }
   render() {
     const { countFormParent } = this.props
