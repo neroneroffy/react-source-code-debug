@@ -409,6 +409,10 @@ export function processUpdateQueue<State>(
   renderLanes: Lanes,
 ): void {
   // This is always non-null on a ClassComponent or HostRoot
+
+  // 准备阶段----------------------------------------
+  // 从workInProgress节点上取出updateQueue
+  // 以下代码中的queue就是updateQueue
   const queue: UpdateQueue<State> = (workInProgress.updateQueue: any);
 
   hasForceUpdate = false;
@@ -417,25 +421,36 @@ export function processUpdateQueue<State>(
     currentlyProcessingQueue = queue.shared;
   }
 
+  // 取出queue上的baseUpdate队列（下面称遗留的队列），
+  // 等待接入本次新产生的更新队列（下面称新队列）
   let firstBaseUpdate = queue.firstBaseUpdate;
   let lastBaseUpdate = queue.lastBaseUpdate;
 
   // Check if there are pending updates. If so, transfer them to the base queue.
+  // 下面的操作，实际上就是将新队列连接到上次遗留的队列中。
   let pendingQueue = queue.shared.pending;
   if (pendingQueue !== null) {
     queue.shared.pending = null;
 
     // The pending queue is circular. Disconnect the pointer between first
     // and last so that it's non-circular.
+    // 取到新队列
     const lastPendingUpdate = pendingQueue;
     const firstPendingUpdate = lastPendingUpdate.next;
+
+    // 将遗留的队列最后一个元素指向null，实现断开环状链表
+    // 然后在尾部接入新队列
     lastPendingUpdate.next = null;
     // Append pending updates to base queue
     if (lastBaseUpdate === null) {
       firstBaseUpdate = firstPendingUpdate;
     } else {
+
+      // 将遗留的队列中最后一个update的next指向新队列第一个update
+      // 完成接入
       lastBaseUpdate.next = firstPendingUpdate;
     }
+    // 修改遗留队列的尾部为新队列的尾部
     lastBaseUpdate = lastPendingUpdate;
 
     // If there's a current queue, and it's different from the base queue, then
@@ -443,6 +458,13 @@ export function processUpdateQueue<State>(
     // queue is a singly-linked list with no cycles, we can append to both
     // lists and take advantage of structural sharing.
     // TODO: Pass `current` as argument
+    // 用同样的方式更新current上的firstBaseUpdate 和
+    // lastBaseUpdate（baseUpdate队列）。
+
+    // 这样做相当于将本次合并完成的队列作为baseUpdate队列备份到current节
+    // 点上，因为如果render中断，那么下次再重新执行任务的时候，WIP节点复制
+    // 自current节点，它上面的baseUpdate队列会保有这次的update，保证
+    // update不丢失。
     const current = workInProgress.alternate;
     if (current !== null) {
       // This is always non-null on a ClassComponent or HostRoot
@@ -459,22 +481,45 @@ export function processUpdateQueue<State>(
     }
   }
 
+  // 至此，新队列已经合并到遗留队列上，firstBaseUpdate作为
+  // 这个新合并的队列，会被循环处理
+
+  // 处理阶段-------------------------------------
+
   // These values may change as we process the queue.
   if (firstBaseUpdate !== null) {
     // Iterate through the list of updates to compute the result.
+    // 取到baseState
     let newState = queue.baseState;
     // TODO: Don't need to accumulate this. Instead, we can remove renderLanes
     // from the original lanes.
+    // 声明newLanes，它会作为本轮更新处理完成的
+    // 优先级，最终标记到WIP节点上
     let newLanes = NoLanes;
 
+    // 声明newBaseState，注意接下来它被赋值的时机，还有前置条件：
+    // 1. 当有优先级被跳过，newBaseState赋值为newState，
+    //    也就是queue.baseState
+    // 2. 当都处理完成后没有优先级被跳过，newBaseState赋值为
+    //    本轮新计算的state，最后更新到queue.baseState上
     let newBaseState = null;
     let newFirstBaseUpdate = null;
     let newLastBaseUpdate = null;
 
+    // 使用newFirstBaseUpdate 和 newLastBaseUpdate
+    // 来表示本次更新产生的的baseUpdate队列，目的是截取现有队列中
+    // 第一个低优先级到最后的所有update，最后会被更新到
+    // updateQueue的firstBaseUpdate 和 lastBaseUpdate上
+    // 作为下次渲染的遗留队列（baseUpdate）
+
+    // 从头开始循环
     let update = firstBaseUpdate;
     do {
       const updateLane = update.lane;
       const updateEventTime = update.eventTime;
+
+      // isSubsetOfLanes函数的意义是，判断当前更新的优先级（updateLane）
+      // 是否在渲染优先级（renderLanes）中如果不在，那么就说明优先级不足
       if (!isSubsetOfLanes(renderLanes, updateLane)) {
         // Priority is insufficient. Skip this update. If this is the first
         // skipped update, the previous update/state is the new base
@@ -490,17 +535,35 @@ export function processUpdateQueue<State>(
 
           next: null,
         };
+        // 优先级不足，将update添加到本次的baseUpdate队列中
         if (newLastBaseUpdate === null) {
+          // newBaseState 更新为前一个 update 任务的结果，下一轮
+          // 持有新优先级的渲染过程处理更新队列时，将会以它为基础进行计算。
           newFirstBaseUpdate = newLastBaseUpdate = clone;
           newBaseState = newState;
         } else {
+          // 如果baseUpdate队列中已经有了update，那么将当前的update
+          // 追加到队列尾部
           newLastBaseUpdate = newLastBaseUpdate.next = clone;
         }
-        // Update the remaining priority in the queue.
+        /*
+        * newLanes会在最后被赋值到workInProgress.lanes上，而它又最终
+        * 会被收集到root.pendingLanes。
+        *
+        * 再次更新时会从root上的pendingLanes中找出应该在本次中更新的优先
+        * 级（renderLanes），renderLanes含有本次跳过的优先级，再次进入，
+        * processUpdateQueue wip的优先级符合要求，被更新掉。
+        * */
+        // 低优先级任务因此被重做
         newLanes = mergeLanes(newLanes, updateLane);
       } else {
         // This update does have sufficient priority.
-
+        // 进到这个判断说明现在处理的这个update在优先级不足的update之后，
+        // 原因有二：
+        // 第一，优先级足够；
+        // 第二，newBaseQueueLast不为null说明已经有优先级不足的update了
+        //
+        // 然后将这个高优先级放入本次的baseUpdate，实现之前提到的截取队列
         if (newLastBaseUpdate !== null) {
           const clone: Update<State> = {
             eventTime: updateEventTime,
@@ -528,6 +591,7 @@ export function processUpdateQueue<State>(
         markRenderEventTimeAndConfig(updateEventTime, update.suspenseConfig);
 
         // Process this update.
+        // 处理更新，计算出新结果
         newState = getStateFromUpdate(
           workInProgress,
           queue,
@@ -536,6 +600,7 @@ export function processUpdateQueue<State>(
           props,
           instance,
         );
+        // 这里的callback是setState的第二个参数，属于副作用，会被放入queue的副作用队列里
         const callback = update.callback;
         if (callback !== null) {
           workInProgress.effectTag |= Callback;
@@ -547,12 +612,17 @@ export function processUpdateQueue<State>(
           }
         }
       }
+      // 将当前处理的update换成当前的下一个，移动指针实现遍历
       update = update.next;
       if (update === null) {
+        // 已有的队列处理完了，检查一下有没有新进来的，有的话
+        // 接在已有队列后边继续处理
         pendingQueue = queue.shared.pending;
         if (pendingQueue === null) {
+          // 如果没有等待处理的update，那么跳出循环
           break;
         } else {
+          // 如果此时又有了新的update进来，那么将它接入到之前合并好的队列中
           // An update was scheduled from inside a reducer. Add the new
           // pending updates to the end of the list and keep processing.
           const lastPendingUpdate = pendingQueue;
@@ -567,10 +637,12 @@ export function processUpdateQueue<State>(
       }
     } while (true);
 
+    // 如果没有低优先级的更新，那么新的newBaseState就被赋值为
+    // 刚刚计算出来的state
     if (newLastBaseUpdate === null) {
       newBaseState = newState;
     }
-
+    // 完成阶段------------------------------------
     queue.baseState = ((newBaseState: any): State);
     queue.firstBaseUpdate = newFirstBaseUpdate;
     queue.lastBaseUpdate = newLastBaseUpdate;

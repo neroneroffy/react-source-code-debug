@@ -188,7 +188,7 @@ import invariant from 'shared/invariant';
 
 import {disableLogs, reenableLogs} from 'shared/ConsolePatchingDev';
 
-export function processUpdateQueue<State>(
+function processUpdateQueue<State>(
   workInProgress: Fiber,
   props: any,
   instance: any,
@@ -422,40 +422,37 @@ export function processUpdateQueue<State>(
   }
 }
 
-function callCallback(callback, context) {
-  invariant(
-    typeof callback === 'function',
-    'Invalid argument passed as callback. Expected a function. Instead ' +
-      'received: %s',
-    callback,
-  );
-  callback.call(context);
-}
-
-export function resetHasForceUpdateBeforeProcessing() {
-  hasForceUpdate = false;
-}
-
-export function checkHasForceUpdateAfterProcessing(): boolean {
-  return hasForceUpdate;
-}
-
-export function commitUpdateQueue<State>(
-  finishedWork: Fiber,
-  finishedQueue: UpdateQueue<State>,
+function processUpdateQueue<State>(
+  workInProgress: Fiber,
+  props: any,
   instance: any,
+  renderLanes: Lanes,
 ): void {
-  // Commit the effects
-  const effects = finishedQueue.effects;
-  finishedQueue.effects = null;
-  if (effects !== null) {
-    for (let i = 0; i < effects.length; i++) {
-      const effect = effects[i];
-      const callback = effect.callback;
-      if (callback !== null) {
-        effect.callback = null;
-        callCallback(callback, instance);
-      }
+
+  // 准备阶段
+  const queue: UpdateQueue<State> = (workInProgress.updateQueue: any);
+  let firstBaseUpdate = queue.firstBaseUpdate;
+  let lastBaseUpdate = queue.lastBaseUpdate;
+  let pendingQueue = queue.shared.pending;
+  if (pendingQueue !== null) { /* ... */ }
+
+
+  if (firstBaseUpdate !== null) {
+    // 处理阶段
+    do {
+      ...
+    } while (true);
+
+    // 完成阶段
+    if (newLastBaseUpdate === null) {
+      newBaseState = newState;
     }
+    queue.baseState = ((newBaseState: any): State);
+    queue.firstBaseUpdate = newFirstBaseUpdate;
+    queue.lastBaseUpdate = newLastBaseUpdate;
+    markSkippedUpdateLanes(newLanes);
+    workInProgress.lanes = newLanes;
+    workInProgress.memoizedState = newState;
   }
 }
+
