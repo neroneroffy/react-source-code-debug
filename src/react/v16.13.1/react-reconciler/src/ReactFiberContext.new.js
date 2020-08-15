@@ -39,8 +39,11 @@ const didPerformWorkStackCursor: StackCursor<boolean> = createCursor(false);
 // Keep track of the previous context object that was on the stack.
 // We use this to get access to the parent context after we have already
 // pushed the next context provider, and now need to merge their contexts.
+// 访问父级上下文用
 let previousContext: Object = emptyContextObject;
 
+// UnmaskedContext是全局context, maskedContext是全局context中根据组件中定义的contextType
+// 从UnmaskedContext中取的context
 function getUnmaskedContext(
   workInProgress: Fiber,
   Component: Function,
@@ -54,6 +57,12 @@ function getUnmaskedContext(
       // we may have already pushed its own child context on the stack. A context
       // provider should not "see" its own child context. Therefore we read the
       // previous (parent) context instead for a context provider.
+
+      /*
+      * 如果Fiber本身是一个context provider，那么当我们读取它的context时，我们可能已经将它自己的子context
+      * 推到堆栈上了。context provider不应该“看到”自己的下级context。因此，我们读取前一个父context（也就是
+      * 推入子context之前的它自己的context），而不是context provider。
+      * */
       return previousContext;
     }
     return contextStackCursor.current;
@@ -68,6 +77,7 @@ function cacheContext(
   if (disableLegacyContext) {
     return;
   } else {
+    // 将上下文缓存到实例上
     const instance = workInProgress.stateNode;
     instance.__reactInternalMemoizedUnmaskedChildContext = unmaskedContext;
     instance.__reactInternalMemoizedMaskedChildContext = maskedContext;
@@ -90,6 +100,12 @@ function getMaskedContext(
     // Avoid recreating masked context unless unmasked context has changed.
     // Failing to do this will result in unnecessary calls to componentWillReceiveProps.
     // This may trigger infinite loops if componentWillReceiveProps calls setState.
+
+    /*
+    * 除非全局上下文已更改，否则不要从中获取到masked context（获取组件需要的上下文）
+    * 如果不这样做，将导致对componentWillReceiveProps的不必要调用。
+    * 如果componentWillReceiveProps调用setState，这可能会触发无限循环。
+    * */
     const instance = workInProgress.stateNode;
     if (
       instance &&
@@ -216,7 +232,7 @@ function processChildContext(
       const name = getComponentName(type) || 'Unknown';
       checkPropTypes(childContextTypes, childContext, 'child context', name);
     }
-
+    // 如果多层嵌套的context，且有key相等的值，最近的context会覆盖上层context中的值
     return {...parentContext, ...childContext};
   }
 }
@@ -299,7 +315,8 @@ function findCurrentUnmaskedContext(fiber: Fiber): Object {
       'Expected subtree parent to be a mounted class component. ' +
         'This error is likely caused by a bug in React. Please file an issue.',
     );
-
+    // 一直向上找，直到找到contextProvider中定义的context。
+    // 相当于找全局context
     let node = fiber;
     do {
       switch (node.tag) {

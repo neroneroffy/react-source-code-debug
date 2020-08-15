@@ -3114,6 +3114,9 @@ function beginWork(
       // This fiber does not have any pending work. Bailout without entering
       // the begin phase. There's still some bookkeeping we that needs to be done
       // in this optimized path, mostly pushing stuff onto the stack.
+
+      // 这个fiber节点没有任何等待处理的工作，进入begin阶段之前跳出，同时需要做一些记录工作，
+      // 主要是把数据推入栈
       switch (workInProgress.tag) {
         case HostRoot:
           pushHostRootContext(workInProgress);

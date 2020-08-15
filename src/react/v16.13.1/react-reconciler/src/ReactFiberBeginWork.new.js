@@ -3265,6 +3265,10 @@ function beginWork(
               // Something might get unblocked by state updates or retries in the
               // tree which will affect the tail. So we need to use the normal
               // path to compute the correct tail.
+              /*
+              * 如果SuspenseList中的某个Suspense加载完成，这意味着需要更新SuspenseList。
+              * 主要是依据revealOrder和tail决定子Suspense的显示效果。
+              * */
               return updateSuspenseListComponent(
                 current,
                 workInProgress,
