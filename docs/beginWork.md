@@ -124,7 +124,7 @@ if (!includesSomeLane(renderLanes, updateLanes)) {
 从这个函数中，我们也可以意识到，在当前fiber节点上标记子节点有无更新（fiber.childLanes）显得尤为重要。它可以决定是否终止当前Fiber
 子树的遍历。
 
-**标记fiber.childLanes的过程是在开始调度时发生的，[markUpdateLaneFromFiberToRoot](https://github.com/neroneroffy/react-source-code-debug/blob/master/src/react/v17.0.0-alpha.0/react-reconciler/src/ReactFiberWorkLoop.new.js#L649) 函数中**
+**标记fiber.childLanes的过程是在开始调度时发生的，在[markUpdateLaneFromFiberToRoot](https://github.com/neroneroffy/react-source-code-debug/blob/master/src/react/v17.0.0-alpha.0/react-reconciler/src/ReactFiberWorkLoop.new.js#L649) 函数中**
 
 带着上边的认知，来看一下源码了解具体的复用过程：
 ```javascript
