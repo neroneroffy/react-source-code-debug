@@ -779,7 +779,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     // with that model. If it ends up not being worth the tradeoffs, we can
     // add it later.
     /*
-    * 这个算法不能通过从两端搜索来优化，因为光纤上没有反向指针。我想看看这个模型能走多远。
+    * 这个算法不能通过从两端搜索来优化，因为Fiber上没有反向指针。我想看看这个模型能走多远。
     * 如果它最终不值得权衡，我们可以稍后添加它。
     * */
     // Even with a two ended optimization, we'd want to optimize for the case
@@ -811,7 +811,12 @@ function ChildReconciler(shouldTrackSideEffects) {
         knownKeys = warnOnInvalidKey(child, knownKeys, returnFiber);
       }
     }
-
+    /*
+    * returnFiber：父级fiber
+    * currentFirstChild：当前执行更新任务的WIP节点
+    * newChildren：组件的render方法渲染出的所有子节点
+    * lanes：优先级相关
+    * */
     let resultingFirstChild: Fiber | null = null;
     let previousNewFiber: Fiber | null = null;
 
@@ -856,6 +861,7 @@ function ChildReconciler(shouldTrackSideEffects) {
           deleteChild(returnFiber, oldFiber);
         }
       }
+      // 插入节点
       lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
       if (previousNewFiber === null) {
         // TODO: Move out of the loop. This only happens for the first run.
@@ -873,6 +879,7 @@ function ChildReconciler(shouldTrackSideEffects) {
 
     if (newIdx === newChildren.length) {
       // We've reached the end of the new children. We can delete the rest.
+      // 新的children遍历结束，删除掉旧children中的剩下的节点
       deleteRemainingChildren(returnFiber, oldFiber);
       return resultingFirstChild;
     }
@@ -880,6 +887,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     if (oldFiber === null) {
       // If we don't have any more existing children we can choose a fast path
       // since the rest will all be insertions.
+      // 如果原来没有任何子节点，那么新来的子节点都是新插入的。
       for (; newIdx < newChildren.length; newIdx++) {
         const newFiber = createChild(returnFiber, newChildren[newIdx], lanes);
         if (newFiber === null) {
@@ -898,9 +906,11 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
 
     // Add all children to a key map for quick lookups.
+    // 有子节点的话，添加到key map以便快速查询
     const existingChildren = mapRemainingChildren(returnFiber, oldFiber);
 
     // Keep scanning and use the map to restore deleted items as moves.
+    // 继续遍历并且用map还原那些移动时删除掉的元素
     for (; newIdx < newChildren.length; newIdx++) {
       const newFiber = updateFromMap(
         existingChildren,
