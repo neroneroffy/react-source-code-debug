@@ -281,6 +281,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     // effects aren't added until the complete phase. Once we implement
     // resuming, this may not be true.
     const last = returnFiber.lastEffect;
+    // 将要删除的child添加到父级fiber的effectList末尾，并添加上effectTag为删除
     if (last !== null) {
       last.nextEffect = childToDelete;
       returnFiber.lastEffect = childToDelete;
@@ -295,6 +296,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
   ): null {
+    // 将所有的子节点标记上deletion的effectTag
     if (!shouldTrackSideEffects) {
       // Noop.
       return null;
@@ -575,7 +577,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     lanes: Lanes,
   ): Fiber | null {
     // Update the fiber if the keys match, otherwise return null.
-
+    // 如果前后的key匹配，则返回fiber，否则返回null
     const key = oldFiber !== null ? oldFiber.key : null;
 
     if (typeof newChild === 'string' || typeof newChild === 'number') {
@@ -776,7 +778,10 @@ function ChildReconciler(shouldTrackSideEffects) {
     // don't have backpointers on fibers. I'm trying to see how far we can get
     // with that model. If it ends up not being worth the tradeoffs, we can
     // add it later.
-
+    /*
+    * 这个算法不能通过从两端搜索来优化，因为光纤上没有反向指针。我想看看这个模型能走多远。
+    * 如果它最终不值得权衡，我们可以稍后添加它。
+    * */
     // Even with a two ended optimization, we'd want to optimize for the case
     // where there are few changes and brute force the comparison instead of
     // going for the Map. It'd like to explore hitting that path first in
@@ -784,10 +789,17 @@ function ChildReconciler(shouldTrackSideEffects) {
     // lots of look ahead. This doesn't handle reversal as well as two ended
     // search but that's unusual. Besides, for the two ended optimization to
     // work on Iterables, we'd need to copy the whole set.
-
+    /*
+    * 即使有两个端点的优化，我们也希望优化很少变化的情况，并使用蛮力进行比较，而不是使用映
+    * 射。它会先在前进模式中探索路径，然后在我们注意到需要向前看时才去找地图。这不能处理反
+    * 转以及两个结束的搜索，但这是不寻常的。此外，为了使这两个结束的优化工作在迭代上，我们
+    * 需要复制整个集合。
+    * */
     // In this first iteration, we'll just live with hitting the bad case
     // (adding everything to a Map) in for every insert/move.
-
+    /*
+    * 在第一次迭代中，我们将在每次插入/移动中执行糟糕的情况(将所有内容添加到映射中)。
+    * */
     // If you change this code, also update reconcileChildrenIterator() which
     // uses the same algorithm.
 
@@ -808,18 +820,25 @@ function ChildReconciler(shouldTrackSideEffects) {
     let newIdx = 0;
     let nextOldFiber = null;
     for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
+      /*
+      * 找到当前fiber的下一个fiber，oldFiber是它自己，nextOldFiber是oldFiber的
+      * 兄弟节点的其中之一
+      * */
       if (oldFiber.index > newIdx) {
         nextOldFiber = oldFiber;
         oldFiber = null;
       } else {
         nextOldFiber = oldFiber.sibling;
       }
+      // 更新子节点
       const newFiber = updateSlot(
         returnFiber,
         oldFiber,
         newChildren[newIdx],
         lanes,
       );
+      // newFiber为空的情况是由于新旧fiber的key不一样
+      // key不同导致不可复用，跳出
       if (newFiber === null) {
         // TODO: This breaks on empty slots like null children. That's
         // unfortunate because it triggers the slow path all the time. We need
@@ -1269,6 +1288,7 @@ function ChildReconciler(shouldTrackSideEffects) {
   // This API will tag the children with the side-effect of the reconciliation
   // itself. They will be added to the side-effect list as we pass through the
   // children and the parent.
+  // 该函数会在子节点上打上effect标签，然后在向上遍历的时候收集到side-effect列表上
   function reconcileChildFibers(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,

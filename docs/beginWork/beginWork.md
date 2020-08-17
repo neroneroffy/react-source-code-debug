@@ -3,7 +3,7 @@
 它的入参是current节点、WIP节点、此次更新任务的渲染优先级。返回入参WIP节点的子节点，作为下一个工作单元继续这个过程；
 若没有子节点返回null，返回null可进入节点的complete阶段。
 
-工作流程主要如下图，图中简化了流程，只对App节点进行了beginWork处理，其余节点流程相似
+工作流程如下图，图中简化了流程，只对App节点进行了beginWork处理，其余节点流程相似
 
 ![beginWork流程](https://neroht.com/beginWork.gif)
 
@@ -156,22 +156,4 @@ function bailoutOnAlreadyFinishedWork(
 beginWork的主要功能就是处理当前节点，并返回新的工作单元。它会遇到两种情况：挂载或者更新。无论哪种情况，最后都会依据fiber的类型来调用
 不同的处理函数。需要注意的是在更新时，会有无需更新的节点，对于这种情况会判断它的子节点有无更新。然后依据判断结果返回下一个工作单元。
 
-其实render阶段的重头戏并不在beginWork中，对节点的更新都在其调用的处理函数中，包含了对节点的state计算、diff操作、effectTag标记
-的操作。之后我们将会以classComponent为主，详细讲解这三个操作。
-```javascript
-    case ClassComponent:
-      ...
-      return updateClassComponent(
-          current,
-          workInProgress,
-          Component,
-          resolvedProps,
-          renderLanes,
-      );
-    }
-```
-
-对于类组件，会调用`updateClassComponent`去处理组件对应的fiber节点。接下来的文章会进入此类型fiber节点的更新过程。
-
-
-
+beginWork调用更新函数更新节点后，依次进入两大处理流程：计算新状态和Diff算法。
