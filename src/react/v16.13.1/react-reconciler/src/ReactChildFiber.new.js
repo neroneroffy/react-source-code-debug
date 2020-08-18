@@ -838,16 +838,17 @@ function ChildReconciler(shouldTrackSideEffects) {
     let oldFiber = currentFirstChild;
     let lastPlacedIndex = 0;
     let newIdx = 0;
-    let nextOldFiber = null; // 作用是将目前遍历到的旧fiber备份起来.相当于记住了旧fiber遍历到哪
+    let nextOldFiber = null; // 作用是将目前遍历到的旧fiber备份起来，相当于记住了旧fiber遍历到哪
+    // 该循环的作用是尽量把能复用的节点进行复用，记录下lastPlacedIndex的位置。目的是处理节点的更新
     for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
-      // 新的字节点遍历完了,旧的子节点没有遍历完
+      // 新的子节点遍历完了，旧的子节点没有遍历完
       if (oldFiber.index > newIdx) {
         nextOldFiber = oldFiber;
         oldFiber = null;
       } else {
         nextOldFiber = oldFiber.sibling;
       }
-      // 生成新的节点,如果新的节点为null,代表着不可以复用,需要跳出
+      // 生成新的节点，如果新的节点为null，代表着不可以复用，需要跳出
       const newFiber = updateSlot(
         returnFiber,
         oldFiber,
@@ -855,7 +856,7 @@ function ChildReconciler(shouldTrackSideEffects) {
         lanes,
       );
       // newFiber为空的情况是由于新旧fiber的key不一样
-      // key不同导致不可复用，跳出,跳出之前
+      // key不同导致不可复用，跳出，跳出之前
       if (newFiber === null) {
         // TODO: This breaks on empty slots like null children. That's
         // unfortunate because it triggers the slow path all the time. We need
@@ -866,9 +867,8 @@ function ChildReconciler(shouldTrackSideEffects) {
         }
         break;
       }
-      // 如果是更新时,
       if (shouldTrackSideEffects) {
-        // 有旧节点,同时经过更新后的新节点它还没有current节点,
+        // 有旧节点，并且经过更新后的新节点它还没有current节点,
         // 说明更新后展现在屏幕上不会有current节点.也就是需要删除
         // 已有的WIP
         if (oldFiber && newFiber.alternate === null) {
