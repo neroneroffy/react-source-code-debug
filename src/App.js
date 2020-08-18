@@ -4,6 +4,7 @@ import LanesDemo from './components/LanesDemo'
 import AppSibling from './components/AppSibling'
 import TasksWithDifferentPriorities from './components/TasksWithDifferentPriorities'
 import Concurrent from './components/ConcurrentInput'
+import Diff from './components/Diff'
 import './App.css';
 
 function App() {
@@ -14,7 +15,8 @@ function App() {
   //     <AppSibling count={count}/>
   //   </div>
   // );
-  return <TasksWithDifferentPriorities/>
+  // return <TasksWithDifferentPriorities/>
+  return <Diff/>
 }
 
 export default App;

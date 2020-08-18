@@ -876,14 +876,14 @@ function ChildReconciler(shouldTrackSideEffects) {
       previousNewFiber = newFiber;
       oldFiber = nextOldFiber;
     }
-
+    // 新子节点遍历完
     if (newIdx === newChildren.length) {
       // We've reached the end of the new children. We can delete the rest.
       // 新的children遍历结束，删除掉旧children中的剩下的节点
       deleteRemainingChildren(returnFiber, oldFiber);
       return resultingFirstChild;
     }
-
+    // 旧子节点遍历完
     if (oldFiber === null) {
       // If we don't have any more existing children we can choose a fast path
       // since the rest will all be insertions.
@@ -906,11 +906,32 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
 
     // Add all children to a key map for quick lookups.
-    // 有子节点的话，添加到key map以便快速查询
+    // 现在这种情况是都没遍历完的情况，把剩余的旧子节点放入一个map中
     const existingChildren = mapRemainingChildren(returnFiber, oldFiber);
 
     // Keep scanning and use the map to restore deleted items as moves.
-    // 继续遍历并且用map还原那些移动时删除掉的元素
+    // 继续遍历新子节点并且从map中找到被遍历到的当前节点它在map中对应的旧节点的index，和lastPlacedIndex去比
+    // 大于的话说明不用动，小于的话说明需要右移
+
+    // 移动的目标是newChildren的节点，
+    // 移动的参照物是newChildren里可以复用的节点中最靠右的那一个的位置索引（lastPlacedIndex）
+    // 移动的逻辑是：newChildren中剩余的节点，去旧fiber中找对应的索引（上一次的索引）。
+    // 如果上一次的索引在lastPlacedIndex的右边，说明newChildren中的节点位置没变，可以复用。
+    // 如果上一次的索引在lastPlacedIndex的左边，当前这个节点的位置要往右挪。
+
+    // 旧 A - B - C - D - E
+    //
+    // 新 A - B - D - C - E
+    //
+    // 可复用部分 A - B，newChildren里可以复用的节点中最靠右的位置为（lastPlacedIndex）1
+    // 旧fiber中的剩余部分C - D - E放入map
+    // newChildren的剩余部分D - C - E继续遍历
+
+    // 首先遍历到D，从map中找到D在旧fiber中（A - B - C - D - E）的索引为3
+    // 3 > 1，D 比 当前的可复用B的位置更靠右，所以更新lastPlacedIndex 为 3
+
+    // 再遍历到C，从map中找到D在旧fiber中（A - B - C - D - E）的索引为2
+    // 2 < 3，C 原来在最新固定位置的左边，要给它移动到右边
     for (; newIdx < newChildren.length; newIdx++) {
       const newFiber = updateFromMap(
         existingChildren,

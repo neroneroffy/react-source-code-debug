@@ -474,6 +474,7 @@ export function scheduleUpdateOnFiber(
   warnAboutRenderPhaseUpdatesInDEV(fiber);
   // 找到rootFiber并遍历更新子节点的优先级
   const root = markUpdateLaneFromFiberToRoot(fiber, lane);
+  console.log(root);
   console.log('root.pendingLanes：', root.pendingLanes);
   if (root === null) {
     warnAboutUpdateOnUnmountedFiberInDEV(fiber);
