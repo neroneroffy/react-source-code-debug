@@ -36,26 +36,26 @@ function beginWork(
           ...
         case HostComponent:
           ...
-        case ClassComponent: 
+        case ClassComponent:
           ...
         case HostPortal:
           ...
       }
-      
+
       // 拦截无需更新的节点
       return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
     }
   } else {
     didReceiveUpdate = false;
   }
-  
+
   // 将WIP节点上的lanes清空，因为更新过程中用不到，
   // 更新结束后会重新赋值
   workInProgress.lanes = NoLanes;
 
   // 依据不同的节点类型来处理更新
   switch (workInProgress.tag) {
-    case IndeterminateComponent: 
+    case IndeterminateComponent:
       ...
     case LazyComponent:
       ...
@@ -85,7 +85,7 @@ function beginWork(
       return updateHostComponent(current, workInProgress, renderLanes);
     case HostText:
       return updateHostText(current, workInProgress);
-      
+
     ......
   }
 }
@@ -103,12 +103,12 @@ workInProgress Tree。
 无论是更新还是首次，都会在最后调用函数去处理节点，最终会根据是首次挂载还是更新来决定是创建fiber还是diff fiber。只不过更新时，
 节点的优先级不满足要求会直接复用已有节点，而不是去创建新节点。
 ## 复用节点过程
-在上面的代码中可以看到，若节点自己的的优先级不满足要求，说明它自己不用更新，会调用`bailoutOnAlreadyFinishedWork`函数，
+节点可复用表示无需更新。在上面的代码中可以看到，若节己的的优先级不满足要求，说明它自己不用更新，会调用`bailoutOnAlreadyFinishedWork`函数，
 它就是复用节点的关键。
 ```javascript
 if (!includesSomeLane(renderLanes, updateLanes)) {
   ...
-  
+
   // 此时无需更新，拦截无需更新的节点
   return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
 }
@@ -137,7 +137,7 @@ function bailoutOnAlreadyFinishedWork(
   if (current !== null) {
     workInProgress.dependencies = current.dependencies;
   }
-  
+
   // 标记有跳过的更新
   markSkippedUpdateLanes(workInProgress.lanes);
 
@@ -156,4 +156,4 @@ function bailoutOnAlreadyFinishedWork(
 beginWork的主要功能就是处理当前节点，并返回新的工作单元。它会遇到两种情况：挂载或者更新。无论哪种情况，最后都会依据fiber的类型来调用
 不同的处理函数。需要注意的是在更新时，会有无需更新的节点，对于这种情况会判断它的子节点有无更新。然后依据判断结果返回下一个工作单元。
 
-beginWork调用更新函数更新节点后，依次进入两大处理流程：计算新状态和Diff算法。
+beginWork调用更新函数更新节点状态后，会依次进入两大处理流程：计算新状态和Diff算法。

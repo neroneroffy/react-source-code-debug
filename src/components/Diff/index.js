@@ -1,9 +1,16 @@
 import React from 'react'
 
 class Diff extends React.Component {
+    state = {
+        arr: [1, 2]
+    }
     render() {
-        return <div className="diff">
-            <div key="a">aa</div>
+        return <div>
+          {
+              this.state.arr.map(v => {
+                  return <div key={v}>{v}</div>
+              })
+          }
         </div>
     }
 }

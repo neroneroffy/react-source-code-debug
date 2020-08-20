@@ -1,8 +1,112 @@
 # 概述
 我们知道，每次组件渲染后，会产生新的ReactElement，另外组件也有对应的fiber节点。Diff算法就是通过对比新产生的ReactElement和
 已有的fiber节点的child节点，来生成新的child。最终将其挂载到组件对应的fiber上。
+## 源码结构
+diff算法最终会进到`ChildReconciler`函数中。该函数针对组件新生成的节点的类型，调用不同的函数进行处理。
+```
+function ChildReconciler(shouldTrackSideEffects) {
+  ...
+  function reconcileSingleElement(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    element: ReactElement,
+    lanes: Lanes,
+  ): Fiber {
+    // 单节点diff
+  }
 
+  function reconcileChildrenArray(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChildren: Array<*>,
+    lanes: Lanes,
+  ): Fiber | null {
+    // 多节点diff
+  }
+
+  ...
+
+  function reconcileChildFibers(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChild: any,
+    lanes: Lanes,
+  ): Fiber | null {
+    const isObject = typeof newChild === 'object' && newChild !== null;
+
+    if (isObject) {
+      // 处理单节点
+      switch (newChild.$$typeof) {
+        case REACT_ELEMENT_TYPE:
+          return placeSingleChild(
+            reconcileSingleElement(
+              returnFiber,
+              currentFirstChild,
+              newChild,
+              lanes,
+            ),
+          );
+        case REACT_PORTAL_TYPE:
+          ...
+        case REACT_LAZY_TYPE:
+          ...
+      }
+    }
+
+    if (typeof newChild === 'string' || typeof newChild === 'number') {
+      // 处理文本节点
+    }
+
+    if (isArray(newChild)) {
+      // 处理多节点
+      return reconcileChildrenArray(
+        returnFiber,
+        currentFirstChild,
+        newChild,
+        lanes,
+      );
+    }
+
+    ...
+
+  }
+
+  return reconcileChildFibers;
+}
+```
+本文只探讨最普遍的DOM类型节点的Diff逻辑。
 # Diff的主体
+关于Diff的参与者，在上游获得Diff最终结果的函数(reconcileChildren)的入参就可以看出，更新时的入参是
+```
+workInProgress.child = reconcileChildFibers(
+  workInProgress,
+  current.child,
+  nextChildren,
+  renderLanes,
+);
+```
+Diff计算的是workInProgress节点的子节点，是一个一个的新fiber节点。
+* workInProgress：作为父节点传入，新生成的第一个fiber的return会被指向它。
+* current.child：旧fiber节点，diff生成新fiber节点时会用新生成的ReactElement和它作比较。
+* nextChildren：新生成的ReactElement，会以它为标准生成新的fiber节点。
+* renderLanes：本次的渲染优先级，最终会被挂载到新fiber的lanes属性上。
+
+这里要注意的是，diff的两个主体：旧fiber（current.child）和新的ReactElement（nextChildren）是两个完全不一样的数据结构。
+
+current.child是现有fiber节点（current）的第一个子节点，通过sibling可以寻找到所有current的子节点：
+```
+A --sibling---> B --sibling---> C
+
+```
+
+而nextChildren则是ReactElement类型的节点，通过遍历可以处理到所有节点
+```javascript
+[
+    {$$typeof: Symbol(react.element), type: "div", key: "A" },
+    {$$typeof: Symbol(react.element), type: "div", key: "B" },
+    {$$typeof: Symbol(react.element), type: "div", key: "B" },
+]
+```
 
 # 基本原则
 对于新旧两种结构来说，场景有节点自身更新、节点增删、节点移动三种情况。面对复杂的情况，即使最前沿的算法，复杂度也极高。面对这种情况，
@@ -40,7 +144,7 @@ React以如下策略应对：
 * 多节点更新、多节点增删、多节点移动。
 
 什么是节点的更新呢？对于DOM节点来说，在前后的节点类型（tag）和key都相同的情况下，节点的属性发生了变化，是节点更新。
-若前后的节点类型或者key不相同，Diff算法会认为发生变化的新节点和旧节点毫无关系。
+若前后的节点类型或者key不相同，Diff算法会认为新节点和旧节点毫无关系。
 
 以下例子中，key为b的新节点的className发生了变化，是节点更新。
 
@@ -92,7 +196,7 @@ React以如下策略应对：
   ...
 }
 ```
-单节点指新节点为单一节点，但是旧节点的数量不一定，所以实际有如下三种场景：
+单节点指newChildren为单一节点，但是oldFiber链的数量不一定，所以实际有如下三种场景：
 *为了降低理解成本，我们用简化的节点模型来说明问题，字母代表key。*
 * 单个旧节点
 旧： A
@@ -109,9 +213,9 @@ React以如下策略应对：
 新： A
 
 对于单节点的diff，其实就只有更新操作，不会涉及位移和位置的变化，使用`reconcileSingleElement`函数处理单节点的更新。
-函数中对以上三种场景都做了覆盖。但实际上上边的情况对于React来说只是两种，有或无旧节点。因此，在实现上也只处理了这两种情况。
-## 有旧节点
-旧节点存在的话，遍历它们，找到和新节点key相同的节点，然后删除剩下的旧节点，再用旧节点的结构，和新节点的props来生成新的fiber节点。
+函数中对以上三种场景都做了覆盖。但实际上上边的情况对于React来说只是两种，oldFiber链是否为空。因此，在实现上也只处理了这两种情况。
+## oldFiber链不为空
+遍历它们，找到key相同的节点，然后删除剩下的oldFiber节点，再用匹配的oldFiber，然后用newChildren中新节点的props来生成新的fiber节点。
 ```javascript
   function reconcileSingleElement(
     returnFiber: Fiber,
@@ -124,15 +228,15 @@ React以如下策略应对：
     while (child !== null) {
       if (child.key === key) {
         switch (child.tag) {
-          case Fragment: 
+          case Fragment:
             ...
           case Block:
             ...
           default: {
             if (child.elementType === element.type) {
-              // 先删除之后的旧节点
+              // 先删除剩下的oldFiber节点
               deleteRemainingChildren(returnFiber, child.sibling);
-              // 基于旧节点和新节点的props新建新的fiber节点
+              // 基于oldFiber节点和新节点的props新建新的fiber节点
               const existing = useFiber(child, element.props);
               existing.ref = coerceRef(returnFiber, child, element);
               existing.return = returnFiber;
@@ -145,8 +249,8 @@ React以如下策略应对：
         deleteRemainingChildren(returnFiber, child);
         break;
       } else {
-        // 没匹配到说明新的fiber节点无法从旧节点新建
-        // 删除掉所有旧节点
+        // 没匹配到说明新的fiber节点无法从oldFiber节点新建
+        // 删除掉所有oldFiber节点
         deleteChild(returnFiber, child);
       }
       child = child.sibling;
@@ -156,8 +260,8 @@ React以如下策略应对：
 
   }
 ```
-## 无旧节点
-对于没有旧节点的情况，只能是从产生的新的ReactElement节点新建一个fiber节点了。逻辑不复杂。
+## oldFiber链为空
+对于没有oldFiber节点的情况，只能新建newFiber节点。逻辑不复杂。
 ```javascript
   function reconcileSingleElement(
     returnFiber: Fiber,
@@ -168,7 +272,7 @@ React以如下策略应对：
     const key = element.key;
     let child = currentFirstChild;
     while (child !== null) {
-      // 有旧节点的情况 
+      // oldFiber链非空的处理
       ...
     }
     if (element.type === REACT_FRAGMENT_TYPE) {
@@ -186,14 +290,14 @@ React以如下策略应对：
 ```
 单节点的更新就是这样的处理，真正比较复杂的情况是多节点的diff。因为它涉及到节点的增删和位移。
 # 多节点
-若组件产出的元素是如下的类型：
+若组件最终产出的DOM元素是如下这样：
 ```html
 <div key="a">aa</div>
 <div key="b">bb</div>
 <div key="c">cc</div>
 <div key="d">dd</div>
 ```
-那么它最终产出的新节点为下面这样（省略了一些与diff相关度不大的属性）
+那么它最终产出的newChildren为下面这样（省略了一些与diff相关度不大的属性）
 ```javascript
 [
     {$$typeof: Symbol(react.element), type: "div", key: "a" },
@@ -229,16 +333,16 @@ React以如下策略应对：
 
 新： A - B - `D - C - E`
 
-多节点的情况一定是属于这四种情况的任意组合，会调用`reconcileChildrenArray`进行diff计算。这个过程按照以上四种情况，会以新节点为主体进行最多三轮遍历，
+多节点的情况一定是属于这四种情况的任意组合，会调用`reconcileChildrenArray`进行diff计算。这个过程按照以上四种情况，会以newChildren为主体进行最多三轮遍历，
 但这三轮遍历并不是相互独立的，事实上只有第一轮是从头开始的，之后的每一轮都是上轮结束的断点继续。实际上在平时的实践中，节点自身的更新是最多的，所以Diff算法会优先处理更新的节点。因此四轮遍历又可以按照场
 景分为两部分：
 
 第一轮是针对节点自身属性更新，剩下的两轮依次处理节点的新增、移动，而重点又在移动节点的处理上，所以本文会着重讲解节点更新和节点移动的处理，对删除和新增简单带过。
 
 ## 节点更新
-第一轮从头开始遍历新节点，会逐个与旧节点进行比较，判断节点的key或者tag是否有变化。
+第一轮从头开始遍历newChildren，会逐个与oldFiber链中的节点进行比较，判断节点的key或者tag是否有变化。
 
-* 没变则从旧节点clone一个props被更新的fiber节点，新的props来自新节点，这样就实现了节点更新。
+* 没变则从oldFiber节点clone一个props被更新的fiber节点，新的props来自newChildren中的新节点，这样就实现了节点更新。
 * 有变化说明不满足复用条件，立即中断遍历进入下边的遍历。Diff算法的复杂度也因为这个操作大幅降低。
 
 ```
@@ -267,7 +371,7 @@ for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
 }
 ```
 
-我们来看一个例子，假设新旧节点如下：
+我们来看一个例子，假设新旧的节点如下：
 
 旧： A - B - `C - D` - E
 
@@ -275,11 +379,11 @@ for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
 
 在本轮遍历中，会遍历`A - B - D - C`。A和B都是key没变的节点，可以直接复用，但当遍历到D时，发现key变化了，跳出当前遍历。
 
-例子中A 和 B是发生自身更新的节点，之后的D 和 C会我们看到它的位置相对于旧节点发生了变化，会往下走到处理移动节点的循环中。
+例子中A 和 B是自身发生更新的节点，后面的D 和 C我们看到它的位置相对于oldFiber链发生了变化，会往下走到处理移动节点的循环中。
 
 **关于移动节点的参照物**
 
-为了方便说明，把保留在原位的节点称为固定节点。经过这次循环的处理，可以看出固定节点是A 和 B。在新节点中，最靠右的固定节点的
+为了方便说明，把保留在原位的节点称为固定节点。经过这次循环的处理，可以看出固定节点是A 和 B。在newChildren中，最靠右的固定节点的
 位置至关重要，对于后续的移动节点的处理来说，它的意义是提供参考位置。所以，每当处理到最后一个固定节点时，要记住此时它的位置，
 这个位置就是`lastPlacedIndex`。关键代码如下：
 
@@ -303,7 +407,7 @@ for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
 
 新： A - B - C
 
-因为遍历的是新节点，当它遍历结束，但旧节点还没有遍历完，那么说明剩下的节点都要被删除。直接在旧节点上标记Deletion的effectTag来实现删除。
+因为遍历的是newChildren，当它遍历结束，但oldFiber链还没有遍历完，那么说明剩下的节点都要被删除。直接在oldFiber节点上标记Deletion的effectTag来实现删除。
 
 ```
 if (newIdx === newChildren.length) {
@@ -316,7 +420,7 @@ if (newIdx === newChildren.length) {
 ```
 
 ## 节点新增
-新增节点的场景也很好理解，当旧节点遍历完，但新节点还没遍历完，那么余下的新节点都属于新插入的节点，会新建fiber节点并以sibling为指针连成fiber链。
+新增节点的场景也很好理解，当oldFiber链遍历完，但newChildren还没遍历完，那么余下的节点都属于新插入的节点，会新建fiber节点并以sibling为指针连成fiber链。
 
 旧： A - B - C
 
@@ -353,16 +457,16 @@ if (oldFiber === null) {
 
 新 A - B - `D - C - E`
 
-经过第一轮遍历的处理，固定节点为A B，最新的固定节点的位置（lastPlacedIndex）为1（B的位置）。此时旧节点中还剩C - D - E - F，新节点中还剩D - C - E。
+经过第一轮遍历的处理，固定节点为A B，最新的固定节点的位置（lastPlacedIndex）为1（B的位置）。此时oldFiber链中还剩C - D - E - F，newChildren中还剩D - C - E。
 
-接下来的逻辑是先更新再移动。因为此时剩余的新旧节点位置不一样，为了在更新时方便查找旧节点，会将剩余的旧节点放入一个以key为键，值为旧节点的map中。称为
-`existingChildren`。
-
-
-由于新旧节点都没遍历完，说明需要移动位置。此刻需要明确一点，就是**这些节点都在最新的固定节点的右边**。
+接下来的逻辑对于位置不一样的节点，它自己会先更新再移动。因为此时剩余的节点位置变了，更新又要复用oldFiber节点，所以为了在更新时方便查找，会将剩余的oldFiber节点
+放入一个以key为键，值为oldFiber节点的map中。称为`existingChildren`。
 
 
-移动的逻辑是：新节点中剩余的节点，都是不确定要不要移动的，遍历它们，每一个都去看看这个节点在旧节点中的位置（旧位置），遍历到的新节点有它在本次中的位（新位置）置：
+由于newChildren 和 oldFiber节点都没遍历完，说明需要移动位置。此刻需要明确一点，就是**这些节点都在最新的固定节点的右边**。
+
+
+移动的逻辑是：newChildren中剩余的节点，都是不确定要不要移动的，遍历它们，每一个都去看看这个节点在oldFiber链中的位置（旧位置），遍历到的节点有它在newChildren中的位置（新位置）：
 
 如果旧位置在lastPlacedIndex的**右边**，说明这个节点位置不变。
 原因是旧位置在lastPlacedIndex的**右边**，而新节点的位置也在它的**右边**，所以它的位置没变化。因为位置不变，所以它成了固定节点，把lastPlacedIndex更新成新位置。
@@ -378,7 +482,7 @@ if (oldFiber === null) {
 
 新 A - B - `D - C - E`
 
-位置固定部分 A - B，最右侧的固定节点为B，lastPlacedIndex为`1`。这时剩余旧节点为C - D - E - F，existingChildren为
+位置固定部分 A - B，最右侧的固定节点为B，lastPlacedIndex为`1`。这时剩余oldFiber链为C - D - E - F，existingChildren为
 
 ```
 {
@@ -391,8 +495,8 @@ if (oldFiber === null) {
 
 newChildren的剩余部分D - C - E继续遍历。
 
-首先遍历到D，D在旧节点中（A - B - C - D - E）的位置为3
-3 > `1`，旧节点中D的位置在B的右边，新节点中也是如此，所以D的位置不动，此时最新的固定节点变成了`D`，更新lastPlacedIndex为`3`。
+首先遍历到D，D在oldFiber链中（A - B - C - D - E）的位置为3
+3 > `1`，oldFiber中D的位置在B的右边，newChildren中也是如此，所以D的位置不动，此时最新的固定节点变成了`D`，更新lastPlacedIndex为`3`。
 
 并从existingChildren中删除D，
 
@@ -404,8 +508,8 @@ newChildren的剩余部分D - C - E继续遍历。
 }
 ```
 
-再遍历到C，C在旧节点中（A - B - C - D - E）的索引为2
-2 < `3`，C原来在最新固定节点（`D`）的左边，新节点中C在`D`的右边，所以要给它移动到右边。
+再遍历到C，C在oldFiber链中（A - B - C - D - E）的索引为2
+2 < `3`，C原来在最新固定节点（`D`）的左边，newChildren中C在`D`的右边，所以要给它移动到右边。
 
 并从existingChildren中删除C，
 
@@ -416,8 +520,8 @@ newChildren的剩余部分D - C - E继续遍历。
 }
 ```
 
-再遍历到E，E旧节点中（A - B - C - D - E）的位置为4
-4 > `3`，旧节点中E位置在`D`的位置的右边，新位置中也是如此，所以E的位置不动，此时最新的固定节点变成了`E`，更新lastPlacedIndex为`4`。
+再遍历到E，E在oldFiber链中（A - B - C - D - E）的位置为4
+4 > `3`，oldFiber链中E位置在`D`的位置的右边，新位置中也是如此，所以E的位置不动，此时最新的固定节点变成了`E`，更新lastPlacedIndex为`4`。
 
 并从existingChildren中删除E，
 
@@ -427,21 +531,19 @@ newChildren的剩余部分D - C - E继续遍历。
 }
 ```
 
-这个时候新节点都处理完了，针对移动节点的遍历结束。
+这个时候newChildren都处理完了，针对移动节点的遍历结束。
 
-此时还剩一个F节点，是在旧节点中的，因为新节点都处理完了，所以将它删除即可。
+此时还剩一个F节点，是在oldFiber链中的，因为newChildren都处理完了，所以将它删除即可。
 
 ```
 existingChildren.forEach(child => deleteChild(returnFiber, child));
 ```
 
-可以看到，节点的移动是以最新固定节点的位置作为参照的。而固定节点是新旧节点中位置未发生变化，可复用的最右边的节点。每次对比节点是否需要移动之后，
+可以看到，节点的移动是以最右侧的固定节点位置作为参照的。这些固定节点是指位置未发生变化的节点。每次对比节点是否需要移动之后，
 及时更新固定节点非常重要。
 
-Diff算法通过key和tag来对节点进行取舍，可直接将复杂的比对拦截掉，降级成节点的移动和增删这样比较简单的操作。
-
-## 源码实探
-了解了上边的多节点diff原理后，相信将上边的关键点匹配到源码上才能进一步理解。下面放出带有详细注释的源码。
+## 源码
+了解了上边的多节点diff原理后，将上边的关键点匹配到源码上更方便能进一步理解。下面放出带有详细注释的源码。
 ```javascript
   function reconcileChildrenArray(
     returnFiber: Fiber,
@@ -449,134 +551,105 @@ Diff算法通过key和tag来对节点进行取舍，可直接将复杂的比对�
     newChildren: Array<*>,
     lanes: Lanes,
   ): Fiber | null {
-    // This algorithm can't optimize by searching from both ends since we
-    // don't have backpointers on fibers. I'm trying to see how far we can get
-    // with that model. If it ends up not being worth the tradeoffs, we can
-    // add it later.
     /*
-    * 这个算法不能通过从两端搜索来优化，因为Fiber上没有反向指针。我想看看这个模型能走多远。
-    * 如果它最终不值得权衡，我们可以稍后添加它。
-    * */
-    // Even with a two ended optimization, we'd want to optimize for the case
-    // where there are few changes and brute force the comparison instead of
-    // going for the Map. It'd like to explore hitting that path first in
-    // forward-only mode and only go for the Map once we notice that we need
-    // lots of look ahead. This doesn't handle reversal as well as two ended
-    // search but that's unusual. Besides, for the two ended optimization to
-    // work on Iterables, we'd need to copy the whole set.
-    /*
-    * 即使有两个端点的优化，我们也希望优化很少变化的情况，并使用蛮力进行比较，而不是使用映
-    * 射。它会先在前进模式中探索路径，然后在我们注意到需要向前看时才去找地图。这不能处理反
-    * 转以及两个结束的搜索，但这是不寻常的。此外，为了使这两个结束的优化工作在迭代上，我们
-    * 需要复制整个集合。
-    * */
-    // In this first iteration, we'll just live with hitting the bad case
-    // (adding everything to a Map) in for every insert/move.
-    /*
-    * 在第一次迭代中，我们将在每次插入/移动中执行糟糕的情况(将所有内容添加到映射中)。
-    * */
-    // If you change this code, also update reconcileChildrenIterator() which
-    // uses the same algorithm.
-
-    if (__DEV__) {
-      // First, validate keys.
-      let knownKeys = null;
-      for (let i = 0; i < newChildren.length; i++) {
-        const child = newChildren[i];
-        knownKeys = warnOnInvalidKey(child, knownKeys, returnFiber);
-      }
-    }
-    /*
-    * returnFiber：父级fiber
-    * currentFirstChild：当前执行更新任务的WIP节点
-    * newChildren：组件的render方法渲染出的所有子节点
+    * returnFiber：currentFirstChild的父级fiber节点
+    * currentFirstChild：当前执行更新任务的WIP（fiber）节点
+    * newChildren：组件的render方法渲染出的新的ReactElement节点
     * lanes：优先级相关
     * */
+
+    // resultingFirstChild是diff之后的新fiber链表的第一个fiber。
     let resultingFirstChild: Fiber | null = null;
+    // resultingFirstChild是新链表的第一个fiber。
+    // previousNewFiber用来将后续的新fiber接到第一个fiber之后
     let previousNewFiber: Fiber | null = null;
 
+    // 旧fiber节点，新的child节点会和它进行比较
     let oldFiber = currentFirstChild;
+    // 存储固定节点的位置
     let lastPlacedIndex = 0;
+    // 存储遍历到的新节点的索引
     let newIdx = 0;
-    let nextOldFiber = null; // 作用是将目前遍历到的旧fiber备份起来，相当于记住了旧fiber遍历到哪
-    // 该循环的作用是尽量把能复用的节点进行复用，记录下lastPlacedIndex的位置。目的是处理节点的更新
+    // 记录目前遍历到的旧fiber的下一个节点
+    let nextOldFiber = null;
+
+    // 该轮遍历来处理节点更新，依据节点是否可复用来决定是否中断遍历
     for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
-      // 新的子节点遍历完了，旧的子节点没有遍历完
+      // newChildren遍历完了，oldFiber链没有遍历完，此时需要中断遍历
       if (oldFiber.index > newIdx) {
         nextOldFiber = oldFiber;
         oldFiber = null;
       } else {
+        // 用nextOldFiber存储当前遍历到的oldFiber的下一个节点
         nextOldFiber = oldFiber.sibling;
       }
-      // 生成新的节点，如果新的节点为null，代表着不可以复用，需要跳出
+      // 生成新的节点，判断key与tag是否相同就在updateSlot中
+      // 对DOM类型的元素来说，key 和 tag都相同才会复用oldFiber
+      // 并返回出去，否则返回null
       const newFiber = updateSlot(
         returnFiber,
         oldFiber,
         newChildren[newIdx],
         lanes,
       );
-      // newFiber为空的情况是由于新旧fiber的key不一样
-      // key不同导致不可复用，跳出，跳出之前
+
+      // newFiber为 null说明 key 或 tag 不同，节点不
+      // 可复用，中断遍历
       if (newFiber === null) {
-        // TODO: This breaks on empty slots like null children. That's
-        // unfortunate because it triggers the slow path all the time. We need
-        // a better way to communicate whether this was a miss or null,
-        // boolean, undefined, etc.
         if (oldFiber === null) {
+          // oldFiber 为null说明旧fiber此时也遍历完了
+          // 是以下场景，D为新增节点
+          // 旧 A - B - C
+          // 新 A - B - C - D
           oldFiber = nextOldFiber;
         }
         break;
       }
       if (shouldTrackSideEffects) {
-        // 有旧节点，并且经过更新后的新节点它还没有current节点,
-        // 说明更新后展现在屏幕上不会有current节点.也就是需要删除
-        // 已有的WIP
+        // shouldTrackSideEffects 为true表示是更新过程
         if (oldFiber && newFiber.alternate === null) {
-          // We matched the slot, but we didn't reuse the existing fiber, so we
-          // need to delete the existing child.
+          // newFiber.alternate 等同于 oldFiber.alternate
+          // oldFiber为WIP节点，它的alternate 就是 current节点
+
+          // oldFiber存在，并且经过更新后的新fiber节点它还没有current节点,
+          // 说明更新后展现在屏幕上不会有current节点，而更新后WIP
+          // 节点会称为current节点，所以需要删除已有的WIP节点
           deleteChild(returnFiber, oldFiber);
         }
       }
-      // 主要目的是记录旧fiber中最后能复用的节点的位置
+      // 记录固定节点的位置
       lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
-      // 利用previousNewFiber将新生成的fiber连接起来
+      // 将新fiber连接成以sibling为指针的单向链表
       if (previousNewFiber === null) {
-        // TODO: Move out of the loop. This only happens for the first run.
         resultingFirstChild = newFiber;
       } else {
-        // TODO: Defer siblings if we're not at the right index for this slot.
-        // I.e. if we had null values before, then we want to defer this
-        // for each null value. However, we also don't want to call updateSlot
-        // with the previous one.
         previousNewFiber.sibling = newFiber;
       }
       previousNewFiber = newFiber;
+
+      // 将oldFiber节点指向下一个，与newChildren的遍历同步移动
       oldFiber = nextOldFiber;
     }
 
-    // 新子节点遍历完,说明剩下的旧fiber都是没用的了,可以删除.
+    // 处理节点删除。新子节点遍历完，说明剩下的旧fiber都是没用的了，可以删除.
     if (newIdx === newChildren.length) {
-      // We've reached the end of the new children. We can delete the rest.
-      // 新的children遍历结束，删除掉旧children中的剩下的节点
+      // newChildren遍历结束，删除掉oldFiber链中的剩下的节点
       deleteRemainingChildren(returnFiber, oldFiber);
       return resultingFirstChild;
     }
+
+    // 处理新增节点。旧的遍历完了，能复用的都复用了，所以意味着新的都是新插入的了
     if (oldFiber === null) {
-      // If we don't have any more existing children we can choose a fast path
-      // since the rest will all be insertions.
-      // 旧的遍历完了,能复用的都复用了,所以意味着新的都是新插入的了
       for (; newIdx < newChildren.length; newIdx++) {
-        // 首先创建newFiber
+        // 基于新生成的ReactElement创建新的Fiber节点
         const newFiber = createChild(returnFiber, newChildren[newIdx], lanes);
         if (newFiber === null) {
           continue;
         }
-        // 记录lastPlacedIndex
+        // 记录固定节点的位置lastPlacedIndex
         lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
-
-        // 将newFiber连接成以sibling为指针的单向链表
+        // 将新生成的fiber节点连接成以sibling为指针的单向链表
         if (previousNewFiber === null) {
-          // TODO: Move out of the loop. This only happens for the first run.
           resultingFirstChild = newFiber;
         } else {
           previousNewFiber.sibling = newFiber;
@@ -585,16 +658,13 @@ Diff算法通过key和tag来对节点进行取舍，可直接将复杂的比对�
       }
       return resultingFirstChild;
     }
-    // Add all children to a key map for quick lookups.
-    // 现在这种情况是都没遍历完的情况，把剩余的旧子节点放入一个以key为键,值为fiber节点的map中
-    // 这样可以通过key快速地找出旧fiber
+    // 执行到这是都没遍历完的情况，把剩余的旧子节点放入一个以key为键,值为旧fiber节点的map中
+    // 这样在基于旧fiber节点新建新的fiber节点时，可以通过key快速地找出旧fiber
     const existingChildren = mapRemainingChildren(returnFiber, oldFiber);
 
-    // Keep scanning and use the map to restore deleted items as moves.
-    // 继续遍历新子节点并且从map中找到被遍历到的当前节点它在map中对应的旧节点的index，和lastPlacedIndex去比
-    // 大于的话说明不用动，小于的话说明需要右移
-
+    // 节点移动
     for (; newIdx < newChildren.length; newIdx++) {
+      // 基于map中的旧fiber节点来创建新fiber
       const newFiber = updateFromMap(
         existingChildren,
         returnFiber,
@@ -605,21 +675,19 @@ Diff算法通过key和tag来对节点进行取舍，可直接将复杂的比对�
       if (newFiber !== null) {
         if (shouldTrackSideEffects) {
           if (newFiber.alternate !== null) {
-            // 剩余的新节点有可能和旧fiber节点一样,只是位置换了,有可能是是新增的.
+            // 因为newChildren中剩余的节点有可能和旧fiber节点一样,只是位置换了，
+            // 但也有可能是是新增的.
 
-            // 如果newFiber的alternate不为空,则说明newFiber是和旧节点一样,而不是新增的.
+            // 如果newFiber的alternate不为空，则说明newFiber不是新增的。
             // 也就说明着它是基于map中的旧fiber节点新建的,意味着旧fiber已经被使用了,所以需
             // 要从map中删去旧fiber
-            // The new fiber is a work in progress, but if there exists a
-            // current, that means that we reused the fiber. We need to delete
-            // it from the child list so that we don't add it to the deletion
-            // list.
             existingChildren.delete(
               newFiber.key === null ? newIdx : newFiber.key,
             );
           }
         }
-        // 调整位置,多节点diff的核心
+
+        // 移动节点，多节点diff的核心，这里真正会实现节点的移动
         lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx);
         // 将新fiber连接成以sibling为指针的单向链表
         if (previousNewFiber === null) {
@@ -632,12 +700,17 @@ Diff算法通过key和tag来对节点进行取舍，可直接将复杂的比对�
     }
 
     if (shouldTrackSideEffects) {
-      // Any existing children that weren't consumed above were deleted. We need
-      // to add them to the deletion list.
-      // 此时新节点遍历完了,删除剩下的旧节点
+      // 此时newChildren遍历完了，该移动的都移动了，那么删除剩下的oldFiber
       existingChildren.forEach(child => deleteChild(returnFiber, child));
     }
     return resultingFirstChild;
   }
-
 ```
+
+# 总结
+Diff算法通过key和tag来对节点进行取舍，可直接将复杂的比对拦截掉，然后降级成节点的移动和增删这样比较简单的操作。
+对旧fiber和新的ReactElement节点的比对，将会生成新的fiber节点。此过程中，对无用的旧fiber打上Deletion的effectTag，
+对位置移动的新fiber打上Placement的effectTag。这些具有effectTag的fiber节点会在completeWork阶段被收集到rootFiber
+的effectList中，在commit阶段被更新掉。
+
+这意味着，在diff过后，workInProgress节点的beginWork节点就完成了。接下来会进入completeWork阶段。

@@ -536,7 +536,7 @@ export function createFiberFromTypeAndProps(
               break;
             case REACT_SCOPE_TYPE:
               if (enableScopeAPI) {
-                return createFiberF romScope(
+                return createFiberFromScope(
                   type,
                   pendingProps,
                   mode,
