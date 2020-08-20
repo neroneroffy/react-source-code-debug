@@ -286,6 +286,7 @@ function ChildReconciler(shouldTrackSideEffects) {
       last.nextEffect = childToDelete;
       returnFiber.lastEffect = childToDelete;
     } else {
+      // 将被需要删除的节点添加进effectList中
       returnFiber.firstEffect = returnFiber.lastEffect = childToDelete;
     }
     childToDelete.nextEffect = null;

@@ -418,6 +418,22 @@ if (newIdx === newChildren.length) {
   return resultingFirstChild;
 }
 ```
+`deleteRemainingChildren`调用了`deleteChild`，值得注意的是，删除不仅仅是标记了effectTag为Deletion，还会将这个被删除的fiber节点添加到父级的effectList中。
+```
+function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
+  ...
+  const last = returnFiber.lastEffect;
+  // 将要删除的child添加到父级fiber的effectList中，并添加上effectTag为删除
+  if (last !== null) {
+    last.nextEffect = childToDelete;
+    returnFiber.lastEffect = childToDelete;
+  } else {
+    returnFiber.firstEffect = returnFiber.lastEffect = childToDelete;
+  }
+  childToDelete.nextEffect = null;
+  childToDelete.effectTag = Deletion;
+}
+```
 
 ## 节点新增
 新增节点的场景也很好理解，当oldFiber链遍历完，但newChildren还没遍历完，那么余下的节点都属于新插入的节点，会新建fiber节点并以sibling为指针连成fiber链。

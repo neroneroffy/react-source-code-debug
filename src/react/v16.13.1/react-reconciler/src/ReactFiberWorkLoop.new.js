@@ -1698,7 +1698,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
   // Attempt to complete the current unit of work, then move to the next
   // sibling. If there are no more siblings, return to the parent fiber.
   /*
-  * 尝试完成当前的工作单元，然后去处理下一个兄弟节点，如果没有兄弟节点，return到上级
+  * 完成当前的工作单元，然后去处理下一个兄弟节点，如果没有兄弟节点，return到上级
   * Fiber节点
   * */
   let completedWork = unitOfWork;
@@ -1706,14 +1706,17 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     // The current, flushed, state of this fiber is the alternate. Ideally
     // nothing should rely on this, but relying on it here means that we don't
     // need an additional field on the work in progress.
+    // 获取到current节点
     const current = completedWork.alternate;
+    // 获取到父级节点
     const returnFiber = completedWork.return;
 
     // Check if the work completed or if something threw.
     if ((completedWork.effectTag & Incomplete) === NoEffect) {
-      // 当前工作单元（Fiber）的任务已经完成，那么
+      // 当前工作单元（Fiber）的任务已经完成
       setCurrentDebugFiberInDEV(completedWork);
       let next;
+      // 是否开启React性能分析工具相关
       if (
         !enableProfilerTimer ||
         (completedWork.mode & ProfileMode) === NoMode
@@ -1721,6 +1724,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         next = completeWork(current, completedWork, subtreeRenderLanes);
       } else {
         startProfilerTimer(completedWork);
+        // 主要是context的出栈
         next = completeWork(current, completedWork, subtreeRenderLanes);
         // Update render duration assuming we didn't error.
         stopProfilerTimerIfRunningAndRecordDelta(completedWork, false);
@@ -1733,7 +1737,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         workInProgress = next;
         return;
       }
-
+      // 收集WIP节点的lanes，不漏掉被跳过的update的lanes，便于再次发起调度
       resetChildLanes(completedWork);
 
       if (
@@ -1749,10 +1753,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         * 上级工作单元。
         * */
         // 链表的并入操作
-        /*
-        * 将当前节点的effectList并入到父节点的effectList
-        *
-        * */
+        // 将当前节点的effectList并入到父节点的effectList
         if (returnFiber.firstEffect === null) {
           returnFiber.firstEffect = completedWork.firstEffect;
         }
@@ -1920,7 +1921,7 @@ function resetChildLanes(completedWork: Fiber) {
     completedWork.treeBaseDuration = treeBaseDuration;
   } else {
     let child = completedWork.child;
-    // 向上收集子节点的lanes
+    // 向上收集的childLanes不漏掉被跳过的update的lanes
     while (child !== null) {
       newChildLanes = mergeLanes(
         newChildLanes,
