@@ -1364,6 +1364,7 @@ function prepareFreshStack(root: FiberRoot, lanes: Lanes) {
 
 function handleError(root, thrownValue): void {
   do {
+    // 记录下当前出错的WIP节点
     let erroredWork = workInProgress;
     try {
       // Reset module-level state that was set during the render phase.
@@ -1375,6 +1376,7 @@ function handleError(root, thrownValue): void {
       ReactCurrentOwner.current = null;
 
       if (erroredWork === null || erroredWork.return === null) {
+        // 致命错误，要么是当前的WIP节点为null，要么是WIP的父级节点为null。
         // Expected to be working on a non-root fiber. This is a fatal error
         // because there's no ancestor that can handle it; the root is
         // supposed to capture all errors that weren't caught by an error
@@ -1386,18 +1388,26 @@ function handleError(root, thrownValue): void {
         // has no siblings nor a parent, we set it to null. Usually this is
         // handled by `completeUnitOfWork` or `unwindWork`, but since we're
         // intentionally not calling those, we need set it here.
+        /*
+        * 将WIP节点设置为null，这表示将处理它的sibling，如果没有sibling，则返回到父级。
+        * 但是由于根节点既没有sibling也没有父级，所以我们将它设置成null，
+        * */
         // TODO: Consider calling `unwindWork` to pop the contexts.
         workInProgress = null;
         return;
       }
 
       if (enableProfilerTimer && erroredWork.mode & ProfileMode) {
+        // 开启React性能分析工具相关，暂时不管
         // Record the time spent rendering before an error was thrown. This
         // avoids inaccurate Profiler durations in the case of a
         // suspended render.
         stopProfilerTimerIfRunningAndRecordDelta(erroredWork, true);
       }
-
+      /*
+      * 给当前出错的WIP节点添加上 Incomplete 的effectTag
+      * 置空它上面的effectList，对于可以处理错误的组件，添加上ShouldCapture 的 effectTag
+      * */
       throwException(
         root,
         erroredWork.return,
@@ -1405,6 +1415,7 @@ function handleError(root, thrownValue): void {
         thrownValue,
         workInProgressRootRenderLanes,
       );
+      // 将错误终止到当前出错的节点
       completeUnitOfWork(erroredWork);
     } catch (yetAnotherThrownValue) {
       // Something in the return path also threw.
@@ -1561,6 +1572,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
       workLoopSync();
       break;
     } catch (thrownValue) {
+      // 渲染报错
       handleError(root, thrownValue);
     }
   } while (true);
@@ -1733,7 +1745,6 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
       if (next !== null) {
         // Completing this fiber spawned new work. Work on that next.
-        // 当前的工作单元完成后产生了新的任务，对应着任务暂停的情况，
         workInProgress = next;
         return;
       }
@@ -1799,10 +1810,12 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
       * 这Fiber不完整，因为抛出了一些错误。在进入完成阶段之前从堆栈中弹出。如果这是一个边界，
       * 尽可能捕获错误。
       * */
+      // 因为出错后会被添加上Incomplete 类型的effectTag，所以会被执行到这里
+      // unwindWork主要是将WIP节点上的ShouldCapture去掉，换成 DidCapture
       const next = unwindWork(completedWork, subtreeRenderLanes);
 
       // Because this fiber did not complete, don't reset its expiration time.
-
+      // 逐层往上标记effectTag |= Incomplete
       if (next !== null) {
         // If completing this work spawned new work, do that next. We'll come
         // back here again.
@@ -1834,7 +1847,8 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
       if (returnFiber !== null) {
         // Mark the parent fiber as incomplete and clear its effect list.
-        // 将父Fiber的effect list清除，effectTag标记成未完成
+        // 将父Fiber的effect list清除，effectTag标记成未完成，便于它的父节点再completeWork的时候
+        // 被unwindWork
         returnFiber.firstEffect = returnFiber.lastEffect = null;
         returnFiber.effectTag |= Incomplete;
       }

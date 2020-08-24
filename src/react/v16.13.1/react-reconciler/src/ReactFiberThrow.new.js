@@ -182,6 +182,7 @@ function throwException(
   // Its effect list is no longer valid.
   sourceFiber.firstEffect = sourceFiber.lastEffect = null;
 
+  // suspense相关，判断捕获的错误是否是promise
   if (
     value !== null &&
     typeof value === 'object' &&
@@ -338,9 +339,18 @@ function throwException(
   // We didn't find a boundary that could handle this type of exception. Start
   // over and traverse parent path again, this time treating the exception
   // as an error.
+
+  /*
+  * 我们没有找到一个边界可以处理这种类型的异常。重新开始并再次遍历父路径，这次将异常作为错误处理。
+  * */
+  // 标记workInProgressRootExitStatus 为 RootErrored
   renderDidError();
 
+  // 创建错误堆栈
   value = createCapturedValue(value, sourceFiber);
+
+  // 从父节点开始，往上找有getDerivedStateFromError或者 componentDidCatch 的组件
+  // 标记effectTag，更新优先级
   let workInProgress = returnFiber;
   do {
     switch (workInProgress.tag) {
@@ -358,6 +368,9 @@ function throwException(
         const errorInfo = value;
         const ctor = workInProgress.type;
         const instance = workInProgress.stateNode;
+
+        // 如果尚未标记错误相关的effectTag，并且有错误的处理函数（getDerivedStateFromError
+        // 或componentDidCatch），那么标记上ShouldCapture
         if (
           (workInProgress.effectTag & DidCapture) === NoEffect &&
           (typeof ctor.getDerivedStateFromError === 'function' ||
@@ -369,6 +382,7 @@ function throwException(
           const lane = pickArbitraryLane(rootRenderLanes);
           workInProgress.lanes = mergeLanes(workInProgress.lanes, lane);
           // Schedule the error boundary to re-render using updated state
+          // 创建一个错误的update放入updateQueue
           const update = createClassErrorUpdate(
             workInProgress,
             errorInfo,
