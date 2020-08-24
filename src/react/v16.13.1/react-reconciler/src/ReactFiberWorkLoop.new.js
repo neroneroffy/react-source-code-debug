@@ -1736,7 +1736,8 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         next = completeWork(current, completedWork, subtreeRenderLanes);
       } else {
         startProfilerTimer(completedWork);
-        // 主要是context的出栈
+        // 更新节点的属性，绑定事件等，将属性作为updateQueue挂载到WIP节点上
+        // 结构为：[ 'style', { color: 'blue' }, onClick, this.handleClick ]
         next = completeWork(current, completedWork, subtreeRenderLanes);
         // Update render duration assuming we didn't error.
         stopProfilerTimerIfRunningAndRecordDelta(completedWork, false);

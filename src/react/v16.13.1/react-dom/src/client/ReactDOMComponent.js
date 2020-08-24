@@ -718,6 +718,10 @@ export function diffProperties(
       continue;
     }
     if (propKey === STYLE) {
+      /*
+      * lastProp: { color: 'red' }
+      * nextProp: { color: 'blue' }
+      * */
       if (__DEV__) {
         if (nextProp) {
           // Freeze the next style object so that we can assume it won't be
@@ -727,6 +731,9 @@ export function diffProperties(
       }
       if (lastProp) {
         // Unset styles on `lastProp` but not on `nextProp`.
+        // 将lastProps中的style属性设置为空
+
+        // styleUpdates = { color: '' }
         for (styleName in lastProp) {
           if (
             lastProp.hasOwnProperty(styleName) &&
@@ -739,6 +746,8 @@ export function diffProperties(
           }
         }
         // Update styles that changed since `lastProp`.
+        // 以nextProp的属性名为key设置新的style的value
+        // styleUpdates = { color: 'blue' }
         for (styleName in nextProp) {
           if (
             nextProp.hasOwnProperty(styleName) &&
@@ -757,8 +766,10 @@ export function diffProperties(
             updatePayload = [];
           }
           updatePayload.push(propKey, styleUpdates);
+          // updatePayload: [ style, null ]
         }
         styleUpdates = nextProp;
+        // styleUpdates = { color: 'blue' }
       }
     } else if (propKey === DANGEROUSLY_SET_INNER_HTML) {
       const nextHtml = nextProp ? nextProp[HTML] : undefined;
@@ -816,6 +827,7 @@ export function diffProperties(
     }
     (updatePayload = updatePayload || []).push(STYLE, styleUpdates);
   }
+  // [ 'style', { color: 'blue' }, onClick, this.handleClick ]
   return updatePayload;
 }
 
