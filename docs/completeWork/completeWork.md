@@ -43,9 +43,27 @@ function completeWork(
 若current存在并且workInProgress.stateNode（WIP节点对应的DOM实例）存在，说明节点已经存在于DOM中了，需要更新，否则进行创建。
 
 ## HostComponent
+**创建**
+原生DOM组件在创建时会以当前的WIP节点为基础，主要根据它的type、props去创建真实的DOM节点。挂载到WIP节点的stateNode属性上。
+此后进行节点的插入操作，最后在节点上进行props的处理以及事件的注册。
+
+这个过程中值得注意的一点是插入操作，由于此时处于completeWork阶段，会自下而上遍历WIP树到root，每经过一层WIP节点都会将它child的DOM节点（child.stateNode）
+插入到当前的这个WIP的stateNode中。
+```
+    li
+    |
+    |
+    div-----> p
+    |
+    |
+    span----> a
+              |
+              |
+              h1
+```
 更新
 
-创建
+
 
 
 ## HostText
@@ -54,6 +72,7 @@ function completeWork(
 
 创建
 
+## effect链的收集
 
 
 
