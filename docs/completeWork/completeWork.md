@@ -1,9 +1,15 @@
 # 概述
-当workInProgress树的beginWork执行到叶子节点时，会从叶子节点往上开始对节点执行completeWork。此阶段的任务主要有两个：effectList的收集与
-fiber节点的属性更新工作的落实。另外会有错误处理相关的工作。
-
-# DOM节点相关
-由于React的大部分类型的fiber节点最终都要体现为DOM，所以该阶段对于HostComponent（原生DOM组件）和HostText（文本节点）的处理需要着重理解。
+每个fiber节点都会经历两个阶段：beginWork和completeWork。fiber节点进入complete的前提是已经完成了beginWork。这个时候拿到的WIP节点都是经过diff算法调和过的，
+也就意味着对于某个WIP节点来说它的fiber类型的形态已经基本确定了。此时有两点需要注意：
+* 需要变化的节点持有了effectTag
+* 目前只有fiber形态变了，它对应的DOM节点并未变化。原生DOM组件（HostComponent）和文本节点（HostText）的fiber最终要体现为实际的DOM节点。
+基于这两个特点，completeWork的工作主要有：
+* 自下而上收集effectList，最终收集到root上
+* 构建或更新DOM节点，构建过程中，会自下而上将第一层子节点插入到当前节点
+对于正常执行工作的WIP节点来说，会执行以上的任务。但由于是WIP节点的完成阶段，免不了之前的工作会出错，所以也会对出错的节点采取措施，
+这就涉及到错误边界以及Suspense的概念了，本节只做简单描述，相关思想会在对应的文章里专门介绍。
+# 流程
+由于React的大部分类型的fiber节点最终都要体现为DOM，所以该阶段对于HostComponent（原生DOM组件）的处理需要着重理解。
 ```javascript
 function completeWork(
   current: Fiber | null,
@@ -38,14 +44,19 @@ function completeWork(
   }
 }
 ```
-由completeWork的结构可以看出，就是依据fiber的tag做不同处理。对于HostComponent 和 HostText的处理是类似的。
+由completeWork的结构可以看出，就是依据fiber的tag做不同处理。对于HostComponent 和 HostText的处理是类似的，都是视情况来决定是更新或者是创建。
+若current存在并且workInProgress.stateNode（WIP节点对应的DOM实例）存在，说明此fiber节点的DOM节点已经存在，走更新逻辑，否则进行创建。
 
-若current存在并且workInProgress.stateNode（WIP节点对应的DOM实例）存在，说明节点已经存在于DOM中了，需要更新，否则进行创建。
-
-## HostComponent
 **创建**
-原生DOM组件在创建时会以当前的WIP节点为基础，主要根据它的type、props去创建真实的DOM节点。挂载到WIP节点的stateNode属性上。
-此后进行节点的插入操作，最后在节点上进行props的处理以及事件的注册。
+
+根据HostComponent（即此刻的WIP节点）上的type、props去创建真实的DOM节点，挂载到这个WIP节点的stateNode属性上。
+然后对该它进行子DOM节点的插入，最后在它本身的DOM节点上进行props的处理以及事件的注册。
+
+**更新**
+
+
+## DOM节点的插入算法
+
 
 这个过程中值得注意的一点是插入操作，由于此时处于completeWork阶段，会自下而上遍历WIP树到root，每经过一层WIP节点都会将它child节点的第一层DOM节点（child.stateNode）
 插入到当前的这个WIP的stateNode中。
@@ -64,7 +75,7 @@ function completeWork(
   4       p ----> 'text node'
          /
         /
-  5    h1    
+  5    h1
 ```
 构建WIP树的DFS遍历对沿途节点一路beginWork，已经遍历到最深的h1节点，它的beginWork已经结束，开始进入completeWork阶段，此时所在的层级深度为第5层。
 **第5层**
@@ -82,7 +93,7 @@ function completeWork(
   4       p
          /
         /
-  5--->h1    
+  5--->h1
 ```
 
 此时WIP节点指向h1的fiber，它对应的dom节点为h1，dom标签创建出来以后进入`appendAllChildren`，因为当前的workInProgress节点为h1，此时它的child为null，无需插入，所以退出。
@@ -100,15 +111,15 @@ h1节点完成工作往上返回到第4层的p节点
                   |
                   |
   2              div
-                /   
-               /     
+                /
+               /
   3        <List/>
             /   \
            /     \
   4 --->  p ----> 'text node'
          /
         /
-  5    h1    
+  5    h1
 ```
 
 
@@ -141,7 +152,7 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
   4       p ----> 'text'
          /
         /
-  5    h1    
+  5    h1
 ```
 
 
@@ -172,7 +183,7 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
   4       p ---->'text'
          /
         /
-  5    h1    
+  5    h1
 ```
 此时WIP节点指向div的fiber，对它进行completeWork，执行子节点插入操作。由于它的child是<List/>，不满足`node.tag === HostComponent || node.tag === HostText`的条件，所以
 不会将它插入到div中。继续向下找<List/>的child，发现是p，将P插入div，寻找p的sibling，发现了'text'，将它也插入div。之后再也找不到同级节点，此时回到第三层的<List/>节点。
