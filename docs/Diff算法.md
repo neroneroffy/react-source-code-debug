@@ -85,7 +85,7 @@ workInProgress.child = reconcileChildFibers(
   renderLanes,
 );
 ```
-Diff计算的是workInProgress节点的子节点，是一个一个的新fiber节点。
+
 * workInProgress：作为父节点传入，新生成的第一个fiber的return会被指向它。
 * current.child：旧fiber节点，diff生成新fiber节点时会用新生成的ReactElement和它作比较。
 * nextChildren：新生成的ReactElement，会以它为标准生成新的fiber节点。
@@ -99,7 +99,7 @@ A --sibling---> B --sibling---> C
 
 ```
 
-而nextChildren则是ReactElement类型的节点，通过遍历可以处理到所有节点
+而nextChildren则是ReactElement类型的节点，通过遍历可以处理到所有节点，举例来说，nextChildren通过类组件的render方法生成。
 ```javascript
 [
     {$$typeof: Symbol(react.element), type: "div", key: "A" },
@@ -725,8 +725,7 @@ existingChildren.forEach(child => deleteChild(returnFiber, child));
 
 # 总结
 Diff算法通过key和tag来对节点进行取舍，可直接将复杂的比对拦截掉，然后降级成节点的移动和增删这样比较简单的操作。
-对旧fiber和新的ReactElement节点的比对，将会生成新的fiber节点。此过程中，对无用的旧fiber打上Deletion的effectTag，
-对位置移动的新fiber打上Placement的effectTag。这些具有effectTag的fiber节点会在completeWork阶段被收集到rootFiber
-的effectList中，在commit阶段被更新掉。
+对旧fiber和新的ReactElement节点的比对，将会生成新的fiber节点，同时标记上effectTag，这些fiber会被连到workInProgress树中，作为新的WIP节点。
+树的结构因此被一点点地确定，而新的WIP节点也基本定型。
 
 这意味着，在diff过后，workInProgress节点的beginWork节点就完成了。接下来会进入completeWork阶段。
