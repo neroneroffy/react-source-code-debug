@@ -1,14 +1,86 @@
 # 概述
-每个fiber节点都会经历两个阶段：beginWork和completeWork。fiber节点进入complete的前提是已经完成了beginWork。这个时候拿到的WIP节点都是经过diff算法调和过的，
-也就意味着对于某个WIP节点来说它的fiber类型的形态已经基本确定了。此时有两点需要注意：
+每个fiber节点都会经历两个阶段：beginWork和completeWork。节点进入complete的前提是已经完成了beginWork。这个时候拿到的WIP节点都是
+经过diff算法调和过的，也就意味着对于某个WIP节点来说它的fiber类型的形态已经基本确定了。此时有两点需要注意：
 * 需要变化的节点持有了effectTag
-* 目前只有fiber形态变了，它对应的DOM节点并未变化。原生DOM组件（HostComponent）和文本节点（HostText）的fiber最终要体现为实际的DOM节点。
+* 目前只有fiber形态变了，对于原生DOM组件（HostComponent）和文本节点（HostText）的fiber来说，对应的DOM节点（fiber.stateNode）并未变化。
+
 基于这两个特点，completeWork的工作主要有：
 * 自下而上收集effectList，最终收集到root上
-* 构建或更新DOM节点，构建过程中，会自下而上将第一层子节点插入到当前节点
+* 构建或更新DOM节点，构建过程中，会自下而上将子节点的第一层第一层插入到当前节点
+
 对于正常执行工作的WIP节点来说，会执行以上的任务。但由于是WIP节点的完成阶段，免不了之前的工作会出错，所以也会对出错的节点采取措施，
 这就涉及到错误边界以及Suspense的概念了，本节只做简单描述，相关思想会在对应的文章里专门介绍。
+
 # 流程
+completeUnitOfWork是complete阶段的入口。它内部有一个循环，会自下而上地遍历workInProgress节点，依次处理节点。
+
+对于正常的WIP节点，会执行completeWork。这其中会对HostComponent组件完成更新props、绑定事件、DOM相关的工作。
+
+
+
+```javascript
+function completeUnitOfWork(unitOfWork: Fiber): void {
+  let completedWork = unitOfWork;
+  do {
+    const current = completedWork.alternate;
+    const returnFiber = completedWork.return;
+
+    if ((completedWork.effectTag & Incomplete) === NoEffect) {
+      // 如果fiber节点没有出错，走正常的complete流程
+      ...
+
+      let next;
+      
+      // 省略了判断逻辑
+      // 对节点进行completeWork，更新props，生成DOM，绑定事件
+      next = completeWork(current, completedWork, subtreeRenderLanes);
+
+      if (next !== null) {
+        // 任务被挂起的情况，
+        workInProgress = next;
+        return;
+      }
+
+      // 收集WIP节点的lanes，不漏掉被跳过的update的lanes，便于再次发起调度
+      resetChildLanes(completedWork);
+
+      // 将当前节点的effectList并入父级节点
+       ...
+
+      // 如果当前节点他自己也有effectTag，将它自己
+      // 也并入到父级节点的effectList
+    } else {
+      // 执行到这个分支说明之前的更新有错误
+      // 进入unwindWork
+      const next = unwindWork(completedWork, subtreeRenderLanes);
+      ...
+
+    }
+    
+    // 查找兄弟节点，若有则进行beginWork -> completeWork
+    // 的流程
+    const siblingFiber = completedWork.sibling;
+    if (siblingFiber !== null) {
+     
+      workInProgress = siblingFiber;
+      return;
+    }
+    // 若没有兄弟节点，那么向上回到父级节点
+    // 对父节点执行complete阶段
+    completedWork = returnFiber;
+    // 将WIP节点指向父级节点
+    workInProgress = completedWork;
+  } while (completedWork !== null);
+
+  // 到达了root，整棵树完成了工作，标记完成状态
+  if (workInProgressRootExitStatus === RootIncomplete) {
+    workInProgressRootExitStatus = RootCompleted;
+  }
+}
+
+```
+
+
 由于React的大部分类型的fiber节点最终都要体现为DOM，所以该阶段对于HostComponent（原生DOM组件）的处理需要着重理解。
 ```javascript
 function completeWork(
