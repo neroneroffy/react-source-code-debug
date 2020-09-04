@@ -68,6 +68,7 @@ export function setValueForStyles(node, styles) {
         warnValidStyle(styleName, styles[styleName]);
       }
     }
+    // 获取到css的值
     const styleValue = dangerousStyleValue(
       styleName,
       styles[styleName],

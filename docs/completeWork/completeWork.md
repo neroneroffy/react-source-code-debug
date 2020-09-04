@@ -30,7 +30,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
       ...
 
       let next;
-      
+
       // 省略了判断逻辑
       // 对节点进行completeWork，更新props，生成DOM，绑定事件
       next = completeWork(current, completedWork, subtreeRenderLanes);
@@ -56,12 +56,12 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
       ...
 
     }
-    
+
     // 查找兄弟节点，若有则进行beginWork -> completeWork
     // 的流程
     const siblingFiber = completedWork.sibling;
     if (siblingFiber !== null) {
-     
+
       workInProgress = siblingFiber;
       return;
     }
@@ -117,23 +117,44 @@ function completeWork(
 }
 ```
 由completeWork的结构可以看出，就是依据fiber的tag做不同处理。对于HostComponent 和 HostText的处理是类似的，都是视情况来决定是更新或者是创建。
-若current存在并且workInProgress.stateNode（WIP节点对应的DOM实例）存在，说明此fiber节点的DOM节点已经存在，走更新逻辑，否则进行创建。
+若current存在并且workInProgress.stateNode（WIP节点对应的DOM实例）存在，说明此fiber节点的DOM节点已经存在，走更新逻辑，否则进行创建。而DOM节点的更新
+实则是属性的更新，会在下面的`DOM属性的处理 -> 属性的更新`中讲到，先集中看一下DOM节点的创建和插入。
 
-**创建**
+## DOM节点的创建和插入
+我们知道，此时的completeWork针对的是经过diff算法产生的新fiber。对于HostComponent类型的新fiber来说，它可能有DOM节点，也可能没有。没有的话，
+就需要执行先创建，再插入的操作，由此引入DOM的插入算法。
+```
+if (current !== null && workInProgress.stateNode != null) {
+    // 表明fiber有dom节点，需要执行更新过程
+} else {
+    // fiber不存在DOM节点
+    // 先创建DOM节点
+    const instance = createInstance(
+      type,
+      newProps,
+      rootContainerInstance,
+      currentHostContext,
+      workInProgress,
+    );
 
-根据HostComponent（即此刻的WIP节点）上的type、props去创建真实的DOM节点，挂载到这个WIP节点的stateNode属性上。
-然后对该它进行子DOM节点的插入，最后在它本身的DOM节点上进行props的处理以及事件的注册。
+    //DOM节点插入
+    appendAllChildren(instance, workInProgress, false, false);
 
-**更新**
+    // 将DOM节点挂载到fiber的stateNode上
+    workInProgress.stateNode = instance;
 
+    ...
 
-## DOM节点的插入算法
+}
 
+```
 
-这个过程中值得注意的一点是插入操作，由于此时处于completeWork阶段，会自下而上遍历WIP树到root，每经过一层WIP节点都会将它child节点的第一层DOM节点（child.stateNode）
-插入到当前的这个WIP的stateNode中。
+**需要注意的是，DOM的插入并不是将当前DOM插入它的父节点，而是将当前这个DOM节点的第一层子节点插入到它自己的下面。**
 
-这是一棵fiber树的结构，workInProgress树最终要成为这个形态。我们来看一下dom节点是如何插入的
+### 图解算法
+此时处于completeWork阶段，会自下而上遍历WIP树到root，每经过一层都会按照上面的规则插入DOM。下边用一个例子来理解一下这个过程。
+
+这是一棵fiber树的结构，workInProgress树最终要成为这个形态。
 ```
   1              App
                   |
@@ -149,7 +170,7 @@ function completeWork(
         /
   5    h1
 ```
-构建WIP树的DFS遍历对沿途节点一路beginWork，已经遍历到最深的h1节点，它的beginWork已经结束，开始进入completeWork阶段，此时所在的层级深度为第5层。
+构建WIP树的DFS遍历对沿途节点一路beginWork，此时已经遍历到最深的h1节点，它的beginWork已经结束，开始进入completeWork阶段，此时所在的层级深度为第5层。
 **第5层**
 
 ```
@@ -298,14 +319,115 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
 
 可以看出，节点的插入也是深度优先。
 
+## DOM属性的处理
+上面的插入过程完成了DOM树的构建，这之后要做的就是为每个DOM节点计算它自己的属性（props）。由于节点存在创建和更新两种情况，所以对属性的处理也会区别对待。
 
+### 属性的初始化
+这个过程发生在DOM节点构建的最后，调用`finalizeInitialChildren`函数完成新节点的属性设置，这其中包括了事件的绑定。
+```
+if (current !== null && workInProgress.stateNode != null) {
+    // 更新
+} else {
+    ...
+    // 创建、插入DOM节点的过程
+    ...
 
+    // DOM节点属性的初始化
+    if (
+      finalizeInitialChildren(
+        instance,
+        type,
+        newProps,
+        rootContainerInstance,
+        currentHostContext,
+      )
+     ) {
+       // 最终会依据textarea的autoFocus属性
+       // 来决定是否更新fiber
+       markUpdate(workInProgress);
+     }
+}
 
+```
+`finalizeInitialChildren`最终会调用`setInitialProperties`，来完成属性的设置。
+这个过程相对简单。主要就是调用`setInitialDOMProperties`将属性直接设置进DOM节点（事件在这个阶段绑定）
+```
+function setInitialDOMProperties(
+  tag: string,
+  domElement: Element,
+  rootContainerElement: Element | Document,
+  nextProps: Object,
+  isCustomComponentTag: boolean,
+): void {
+  for (const propKey in nextProps) {
+    const nextProp = nextProps[propKey];
+    if (propKey === STYLE) {
+      // 设置行内样式
+      setValueForStyles(domElement, nextProp);
+    } else if (propKey === DANGEROUSLY_SET_INNER_HTML) {
+      // 设置innerHTML
+      const nextHtml = nextProp ? nextProp[HTML] : undefined;
+      if (nextHtml != null) {
+        setInnerHTML(domElement, nextHtml);
+      }
+    }
+     ...
+     else if (registrationNameDependencies.hasOwnProperty(propKey)) {
+      // 绑定事件
+      if (nextProp != null) {
+        ensureListeningTo(rootContainerElement, propKey);
+      }
+    } else if (nextProp != null) {
+      // 设置其余属性
+      setValueForProperty(domElement, propKey, nextProp, isCustomComponentTag);
+    }
+  }
+}
+```
+### 属性的更新
+若对已有DOM节点进行更新，说明只对属性进行更新即可，因为节点已经存在，不存在删除和新增的情况。`updateHostComponent`函数
+负责HostComponent的更新，代码不多很好理解。
+```
+  updateHostComponent = function(
+    current: Fiber,
+    workInProgress: Fiber,
+    type: Type,
+    newProps: Props,
+    rootContainerInstance: Container,
+  ) {
+    const oldProps = current.memoizedProps;
+    // 新旧props相同，不更新
+    if (oldProps === newProps) {
+      return;
+    }
 
-更新
+    const instance: Instance = workInProgress.stateNode;
+    const currentHostContext = getHostContext();
 
+    // prepareUpdate计算新属性
+    const updatePayload = prepareUpdate(
+      instance,
+      type,
+      oldProps,
+      newProps,
+      rootContainerInstance,
+      currentHostContext,
+    );
 
+    // 最终新属性被挂载到updateQueue中，供commit阶段使用
+    workInProgress.updateQueue = (updatePayload: any);
 
+    if (updatePayload) {
+      // 标记fiber节点有更新
+      markUpdate(workInProgress);
+    }
+  };
+```
+
+节点调用`prepareUpdate`实现属性的更新，它内部会调用`diffProperties`来计算新属性。值得注意的是，新属性的形式为：
+```
+[ 'style', { color: 'blue' }, title, '测试标题' ]
+```
 
 ## HostText
 

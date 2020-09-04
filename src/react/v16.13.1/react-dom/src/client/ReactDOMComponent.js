@@ -326,6 +326,7 @@ function setInitialDOMProperties(
         }
       }
       // Relies on `updateStylesByID` not mutating `styleUpdates`.
+      // 设置行内样式
       setValueForStyles(domElement, nextProp);
     } else if (propKey === DANGEROUSLY_SET_INNER_HTML) {
       const nextHtml = nextProp ? nextProp[HTML] : undefined;
@@ -357,6 +358,7 @@ function setInitialDOMProperties(
       // adding a special case here, but then it wouldn't be emitted
       // on server rendering (but we *do* want to emit it in SSR).
     } else if (registrationNameDependencies.hasOwnProperty(propKey)) {
+      // 绑定事件
       if (nextProp != null) {
         if (__DEV__ && typeof nextProp !== 'function') {
           warnForInvalidEventListener(propKey, nextProp);
@@ -575,6 +577,7 @@ export function setInitialProperties(
 
   assertValidProps(tag, props);
 
+  // 为DOM节点设置属性，包括事件的绑定
   setInitialDOMProperties(
     tag,
     domElement,
@@ -698,6 +701,7 @@ export function diffProperties(
       // This is a special case. If any listener updates we need to ensure
       // that the "current" fiber pointer gets updated so we need a commit
       // to update this element.
+      // 事件更新
       if (!updatePayload) {
         updatePayload = [];
       }
@@ -827,7 +831,7 @@ export function diffProperties(
     }
     (updatePayload = updatePayload || []).push(STYLE, styleUpdates);
   }
-  // [ 'style', { color: 'blue' }, onClick, this.handleClick ]
+  // [ 'style', { color: 'blue' }, title, '测试标题' ]
   return updatePayload;
 }
 
