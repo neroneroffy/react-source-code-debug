@@ -5,12 +5,12 @@ import AppSibling from './components/AppSibling'
 import TasksWithDifferentPriorities from './components/TasksWithDifferentPriorities'
 import Concurrent from './components/ConcurrentInput'
 import Diff from './components/Diff'
+import PropsDiff from './components/PropsDiff'
 import './App.css';
 
 class App extends React.Component {
   render() {
-    console.log('diffRef', this.refs.diffRef)
-    return <Diff ref={'diffRef'}/>
+    return <PropsDiff/>
   }
 }
 // function App() {

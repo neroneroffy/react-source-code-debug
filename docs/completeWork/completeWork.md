@@ -1,22 +1,22 @@
 # 概述
-每个fiber节点都会经历两个阶段：beginWork和completeWork。节点进入complete的前提是已经完成了beginWork。这个时候拿到的WIP节点都是
+每个WIP节点都会经历两个阶段：beginWork和completeWork。节点进入complete的前提是已经完成了beginWork。这个时候拿到的WIP节点都是
 经过diff算法调和过的，也就意味着对于某个WIP节点来说它的fiber类型的形态已经基本确定了。此时有两点需要注意：
-* 需要变化的节点持有了effectTag
 * 目前只有fiber形态变了，对于原生DOM组件（HostComponent）和文本节点（HostText）的fiber来说，对应的DOM节点（fiber.stateNode）并未变化。
+* 经过Diff生成的新的WIP节点持有了effectTag
 
 基于这两个特点，completeWork的工作主要有：
+* 构建或更新DOM节点，
+     - 构建过程中，会自下而上将子节点的第一层第一层插入到当前节点。
+     - 更新过程中，会计算DOM节点的属性，一旦属性需要更新，会为DOM节点对应的WIP节点标记Update的effectTag。
 * 自下而上收集effectList，最终收集到root上
-* 构建或更新DOM节点，构建过程中，会自下而上将子节点的第一层第一层插入到当前节点
 
 对于正常执行工作的WIP节点来说，会执行以上的任务。但由于是WIP节点的完成阶段，免不了之前的工作会出错，所以也会对出错的节点采取措施，
-这就涉及到错误边界以及Suspense的概念了，本节只做简单描述，相关思想会在对应的文章里专门介绍。
+这涉及到错误边界以及Suspense的概念，相关思想会在对应的文章里专门介绍。
 
 # 流程
 completeUnitOfWork是complete阶段的入口。它内部有一个循环，会自下而上地遍历workInProgress节点，依次处理节点。
 
-对于正常的WIP节点，会执行completeWork。这其中会对HostComponent组件完成更新props、绑定事件、DOM相关的工作。
-
-
+对于正常的WIP节点，会执行completeWork。这其中会对HostComponent组件完成更新props、绑定事件等DOM相关的工作。
 
 ```javascript
 function completeUnitOfWork(unitOfWork: Fiber): void {
@@ -26,13 +26,13 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     const returnFiber = completedWork.return;
 
     if ((completedWork.effectTag & Incomplete) === NoEffect) {
-      // 如果fiber节点没有出错，走正常的complete流程
+      // 如果WIP节点没有出错，走正常的complete流程
       ...
 
       let next;
 
       // 省略了判断逻辑
-      // 对节点进行completeWork，更新props，生成DOM，绑定事件
+      // 对节点进行completeWork，生成DOM，更新props，绑定事件
       next = completeWork(current, completedWork, subtreeRenderLanes);
 
       if (next !== null) {
@@ -58,7 +58,6 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
     }
 
     // 查找兄弟节点，若有则进行beginWork -> completeWork
-    // 的流程
     const siblingFiber = completedWork.sibling;
     if (siblingFiber !== null) {
 
@@ -66,7 +65,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
       return;
     }
     // 若没有兄弟节点，那么向上回到父级节点
-    // 对父节点执行complete阶段
+    // 父节点进入complete
     completedWork = returnFiber;
     // 将WIP节点指向父级节点
     workInProgress = completedWork;
@@ -79,7 +78,6 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 }
 
 ```
-
 
 由于React的大部分类型的fiber节点最终都要体现为DOM，所以该阶段对于HostComponent（原生DOM组件）的处理需要着重理解。
 ```javascript
@@ -116,9 +114,10 @@ function completeWork(
   }
 }
 ```
-由completeWork的结构可以看出，就是依据fiber的tag做不同处理。对于HostComponent 和 HostText的处理是类似的，都是视情况来决定是更新或者是创建。
-若current存在并且workInProgress.stateNode（WIP节点对应的DOM实例）存在，说明此fiber节点的DOM节点已经存在，走更新逻辑，否则进行创建。而DOM节点的更新
-实则是属性的更新，会在下面的`DOM属性的处理 -> 属性的更新`中讲到，先集中看一下DOM节点的创建和插入。
+由completeWork的结构可以看出，就是依据fiber的tag做不同处理。对于HostComponent 和 HostText的处理是类似的，都是视情况来决定是更新还是创建DOM。
+若current存在并且workInProgress.stateNode（WIP节点对应的DOM实例）存在，说明此WIP节点的DOM节点已经存在，走更新逻辑，否则进行创建。
+
+DOM节点的更新实则是属性的更新，会在下面的`DOM属性的处理 -> 属性的更新`中讲到，先来看一下DOM节点的创建和插入。
 
 ## DOM节点的创建和插入
 我们知道，此时的completeWork针对的是经过diff算法产生的新fiber。对于HostComponent类型的新fiber来说，它可能有DOM节点，也可能没有。没有的话，
@@ -322,8 +321,8 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
 ## DOM属性的处理
 上面的插入过程完成了DOM树的构建，这之后要做的就是为每个DOM节点计算它自己的属性（props）。由于节点存在创建和更新两种情况，所以对属性的处理也会区别对待。
 
-### 属性的初始化
-这个过程发生在DOM节点构建的最后，调用`finalizeInitialChildren`函数完成新节点的属性设置，这其中包括了事件的绑定。
+### 属性的创建
+属性的创建相对更新来说比较简单，这个过程发生在DOM节点构建的最后，调用`finalizeInitialChildren`函数完成新节点的属性设置。
 ```
 if (current !== null && workInProgress.stateNode != null) {
     // 更新
@@ -418,25 +417,364 @@ function setInitialDOMProperties(
     workInProgress.updateQueue = (updatePayload: any);
 
     if (updatePayload) {
-      // 标记fiber节点有更新
+      // 标记WIP节点有更新
       markUpdate(workInProgress);
     }
   };
 ```
 
-节点调用`prepareUpdate`实现属性的更新，它内部会调用`diffProperties`来计算新属性。值得注意的是，新属性的形式为：
+可以看出它只做了一件事就是计算新的属性，并挂载到WIP节点的updateQueue中，它的形式为：
 ```
 [ 'style', { color: 'blue' }, title, '测试标题' ]
 ```
+这个结果由`diffProperties`计算产生，它对比lastProps和nextProps，计算出updatePayload。内部的过程可以概括为：
 
-## HostText
+若有某个属性（propKey）它在
 
-更新
+* lastProps存在，nextProps不存在，将propKey的value标记为null表示删除
+* lastProps不存在，nextProps存在，将nextProps中的propKey和对应的value添加到updatePayload
+* lastProps存在，nextProps也存在，将nextProps中的propKey和对应的value添加到updatePayload
 
-创建
+举个例子来说，有如下组件，div上绑定的点击事件会改变它的props。
+```
+class PropsDiff extends React.Component {
+    state = {
+        title: '更新前的标题',
+        color: 'red',
+        fontSize: 18
+    }
+    onClickDiv = () => {
+        this.setState({
+            title: '更新后的标题',
+            color: 'blue'
+        })
+    }
+    render() {
+        const { color, fontSize, title } = this.state
+        return <div
+            className="test"
+            onClick={this.onClickDiv}
+            title={title}
+            style={{color, fontSize}}
+            {...this.state.color === 'red' && { props: '自定义旧属性' }}
+        >
+            测试div的Props变化
+        </div>
+    }
+}
+```
+lastProps和nextProps分别为
+```
+lastProps
+{
+  "className": "test",
+  "title": "更新前的标题",
+  "style": { "color": "red", "fontSize": 18},
+  "props": "自定义旧属性",
+  "children": "测试div的Props变化",
+  "onClick": () => {...}
+}
+
+nextProps
+{
+  "className": "test",
+  "title": "更新后的标题",
+  "style": { "color":"blue", "fontSize":18 },
+  "children": "测试div的Props变化",
+  "onClick": () => {...}
+}
+```
+它们有变化的是propsKey是`style、title、props`，经过diff，最终打印出来的updatePayload为
+```
+[
+   "props", null,
+   "title", "更新后的标题",
+   "style", {"color":"blue"}
+]
+```
+
+我们来看一下源码结构：
+```javascript
+export function diffProperties(
+  domElement: Element,
+  tag: string,
+  lastRawProps: Object,
+  nextRawProps: Object,
+  rootContainerElement: Element | Document,
+): null | Array<mixed> {
+
+  let updatePayload: null | Array<any> = null;
+
+  let lastProps: Object;
+  let nextProps: Object;
+  
+  ...
+
+  let propKey;
+  let styleName;
+  let styleUpdates = null;
+
+  for (propKey in lastProps) {
+    // 循环lastProps，找出需要标记删除的propKey
+    if (
+      nextProps.hasOwnProperty(propKey) ||
+      !lastProps.hasOwnProperty(propKey) ||
+      lastProps[propKey] == null
+    ) {
+      // 对propKey来说，如果nextProps也有，或者lastProps没有，那么
+      // 就不需要标记为删除，跳出本次循环继续判断下一个propKey
+      continue;
+    }
+    if (propKey === STYLE) {
+      // 删除style
+      const lastStyle = lastProps[propKey];
+      for (styleName in lastStyle) {
+        if (lastStyle.hasOwnProperty(styleName)) {
+          if (!styleUpdates) {
+            styleUpdates = {};
+          }
+          styleUpdates[styleName] = '';
+        }
+      }
+    } else if(/*...*/) {
+      ...
+      // 一些特定种类的propKey的删除
+    } else {
+      // 将其他种类的propKey标记为删除
+      (updatePayload = updatePayload || []).push(propKey, null);
+    }
+  }
+  for (propKey in nextProps) {
+    // 将新prop添加到updatePayload
+    const nextProp = nextProps[propKey];
+    const lastProp = lastProps != null ? lastProps[propKey] : undefined;
+    if (
+      !nextProps.hasOwnProperty(propKey) ||
+      nextProp === lastProp ||
+      (nextProp == null && lastProp == null)
+    ) {
+      // 如果nextProps不存在propKey，或者前后的value相同，或者前后的value都为null
+      // 那么不需要添加进去，跳出本次循环继续处理下一个prop
+      continue;
+    }
+    if (propKey === STYLE) {
+      /*
+      * lastProp: { color: 'red' }
+      * nextProp: { color: 'blue' }
+      * */
+      // 如果style在lastProps和nextProps中都有
+      // 那么需要删除lastProps中style的样式
+      if (lastProp) {
+        // 如果lastProps中也有style
+        // 将style内的样式属性设置为空
+        // styleUpdates = { color: '' }
+        for (styleName in lastProp) {
+          if (
+            lastProp.hasOwnProperty(styleName) &&
+            (!nextProp || !nextProp.hasOwnProperty(styleName))
+          ) {
+            if (!styleUpdates) {
+              styleUpdates = {};
+            }
+            styleUpdates[styleName] = '';
+          }
+        }
+        // 以nextProp的属性名为key设置新的style的value
+        // styleUpdates = { color: 'blue' }
+        for (styleName in nextProp) {
+          if (
+            nextProp.hasOwnProperty(styleName) &&
+            lastProp[styleName] !== nextProp[styleName]
+          ) {
+            if (!styleUpdates) {
+              styleUpdates = {};
+            }
+            styleUpdates[styleName] = nextProp[styleName];
+          }
+        }
+      } else {
+        // 如果lastProps中没有style，说明新增的
+        // 属性全部可放入updatePayload
+        if (!styleUpdates) {
+          if (!updatePayload) {
+            updatePayload = [];
+          }
+          updatePayload.push(propKey, styleUpdates);
+          // updatePayload: [ style, null ]
+        }
+        styleUpdates = nextProp;
+        // styleUpdates = { color: 'blue' }
+      }
+    } else if (/*...*/) {
+      ...
+      // 一些特定种类的propKey的处理
+    } else if (registrationNameDependencies.hasOwnProperty(propKey)) {
+      if (nextProp != null) {
+        // 重新绑定事件
+        ensureListeningTo(rootContainerElement, propKey);
+      }
+      if (!updatePayload && lastProp !== nextProp) {
+        // 事件重新绑定后，需要赋值updatePayload，使这个节点得以被更新
+        updatePayload = [];
+      }
+    } else if (
+      typeof nextProp === 'object' &&
+      nextProp !== null &&
+      nextProp.$$typeof === REACT_OPAQUE_ID_TYPE
+    ) {
+      // 服务端渲染相关
+      nextProp.toString();
+    } else {
+       // 将计算好的属性push到updatePayload
+      (updatePayload = updatePayload || []).push(propKey, nextProp);
+    }
+  }
+  if (styleUpdates) {
+    // 将style和值push进updatePayload
+    (updatePayload = updatePayload || []).push(STYLE, styleUpdates);
+  }
+  console.log('updatePayload', JSON.stringify(updatePayload));
+  // [ 'style', { color: 'blue' }, title, '测试标题' ]
+  return updatePayload;
+}
+```
+
+属性的diff为WIP节点挂载了带有新属性的updateQueue，一旦节点的updateQueue不为空，它就会被标记上Update的
+effectTag
+```javascript
+if (updatePayload) {
+  markUpdate(workInProgress);
+}
+```
 
 ## effect链的收集
+经过beginWork和上面对于DOM的操作，有变化的WIP节点已经被打上了effectTag。
 
+一旦WIP节点持有了effectTag，说明它需要在commit阶段被处理。每个WIP节点都有一个firstEffect和lastEffect，是一个单向链表，来表
+示它自身以及它的子节点上所有持有effectTag的WIP节点。completeWork阶段在向上遍历的过程中也会逐层收集effect链，最终收集到root上，
+供接下来的commit阶段使用。
 
+实现上相对简单，对于某个WIP节点来说，先将它已有的effectList并入到父级节点，再判断它自己有没有effectTag，有的话也并入到父级节点。
+
+```javascript
+ /*
+* effectList是一条单向链表，每完成一个工作单元上的任务，
+* 都要将它产生的effect链表并入
+* 上级工作单元。
+* */
+// 将当前节点的effectList并入到父节点的effectList
+if (returnFiber.firstEffect === null) {
+  returnFiber.firstEffect = completedWork.firstEffect;
+}
+if (completedWork.lastEffect !== null) {
+  if (returnFiber.lastEffect !== null) {
+    returnFiber.lastEffect.nextEffect = completedWork.firstEffect;
+  }
+  returnFiber.lastEffect = completedWork.lastEffect;
+}
+
+// 将自身添加到effect链，添加时跳过NoWork 和
+// PerformedWork的effectTag，因为真正
+// 的commit用不到
+const effectTag = completedWork.effectTag;
+
+if (effectTag > PerformedWork) {
+  if (returnFiber.lastEffect !== null) {
+    returnFiber.lastEffect.nextEffect = completedWork;
+  } else {
+    returnFiber.firstEffect = completedWork;
+  }
+  returnFiber.lastEffect = completedWork;
+}
+```
+每个节点都会执行这样的操作，最终当回到root的时候，root上会有一条完整的effectList，包含了所有需要处理的fiber节点。
 
 # 错误处理
+completeUnitWork中的错误处理是错误边界机制的组成部分。
+
+错误边界是一种React组件，一旦类组件中使用了`getDerivedStateFromError`或`componentDidCatch`，那么它就是错误边界，可以捕获发生在其子组件树的错误。
+
+回到源码中，节点在completeWork之前的处理过程有可能报错，这个报错节点就会被打上Incomplete的effectTag，说明节点的更新工作未完成，就不能执行正常的completeWork，
+要走另一个判断分支进行处理。
+```javascript
+if ((completedWork.effectTag & Incomplete) === NoEffect) {
+  
+} else {
+  // 有Incomplete的节点会进入到这个判断分支进行错误处理
+}
+
+```
+
+## Incomplete从何而来
+
+什么情况下节点会被标记上Incomplete呢？这还要从最外层的工作循环说起。
+
+concurrent模式的渲染函数：renderRootConcurrent之中在构建workInProgress树时，使用了try...catch来包裹执行函数，这对报错节点的处理提供了机会。
+```javascript
+do {
+    try {
+      workLoopConcurrent();
+      break;
+    } catch (thrownValue) {
+      handleError(root, thrownValue);
+    }
+  } while (true);
+```
+一旦某个节点执行出错，会进入`handleError`函数处理。该函数中可以获取到当前出错的WIP节点，除此之外我们暂且不关注其他功能，只需清楚它调用了`throwException`。
+这个函数会为这个出错的WIP节点打上`Incomplete 的 effectTag`，此外还会置空它上面的effectList。对于错误边界组件，添加上ShouldCapture 的 effectTag。然后
+对这个节点开始`completeUnitOfWork`，目的是将错误终止到当前的节点，因为它本身都出错了，再向下渲染没有意义。
+```javascript
+function handleError(root, thrownValue):void {
+  ...
+
+  // 给当前出错的WIP节点添加上 Incomplete 的effectTag
+  throwException(
+  root,
+  erroredWork.return,
+  erroredWork,
+  thrownValue,
+  workInProgressRootRenderLanes,
+  );
+
+  // 开始对错误节点执行completeWork阶段
+  completeUnitOfWork(erroredWork);
+  
+  ...
+
+}
+```
+
+当这个错误节点进入completeUnitOfWork时，不会进入正常的complete流程，而是会进入错误处理的逻辑。先说明错误处理逻辑做的事情：
+* 对出错节点执行`unwindWork`，找到错误边界。
+* 将出错节点的父节点（returnFiber）标记上`Incomplete`。
+* 清空出错节点父节点上的effect链。
+
+```javascript
+if ((completedWork.effectTag & Incomplete) === NoEffect) {
+
+    // 正常流程
+    ... 
+
+    } else {
+      // unwindWork主要是将WIP节点上的ShouldCapture去掉，换成 DidCapture
+      const next = unwindWork(completedWork, subtreeRenderLanes);
+
+      if (next !== null) {
+        // 如果完成此工作产生了新任务，则执行下一步，之后会再回到这里，由于需要重启，所以从effect
+        // 标签中删除所有不是host effect的effectTag。
+        next.effectTag &= HostEffectMask;
+        workInProgress = next;
+        return;
+      }
+
+      // ...省略了React性能分析相关的代码
+
+      if (returnFiber !== null) {
+        // 将父Fiber的effect list清除，effectTag标记成未完成，便于它的父节点再completeWork的时候
+        // 被unwindWork
+        returnFiber.firstEffect = returnFiber.lastEffect = null;
+        // 逐层往上标记effectTag |= Incomplete
+        returnFiber.effectTag |= Incomplete;
+      }
+    }
+```
