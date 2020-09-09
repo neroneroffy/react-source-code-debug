@@ -692,9 +692,9 @@ if (effectTag > PerformedWork) {
 # 错误处理
 completeUnitWork中的错误处理是错误边界机制的组成部分。
 
-错误边界是一种React组件，一旦类组件中使用了`getDerivedStateFromError`或`componentDidCatch`，那么它就是错误边界，可以捕获发生在其子组件树的错误。
+错误边界是一种React组件，一旦类组件中使用了`getDerivedStateFromError`或`componentDidCatch`，可以捕获发生在其子组件树的错误，那么它就是错误边界。
 
-回到源码中，节点在completeWork之前的处理过程有可能报错，这个报错节点就会被打上Incomplete的effectTag，说明节点的更新工作未完成，就不能执行正常的completeWork，
+回到源码中，节点如果在completeWork之前的处理过程报错，它就会被打上Incomplete的effectTag，此时说明节点的更新工作未完成，因此不能执行正常的completeWork，
 要走另一个判断分支进行处理。
 ```javascript
 if ((completedWork.effectTag & Incomplete) === NoEffect) {
@@ -709,7 +709,7 @@ if ((completedWork.effectTag & Incomplete) === NoEffect) {
 
 什么情况下节点会被标记上Incomplete呢？这还要从最外层的工作循环说起。
 
-concurrent模式的渲染函数：renderRootConcurrent之中在构建workInProgress树时，使用了try...catch来包裹执行函数，这对报错节点的处理提供了机会。
+concurrent模式的渲染函数：renderRootConcurrent之中在构建workInProgress树时，使用了try...catch来包裹执行函数，这对处理报错节点提供了机会。
 ```javascript
 do {
     try {
@@ -721,19 +721,22 @@ do {
   } while (true);
 ```
 一旦某个节点执行出错，会进入`handleError`函数处理。该函数中可以获取到当前出错的WIP节点，除此之外我们暂且不关注其他功能，只需清楚它调用了`throwException`。
-这个函数会为这个出错的WIP节点打上`Incomplete 的 effectTag`，此外还会置空它上面的effectList。对于错误边界组件，添加上ShouldCapture 的 effectTag。然后
-对这个节点开始`completeUnitOfWork`，目的是将错误终止到当前的节点，因为它本身都出错了，再向下渲染没有意义。
+
+`throwException`会为这个出错的WIP节点打上`Incomplete 的 effectTag`，表明未完成，然后向上找到可以捕获这个错误的节点（即错误边界），添加上ShouldCapture 的 effectTag。
+然后创建代表错误的update，`getDerivedStateFromError`放入payload，`componentDidCatch`放入callback。然后这个update入队节点的updateQueue。
+
+`throwException`执行完毕，回到出错的WIP节点，执行`completeUnitOfWork`，目的是将错误终止到当前的节点，因为它本身都出错了，再向下渲染没有意义。
 ```javascript
 function handleError(root, thrownValue):void {
   ...
 
   // 给当前出错的WIP节点添加上 Incomplete 的effectTag
   throwException(
-  root,
-  erroredWork.return,
-  erroredWork,
-  thrownValue,
-  workInProgressRootRenderLanes,
+    root,
+    erroredWork.return,
+    erroredWork,
+    thrownValue,
+    workInProgressRootRenderLanes,
   );
 
   // 开始对错误节点执行completeWork阶段
@@ -744,10 +747,41 @@ function handleError(root, thrownValue):void {
 }
 ```
 
-当这个错误节点进入completeUnitOfWork时，不会进入正常的complete流程，而是会进入错误处理的逻辑。先说明错误处理逻辑做的事情：
-* 对出错节点执行`unwindWork`，找到错误边界。
-* 将出错节点的父节点（returnFiber）标记上`Incomplete`。
+当这个错误节点进入completeUnitOfWork时，因为持有了`Incomplete`，所以不会进入正常的complete流程，而是会进入错误处理的逻辑。
+
+错误处理逻辑做的事情：
+* 对出错节点执行`unwindWork`。
+* 将出错节点的父节点（returnFiber）标记上`Incomplete`，目的是在父节点执行到completeUnitOfWork的时候，也能被执行unwindWork，进而验证它是否是错误边界。
 * 清空出错节点父节点上的effect链。
+
+这里的重点是`unwindWork`会验证节点是否是错误边界，来看一下unwindWork的关键代码：
+```javascript
+function unwindWork(workInProgress: Fiber, renderLanes: Lanes) {
+  switch (workInProgress.tag) {
+    case ClassComponent: {
+
+      ...
+
+      const effectTag = workInProgress.effectTag;
+      if (effectTag & ShouldCapture) {
+        // 删它上面的ShouldCapture，再打上DidCapture
+        workInProgress.effectTag = (effectTag & ~ShouldCapture) | DidCapture;
+        
+        return workInProgress;
+      }
+      return null;
+    }
+    ...
+    default:
+      return null;
+  }
+}
+```
+`unwindWork`会验证节点是错误边界的依据就是节点上是否有ShouldCapture的effectTag。而这个ShouldCapture就是在当时出错
+时`throwException`找到错误边界并标记上的。如果节点是错误边界，最终会被return出去。
+
+
+接下来我们看一下错误处理的整体逻辑：
 
 ```javascript
 if ((completedWork.effectTag & Incomplete) === NoEffect) {
@@ -755,26 +789,59 @@ if ((completedWork.effectTag & Incomplete) === NoEffect) {
     // 正常流程
     ... 
 
-    } else {
-      // unwindWork主要是将WIP节点上的ShouldCapture去掉，换成 DidCapture
-      const next = unwindWork(completedWork, subtreeRenderLanes);
+} else {
+  // 验证节点是否是错误边界
+  const next = unwindWork(completedWork, subtreeRenderLanes);
 
-      if (next !== null) {
-        // 如果完成此工作产生了新任务，则执行下一步，之后会再回到这里，由于需要重启，所以从effect
-        // 标签中删除所有不是host effect的effectTag。
-        next.effectTag &= HostEffectMask;
-        workInProgress = next;
-        return;
-      }
+  if (next !== null) {
+    // 如果找到了错误边界，删除与错误处理有关的effectTag，
+    // 例如ShouldCapture、Incomplete，
+    // 并将workInProgress指针指向next
+    next.effectTag &= HostEffectMask;
+    workInProgress = next;
+    return;
+  }
 
-      // ...省略了React性能分析相关的代码
+  // ...省略了React性能分析相关的代码
 
-      if (returnFiber !== null) {
-        // 将父Fiber的effect list清除，effectTag标记成未完成，便于它的父节点再completeWork的时候
-        // 被unwindWork
-        returnFiber.firstEffect = returnFiber.lastEffect = null;
-        // 逐层往上标记effectTag |= Incomplete
-        returnFiber.effectTag |= Incomplete;
-      }
-    }
+  if (returnFiber !== null) {
+    // 将父Fiber的effect list清除，effectTag标记为Incomplete，
+    // 便于它的父节点再completeWork的时候被unwindWork
+    returnFiber.firstEffect = returnFiber.lastEffect = null;
+    returnFiber.effectTag |= Incomplete;
+  }
+}
+
+...
+// 继续向上completeWork的过程
+completedWork = returnFiber;
+
+```
+
+现在我们要有个认知，一旦unwindWork识别当前的WIP节点为错误边界，那么现在的workInProgress节点就是这个错误边界。
+然后会删除掉与错误处理有关的effectTag，DidCapture会被保留下来。
+```javascript
+  if (next !== null) {
+    next.effectTag &= HostEffectMask;
+    workInProgress = next;
+    return;
+  }
+```
+WIP节点有值，并且跳出了completeUnitOfWork，那么继续最外层的工作循环：
+```javascript
+function workLoopConcurrent() {
+  while (workInProgress !== null && !shouldYield()) {
+    performUnitOfWork(workInProgress);
+  }
+}
+```
+此时，workInProgress节点，也就是错误边界，会再被performUnitOfWork处理，然后进入beginWork、completeWork！
+也就是说明报错的节点会被重新渲染一次，不同的是，这次节点上持有了DidCapture的effectTag。所以这次的流程是不一样的。
+还记得`throwException`阶段入队错误边界更新队列的表示错误的update吗？它在beginWork调用processUpdateQueue的时候，会被处理，
+首先保证了`getDerivedStateFromError`和`componentDidCatch`的调用，其次是产生新的state，这个state表示这次错误的状态。
+
+之后代码执行到完成类组件更新的函数`finishClassComponent`，对于错误边界，会卸载掉它所有的子节点，重新渲染新的子节点，这个子节点有可能是
+经过错误处理渲染的备用UI。
+```javascript
+
 ```
