@@ -722,7 +722,7 @@ do {
 ```
 一旦某个节点执行出错，会进入`handleError`函数处理。该函数中可以获取到当前出错的WIP节点，除此之外我们暂且不关注其他功能，只需清楚它调用了`throwException`。
 
-`throwException`会为这个出错的WIP节点打上`Incomplete 的 effectTag`，表明未完成，然后向上找到可以捕获这个错误的节点（即错误边界），添加上ShouldCapture 的 effectTag。
+`throwException`会为这个出错的WIP节点打上`Incomplete 的 effectTag`，表明未完成，然后向上找到可以处理错误的节点（即错误边界），添加上ShouldCapture 的 effectTag。
 然后创建代表错误的update，`getDerivedStateFromError`放入payload，`componentDidCatch`放入callback。然后这个update入队节点的updateQueue。
 
 `throwException`执行完毕，回到出错的WIP节点，执行`completeUnitOfWork`，目的是将错误终止到当前的节点，因为它本身都出错了，再向下渲染没有意义。
@@ -746,7 +746,9 @@ function handleError(root, thrownValue):void {
 
 }
 ```
+**重点：从发生错误的节点往上找到错误边界，做记号，记号就是Incomplete 的 effectTag。**
 
+## 错误边界再次更新
 当这个错误节点进入completeUnitOfWork时，因为持有了`Incomplete`，所以不会进入正常的complete流程，而是会进入错误处理的逻辑。
 
 错误处理逻辑做的事情：
@@ -779,7 +781,6 @@ function unwindWork(workInProgress: Fiber, renderLanes: Lanes) {
 ```
 `unwindWork`会验证节点是错误边界的依据就是节点上是否有ShouldCapture的effectTag。而这个ShouldCapture就是在当时出错
 时`throwException`找到错误边界并标记上的。如果节点是错误边界，最终会被return出去。
-
 
 接下来我们看一下错误处理的整体逻辑：
 
@@ -820,6 +821,7 @@ completedWork = returnFiber;
 
 现在我们要有个认知，一旦unwindWork识别当前的WIP节点为错误边界，那么现在的workInProgress节点就是这个错误边界。
 然后会删除掉与错误处理有关的effectTag，DidCapture会被保留下来。
+
 ```javascript
   if (next !== null) {
     next.effectTag &= HostEffectMask;
@@ -827,7 +829,10 @@ completedWork = returnFiber;
     return;
   }
 ```
-WIP节点有值，并且跳出了completeUnitOfWork，那么继续最外层的工作循环：
+
+**重点：将workInProgress节点指向错误边界，这样可以对错误边界重新走更新流程。**
+
+这个时候WIP节点有值，并且跳出了completeUnitOfWork，那么继续最外层的工作循环：
 ```javascript
 function workLoopConcurrent() {
   while (workInProgress !== null && !shouldYield()) {
@@ -836,12 +841,82 @@ function workLoopConcurrent() {
 }
 ```
 此时，workInProgress节点，也就是错误边界，会再被performUnitOfWork处理，然后进入beginWork、completeWork！
-也就是说明报错的节点会被重新渲染一次，不同的是，这次节点上持有了DidCapture的effectTag。所以这次的流程是不一样的。
-还记得`throwException`阶段入队错误边界更新队列的表示错误的update吗？它在beginWork调用processUpdateQueue的时候，会被处理，
-首先保证了`getDerivedStateFromError`和`componentDidCatch`的调用，其次是产生新的state，这个state表示这次错误的状态。
+也就是说它会被重新渲染一次，不同的是，这次节点上持有了DidCapture的effectTag。所以流程上是不一样的。
+还记得`throwException`阶段入队错误边界更新队列的表示错误的update吗？它在此次beginWork调用processUpdateQueue的时候，会被处理。
+这样保证了`getDerivedStateFromError`和`componentDidCatch`的调用，其次是产生新的state，这个state表示这次错误的状态。
 
-之后代码执行到完成类组件更新的函数`finishClassComponent`，对于错误边界，会卸载掉它所有的子节点，重新渲染新的子节点，这个子节点有可能是
-经过错误处理渲染的备用UI。
+错误边界是类组件，在beginWork阶段会执行`finishClassComponent`，如果判断组件有DidCapture，会卸载掉它所有的子节点，然后重新渲染新的子节点，
+这些子节点有可能是经过错误处理渲染的备用UI。
+
+*示例代码来自React[错误边界介绍](https://zh-hans.reactjs.org/docs/error-boundaries.html)*
+
 ```javascript
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    // 更新 state 使下一次渲染能够显示降级后的 UI
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    // 你同样可以将错误日志上报给服务器
+    logErrorToMyService(error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // 你可以自定义降级后的 UI 并渲染
+      return <h1>Something went wrong.</h1>;
+    }
+
+    return this.props.children; 
+  }
+}
+```
+
+对于上述情况来说，一旦ErrorBoundary的子树中有某个节点发生了错误，组件中的`getDerivedStateFromError` 和 `componentDidCatch`就会被触发，
+此时的备用UI就是：
+```javascript
+<h1>Something went wrong.</h1>
+```
+
+## 流程梳理
+上面的错误处理我们用图来梳理一下，假设<Example/>具有错误处理的能力。
 
 ```
+  1              App
+                  |
+                  |
+  2           <Example/>
+                /   \
+               /     \
+  3 --->   <List/>--->span
+            /   \
+           /     \
+  4       p ----> 'text'
+         /
+        /
+  5    h1
+```
+
+1.如果<List/>更新出错，那么首先`throwException`会给它打上Incomplete的effectTag，然后以它的父节点为起点向上找到可以处理错误的节点。
+
+2.找到了<Example/>，它可以处理错误，给他打上ShouldCapture的effectTag（做记号），创建错误的update，将`getDerivedStateFromError`放入payload，`componentDidCatch`放入callback。
+，入队<Example/>的updateQueue。
+
+3.从<List/>开始直接`completeUnitOfWork`。由于它有Incomplete，所以会走`unwindWork`，它不是刚刚做记号的错误边界，继续向上`completeUnitOfWork`
+
+4.<Example/>进入`unwindWork`，而它恰恰是刚刚做过记号的错误边界节点，打上DidCapture的effectTag，将workInProgress的指针指向<Example/>
+
+5.<Example/>重新更新一次，进入beginWork处理updateQueue，调和子节点（卸载掉原有的子节点，渲染备用UI）。
+
+我们可以看出来，React的错误边界的概念其实是对可以处理错误的组件重新进行更新。这个组件只能捕获它子树的错误，而不能捕获到它自己的错误，自己的错误要靠它上面的错误边界来捕获。
+我想这是由于出错的组件已经无法再渲染出它的子树，所以即使它捕获到了自己的错误也于事无补，因为它不能渲染出备用UI。
+
+
+
+
