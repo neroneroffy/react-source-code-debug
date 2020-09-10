@@ -1,6 +1,7 @@
 # 概述
 每个WIP节点都会经历两个阶段：beginWork和completeWork。节点进入complete的前提是已经完成了beginWork。这个时候拿到的WIP节点都是
-经过diff算法调和过的，也就意味着对于某个WIP节点来说它的fiber类型的形态已经基本确定了。此时有两点需要注意：
+经过diff算法调和过的，也就意味着对于某个WIP节点来说它fiber类型的形态已经基本确定了，但除此之外还有两点：
+
 * 目前只有fiber形态变了，对于原生DOM组件（HostComponent）和文本节点（HostText）的fiber来说，对应的DOM节点（fiber.stateNode）并未变化。
 * 经过Diff生成的新的WIP节点持有了effectTag
 
@@ -10,11 +11,19 @@
      - 更新过程中，会计算DOM节点的属性，一旦属性需要更新，会为DOM节点对应的WIP节点标记Update的effectTag。
 * 自下而上收集effectList，最终收集到root上
 
-对于正常执行工作的WIP节点来说，会执行以上的任务。但由于是WIP节点的完成阶段，免不了之前的工作会出错，所以也会对出错的节点采取措施，
-这涉及到错误边界以及Suspense的概念，相关思想会在对应的文章里专门介绍。
+对于正常执行工作的WIP节点来说，会走以上的流程。但是免不了节点的更新会出错，所以对出错的节点会采取措施，这涉及到错误边界以及Suspense的概念，
+本文只做简单流程分析。
+
+这一节涉及的知识点有
+
+* DOM节点的创建以及挂载
+* DOM属性的处理
+* effectList的收集
+* 错误处理
+
 
 # 流程
-completeUnitOfWork是complete阶段的入口。它内部有一个循环，会自下而上地遍历workInProgress节点，依次处理节点。
+completeUnitOfWork是completeWork阶段的入口。它内部有一个循环，会自下而上地遍历workInProgress节点，依次处理节点。
 
 对于正常的WIP节点，会执行completeWork。这其中会对HostComponent组件完成更新props、绑定事件等DOM相关的工作。
 
@@ -79,7 +88,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
 ```
 
-由于React的大部分类型的fiber节点最终都要体现为DOM，所以该阶段对于HostComponent（原生DOM组件）的处理需要着重理解。
+由于React的大部分的fiber节点最终都要体现为DOM，所以本文主要分析HostComponent相关的处理流程。
 ```javascript
 function completeWork(
   current: Fiber | null,
@@ -114,15 +123,15 @@ function completeWork(
   }
 }
 ```
-由completeWork的结构可以看出，就是依据fiber的tag做不同处理。对于HostComponent 和 HostText的处理是类似的，都是视情况来决定是更新还是创建DOM。
+由completeWork的结构可以看出，就是依据fiber的tag做不同处理。对HostComponent 和 HostText的处理是类似的，都是针对它们的DOM节点，处理方法又会分为更新和创建。
 若current存在并且workInProgress.stateNode（WIP节点对应的DOM实例）存在，说明此WIP节点的DOM节点已经存在，走更新逻辑，否则进行创建。
 
 DOM节点的更新实则是属性的更新，会在下面的`DOM属性的处理 -> 属性的更新`中讲到，先来看一下DOM节点的创建和插入。
 
-## DOM节点的创建和插入
-我们知道，此时的completeWork针对的是经过diff算法产生的新fiber。对于HostComponent类型的新fiber来说，它可能有DOM节点，也可能没有。没有的话，
+# DOM节点的创建和插入
+我们知道，此时的completeWork处理的是经过diff算法之后产生的新fiber。对于HostComponent类型的新fiber来说，它可能有DOM节点，也可能没有。没有的话，
 就需要执行先创建，再插入的操作，由此引入DOM的插入算法。
-```
+```javascript
 if (current !== null && workInProgress.stateNode != null) {
     // 表明fiber有dom节点，需要执行更新过程
 } else {
@@ -145,13 +154,12 @@ if (current !== null && workInProgress.stateNode != null) {
     ...
 
 }
-
 ```
 
 **需要注意的是，DOM的插入并不是将当前DOM插入它的父节点，而是将当前这个DOM节点的第一层子节点插入到它自己的下面。**
 
-### 图解算法
-此时处于completeWork阶段，会自下而上遍历WIP树到root，每经过一层都会按照上面的规则插入DOM。下边用一个例子来理解一下这个过程。
+## 图解算法
+此时的completeWork阶段，会自下而上遍历WIP树到root，每经过一层都会按照上面的规则插入DOM。下边用一个例子来理解一下这个过程。
 
 这是一棵fiber树的结构，workInProgress树最终要成为这个形态。
 ```
@@ -170,6 +178,7 @@ if (current !== null && workInProgress.stateNode != null) {
   5    h1
 ```
 构建WIP树的DFS遍历对沿途节点一路beginWork，此时已经遍历到最深的h1节点，它的beginWork已经结束，开始进入completeWork阶段，此时所在的层级深度为第5层。
+
 **第5层**
 
 ```
@@ -188,8 +197,8 @@ if (current !== null && workInProgress.stateNode != null) {
   5--->h1
 ```
 
-此时WIP节点指向h1的fiber，它对应的dom节点为h1，dom标签创建出来以后进入`appendAllChildren`，因为当前的workInProgress节点为h1，此时它的child为null，无需插入，所以退出。
-h1节点完成工作往上返回到第4层的p节点
+此时WIP节点指向h1的fiber，它对应的dom节点为h1，dom标签创建出来以后进入`appendAllChildren`，因为当前的workInProgress节点为h1，所以它的child为null，无需子节点可插入，退出。
+h1节点完成工作往上返回到第4层的p节点。
 
 此时的dom树为
 ```
@@ -214,12 +223,11 @@ h1节点完成工作往上返回到第4层的p节点
   5    h1
 ```
 
-
-此时WIP节点指向p的fiber，它对应的dom节点为p，进入`appendAllChildren`，发现 p 的child为 h1，并且是HostComponent组件，将 h1 插入 p，然后寻找h1是否有同级的sibling节点。
+此时WIP节点指向p的fiber，它对应的dom节点为p，进入`appendAllChildren`，发现 p 的child为 h1，并且是HostComponent组件，将 h1 插入 p，然后寻找子节点h1是否有同级的sibling节点。
 发现没有，退出。
 
 p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text'会作为下一个工作单元，执行beginWork再进入completeWork。现在需要对它执行`appendAllChildren`，发现没有child，
-不执行插入操作。它的工作也完成，return到父节点<List/>，进入第3层
+不执行插入操作。它的工作也完成，return到父节点`<List/>`，进入第3层
 
 此时的dom树为
 ```
@@ -248,8 +256,9 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
 ```
 
 
-此时WIP节点指向List的fiber，对它进行completeWork，由于此时它是自定义组件，不属于HostComponent，所以不会对它进行子节点的插入操作。寻找它的兄弟节点span，beginWork再completeWork，执行子节点的插入操作，
-发现它没有child，退出。return到父节点div，进入第二层。
+此时WIP节点指向`<List/>`的fiber，对它进行completeWork，由于此时它是自定义组件，不属于HostComponent，所以不会对它进行子节点的插入操作。
+
+寻找它的兄弟节点span，对span先进行beginWork再进行到completeWork，执行span子节点的插入操作，发现它没有child，退出。return到父节点div，进入第二层。
 
 此时的dom树为
 ```
@@ -260,6 +269,7 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
       /
      h1
 ```
+
 **第2层**
 
 ```
@@ -277,10 +287,10 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
         /
   5    h1
 ```
-此时WIP节点指向div的fiber，对它进行completeWork，执行子节点插入操作。由于它的child是<List/>，不满足`node.tag === HostComponent || node.tag === HostText`的条件，所以
-不会将它插入到div中。继续向下找<List/>的child，发现是p，将P插入div，寻找p的sibling，发现了'text'，将它也插入div。之后再也找不到同级节点，此时回到第三层的<List/>节点。
+此时WIP节点指向div的fiber，对它进行completeWork，执行div的子节点插入。由于它的child是<List/>，不满足`node.tag === HostComponent || node.tag === HostText`的条件，所以
+不会将它插入到div中。继续向下找<List/>的child，发现是p，将P插入div，然后寻找p的sibling，发现了'text'，将它也插入div。之后再也找不到同级节点，此时回到第三层的<List/>节点。
 
-<List/>有sibling节点span，将span插入到div。由于span没有子节点，所以退出。
+<List/>有sibling节点span，将span插入到div。由于span没有子节点，退出。
 
 此时的dom树为
 ```
@@ -297,9 +307,10 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
 此时WIP节点指向App的fiber，由于它是自定义节点，所以不会对它进行子节点的插入操作。
 
 到此为止，dom树基本构建完成。在这个过程中我们可以总结出几个规律：
-1. 向节点中插入dom节点时，只插入它子节点中第一层的dom。可以把这个插入可以看成是一个自下而上收集dom节点的过程。第一层之下的dom，在该dom节点执行插入时已经被插入了，类似于累加的
-概念。
-2. 总是优先看本身可否插入，再往下找，之后才是sibling节点。
+1. 向节点中插入dom节点时，只插入它子节点中第一层的dom。可以把这个插入可以看成是一个自下而上收集dom节点的过程。第一层子节点之下的dom，已经在第一层子节点执行插入时被插入第一层子节点了，从下往上逐层completeWork
+的这个过程类似于dom节点的累加。
+
+2. 总是优先看本身可否插入，再往下找，之后才是找sibling节点。
 
 这是由于fiber树和dom树的差异导致，每个fiber节点不一定对应一个dom节点，但一个dom节点一定对应一个fiber节点。
 ```
@@ -313,17 +324,17 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
      |
    input
 ```
-由于一个原生DOM组件的子组件有可能是类组件或函数组件，优先检查自身，但它们不是原生DOM组件，不能被插入到父级的DOM组件对应的DOM节点中，所以下一步要往下找，直到找到原生DOM组件，执行插入，
+由于一个原生DOM组件的子组件有可能是类组件或函数组件，所以会优先检查自身，发现自己不是原生DOM组件，不能被插入到父级fiber节点对应的DOM中，所以要往下找，直到找到原生DOM组件，执行插入，
 最后再从这一层找同级的fiber节点，同级节点也会执行`先自检，再检查下级，再检查下级的同级`的操作。
 
 可以看出，节点的插入也是深度优先。
 
-## DOM属性的处理
+# DOM属性的处理
 上面的插入过程完成了DOM树的构建，这之后要做的就是为每个DOM节点计算它自己的属性（props）。由于节点存在创建和更新两种情况，所以对属性的处理也会区别对待。
 
-### 属性的创建
+## 属性的创建
 属性的创建相对更新来说比较简单，这个过程发生在DOM节点构建的最后，调用`finalizeInitialChildren`函数完成新节点的属性设置。
-```
+```javascript
 if (current !== null && workInProgress.stateNode != null) {
     // 更新
 } else {
@@ -349,8 +360,8 @@ if (current !== null && workInProgress.stateNode != null) {
 
 ```
 `finalizeInitialChildren`最终会调用`setInitialProperties`，来完成属性的设置。
-这个过程相对简单。主要就是调用`setInitialDOMProperties`将属性直接设置进DOM节点（事件在这个阶段绑定）
-```
+过程好理解，主要就是调用`setInitialDOMProperties`将属性直接设置进DOM节点（事件在这个阶段绑定）
+```javascript
 function setInitialDOMProperties(
   tag: string,
   domElement: Element,
@@ -383,9 +394,9 @@ function setInitialDOMProperties(
   }
 }
 ```
-### 属性的更新
+## 属性的更新
 若对已有DOM节点进行更新，说明只对属性进行更新即可，因为节点已经存在，不存在删除和新增的情况。`updateHostComponent`函数
-负责HostComponent的更新，代码不多很好理解。
+负责HostComponent对应DOM节点属性的更新，代码不多很好理解。
 ```
   updateHostComponent = function(
     current: Fiber,
@@ -423,20 +434,14 @@ function setInitialDOMProperties(
   };
 ```
 
-可以看出它只做了一件事就是计算新的属性，并挂载到WIP节点的updateQueue中，它的形式为：
+可以看出它只做了一件事，就是计算新的属性，并挂载到WIP节点的updateQueue中，它的形式是以2为单位，index为偶数的是key，为奇数的是value：
 ```
 [ 'style', { color: 'blue' }, title, '测试标题' ]
 ```
-这个结果由`diffProperties`计算产生，它对比lastProps和nextProps，计算出updatePayload。内部的过程可以概括为：
-
-若有某个属性（propKey）它在
-
-* lastProps存在，nextProps不存在，将propKey的value标记为null表示删除
-* lastProps不存在，nextProps存在，将nextProps中的propKey和对应的value添加到updatePayload
-* lastProps存在，nextProps也存在，将nextProps中的propKey和对应的value添加到updatePayload
+这个结果由`diffProperties`计算产生，它对比lastProps和nextProps，计算出updatePayload。
 
 举个例子来说，有如下组件，div上绑定的点击事件会改变它的props。
-```
+```javascript
 class PropsDiff extends React.Component {
     state = {
         title: '更新前的标题',
@@ -493,7 +498,15 @@ nextProps
 ]
 ```
 
-我们来看一下源码结构：
+`diffProperties`内部的规则可以概括为：
+
+若有某个属性（propKey），它在
+
+* lastProps中存在，nextProps中不存在，将propKey的value标记为null表示删除
+* lastProps中不存在，nextProps中存在，将nextProps中的propKey和对应的value添加到updatePayload
+* lastProps中存在，nextProps中也存在，将nextProps中的propKey和对应的value添加到updatePayload
+
+对照这个规则看一下源码：
 ```javascript
 export function diffProperties(
   domElement: Element,
@@ -639,15 +652,15 @@ export function diffProperties(
 }
 ```
 
-属性的diff为WIP节点挂载了带有新属性的updateQueue，一旦节点的updateQueue不为空，它就会被标记上Update的
-effectTag
+DOM节点属性的diff为WIP节点挂载了带有新属性的updateQueue，一旦节点的updateQueue不为空，它就会被标记上Update的
+effectTag，commit阶段会处理updateQueue。
 ```javascript
 if (updatePayload) {
   markUpdate(workInProgress);
 }
 ```
 
-## effect链的收集
+# effect链的收集
 经过beginWork和上面对于DOM的操作，有变化的WIP节点已经被打上了effectTag。
 
 一旦WIP节点持有了effectTag，说明它需要在commit阶段被处理。每个WIP节点都有一个firstEffect和lastEffect，是一个单向链表，来表
@@ -692,9 +705,9 @@ if (effectTag > PerformedWork) {
 # 错误处理
 completeUnitWork中的错误处理是错误边界机制的组成部分。
 
-错误边界是一种React组件，一旦类组件中使用了`getDerivedStateFromError`或`componentDidCatch`，可以捕获发生在其子组件树的错误，那么它就是错误边界。
+错误边界是一种React组件，一旦类组件中使用了`getDerivedStateFromError`或`componentDidCatch`，就可以捕获发生在其子树中的错误，那么它就是错误边界。
 
-回到源码中，节点如果在completeWork之前的处理过程报错，它就会被打上Incomplete的effectTag，此时说明节点的更新工作未完成，因此不能执行正常的completeWork，
+回到源码中，节点如果在更新的过程中报错，它就会被打上Incomplete的effectTag，说明节点的更新工作未完成，因此不能执行正常的completeWork，
 要走另一个判断分支进行处理。
 ```javascript
 if ((completedWork.effectTag & Incomplete) === NoEffect) {
@@ -722,8 +735,8 @@ do {
 ```
 一旦某个节点执行出错，会进入`handleError`函数处理。该函数中可以获取到当前出错的WIP节点，除此之外我们暂且不关注其他功能，只需清楚它调用了`throwException`。
 
-`throwException`会为这个出错的WIP节点打上`Incomplete 的 effectTag`，表明未完成，然后向上找到可以处理错误的节点（即错误边界），添加上ShouldCapture 的 effectTag。
-然后创建代表错误的update，`getDerivedStateFromError`放入payload，`componentDidCatch`放入callback。然后这个update入队节点的updateQueue。
+`throwException`会为这个出错的WIP节点打上`Incomplete 的 effectTag`，表明未完成，在向上找到可以处理错误的节点（即错误边界），添加上ShouldCapture 的 effectTag。
+另外，创建代表错误的update，`getDerivedStateFromError`放入payload，`componentDidCatch`放入callback。最后这个update入队节点的updateQueue。
 
 `throwException`执行完毕，回到出错的WIP节点，执行`completeUnitOfWork`，目的是将错误终止到当前的节点，因为它本身都出错了，再向下渲染没有意义。
 ```javascript
@@ -746,7 +759,7 @@ function handleError(root, thrownValue):void {
 
 }
 ```
-**重点：从发生错误的节点往上找到错误边界，做记号，记号就是Incomplete 的 effectTag。**
+**重点：从发生错误的节点往上找到错误边界，做记号，记号就是ShouldCapture 的 effectTag。**
 
 ## 错误边界再次更新
 当这个错误节点进入completeUnitOfWork时，因为持有了`Incomplete`，所以不会进入正常的complete流程，而是会进入错误处理的逻辑。
@@ -779,10 +792,8 @@ function unwindWork(workInProgress: Fiber, renderLanes: Lanes) {
   }
 }
 ```
-`unwindWork`会验证节点是错误边界的依据就是节点上是否有ShouldCapture的effectTag。而这个ShouldCapture就是在当时出错
-时`throwException`找到错误边界并标记上的。如果节点是错误边界，最终会被return出去。
-
-接下来我们看一下错误处理的整体逻辑：
+`unwindWork`验证节点是错误边界的依据就是节点上是否有刚刚`throwException`的时候打上的ShouldCapture的effectTag。如果验证成功，最终会被return出去。
+return出去之后呢？会被赋值给workInProgress节点，我们往下看一下错误处理的整体逻辑：
 
 ```javascript
 if ((completedWork.effectTag & Incomplete) === NoEffect) {
@@ -840,10 +851,14 @@ function workLoopConcurrent() {
   }
 }
 ```
-此时，workInProgress节点，也就是错误边界，会再被performUnitOfWork处理，然后进入beginWork、completeWork！
-也就是说它会被重新渲染一次，不同的是，这次节点上持有了DidCapture的effectTag。所以流程上是不一样的。
+此时，workInProgress节点，也就是错误边界，它会**再被performUnitOfWork处理，然后进入beginWork、completeWork！**
+
+也就是说它会被重新更新一次。为什么说再被更新呢？因为构建WIP树的时候，beginWork是从上往下的，当时workInProgress指针指向它的时候，它只执行了beginWork。
+此时子节点出错导致向上completeUnitOfWork的时候，发现了他是错误边界，workInProgress又指向了它，所以它会再次进行beginWork。不同的是，这次节点上持有了
+DidCapture的effectTag。所以流程上是不一样的。
+
 还记得`throwException`阶段入队错误边界更新队列的表示错误的update吗？它在此次beginWork调用processUpdateQueue的时候，会被处理。
-这样保证了`getDerivedStateFromError`和`componentDidCatch`的调用，其次是产生新的state，这个state表示这次错误的状态。
+这样保证了`getDerivedStateFromError`和`componentDidCatch`的调用，然后产生新的state，这个state表示这次错误的状态。
 
 错误边界是类组件，在beginWork阶段会执行`finishClassComponent`，如果判断组件有DidCapture，会卸载掉它所有的子节点，然后重新渲染新的子节点，
 这些子节点有可能是经过错误处理渲染的备用UI。
@@ -877,7 +892,6 @@ class ErrorBoundary extends React.Component {
   }
 }
 ```
-
 对于上述情况来说，一旦ErrorBoundary的子树中有某个节点发生了错误，组件中的`getDerivedStateFromError` 和 `componentDidCatch`就会被触发，
 此时的备用UI就是：
 ```javascript
@@ -885,7 +899,7 @@ class ErrorBoundary extends React.Component {
 ```
 
 ## 流程梳理
-上面的错误处理我们用图来梳理一下，假设<Example/>具有错误处理的能力。
+上面的错误处理我们用图来梳理一下，假设`<Example/>`具有错误处理的能力。
 
 ```
   1              App
@@ -903,19 +917,49 @@ class ErrorBoundary extends React.Component {
   5    h1
 ```
 
-1.如果<List/>更新出错，那么首先`throwException`会给它打上Incomplete的effectTag，然后以它的父节点为起点向上找到可以处理错误的节点。
+1.如果`<List/>`更新出错，那么首先`throwException`会给它打上Incomplete的effectTag，然后以它的父节点为起点向上找到可以处理错误的节点。
 
-2.找到了<Example/>，它可以处理错误，给他打上ShouldCapture的effectTag（做记号），创建错误的update，将`getDerivedStateFromError`放入payload，`componentDidCatch`放入callback。
-，入队<Example/>的updateQueue。
+2.找到了`<Example/>`，它可以处理错误，给他打上ShouldCapture的effectTag（做记号），创建错误的update，将`getDerivedStateFromError`放入payload，`componentDidCatch`放入callback。
+，入队`<Example/>`的updateQueue。
 
-3.从<List/>开始直接`completeUnitOfWork`。由于它有Incomplete，所以会走`unwindWork`，它不是刚刚做记号的错误边界，继续向上`completeUnitOfWork`
+3.从`<List/>`开始直接`completeUnitOfWork`。由于它有Incomplete，所以会走`unwindWork`，然后给它的父节点`<Example/>`打上Incomplete，`unwindWork`发现它不是刚刚做记号的错误边界，
+继续向上`completeUnitOfWork`。
 
-4.<Example/>进入`unwindWork`，而它恰恰是刚刚做过记号的错误边界节点，打上DidCapture的effectTag，将workInProgress的指针指向<Example/>
+4.`<Example/>`有Incomplete，进入`unwindWork`，而它恰恰是刚刚做过记号的错误边界节点，去掉ShouldCapture打上DidCapture，将workInProgress的指针指向`<Example/>`
 
-5.<Example/>重新更新一次，进入beginWork处理updateQueue，调和子节点（卸载掉原有的子节点，渲染备用UI）。
+5.`<Example/>`重新进入beginWork处理updateQueue，调和子节点（卸载掉原有的子节点，渲染备用UI）。
 
-我们可以看出来，React的错误边界的概念其实是对可以处理错误的组件重新进行更新。这个组件只能捕获它子树的错误，而不能捕获到它自己的错误，自己的错误要靠它上面的错误边界来捕获。
-我想这是由于出错的组件已经无法再渲染出它的子树，所以即使它捕获到了自己的错误也于事无补，因为它不能渲染出备用UI。
+我们可以看出来，React的错误边界的概念其实是对可以处理错误的组件重新进行更新。错误边界只能捕获它子树的错误，而不能捕获到它自己的错误，自己的错误要靠它上面的错误边界来捕获。
+我想这是由于出错的组件已经无法再渲染出它的子树，也就意味着它不能渲染出备用UI，所以即使它捕获到了自己的错误也于事无补。
+
+这一点在`throwException`函数中有体现，是从它的父节点开始向上找错误边界：
+```javascript
+// 从当前节点的父节点开始向上找
+let workInProgress = returnFiber;
+
+do {
+  ...
+} while (workInProgress !== null);
+
+```
+
+回到completeWork，它在整体的错误处理中做的事情就是对错误边界内的节点进行处理：
+* 检查当前节点是否是错误边界，是的话将workInProgress指针指向它，便于它再次走一遍更新。
+* 置空节点上的effectList。
+
+以上我们只是分析了一般场景下的错误处理，实际上在任务挂起（Suspense）时，也会走错误处理的逻辑，因为此时throw的错误值是个thenable对象，具体会在分析suspense时详细解释。
+
+# 总结
+workInProgress节点的completeWork阶段主要做的事情再来回顾一下：
+
+* 真实DOM节点的创建以及挂载
+* DOM属性的处理
+* effectList的收集
+* 错误处理
+
+虽然用了不少的篇幅去讲错误处理，但是仍然需要重点关注正常节点的处理过程。completeWork阶段处在beginWork之后，commit之前，起到的是一个承上启下的作用。
+它接收到的是经过diff后的fiber节点，然后他自己要将DOM节点和effectList都准备好。因为commit阶段是不能被打断的，所以充分准备有利于commit阶段做更少的工作。
+
 
 
 
