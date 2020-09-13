@@ -157,15 +157,31 @@ type BasicStateAction<S> = (S => S) | S;
 type Dispatch<A> = A => void;
 
 // These are set right before calling the component.
+// 这些都是在调用组件之前设置的。
 let renderLanes: Lanes = NoLanes;
 // The work-in-progress fiber. I've named it differently to distinguish it from
 // the work-in-progress hook.
+// 正在工作的fiber，我给它起了不同的名字
 let currentlyRenderingFiber: Fiber = (null: any);
 
 // Hooks are stored as a linked list on the fiber's memoizedState field. The
 // current hook list is the list that belongs to the current fiber. The
 // work-in-progress hook list is a new list that will be added to the
 // work-in-progress fiber.
+/*
+* hooks以链表的形式存在fiber的memoizedState字段中，current hook链表是属于current fiber中的。
+* work-in-progress hook的链表是一个新链表，它属于work-in-progress fiber中
+*
+*                         current树                                                     workInProgress树
+*
+*      currentA.memoizedState =  hookA1 -> hookA2 -> hookA3    workInProgress ---------> wipA.memoizedState =  hookA1 -> hookA2 -> hookA3
+*         |                                                                               |                                 ^
+*         |                                                                               |                        workInProgressHook
+*         |                                                                               |
+*      currentB.memoizedState =  hookB1 -> hookB2                                        wipB.memoizedState =  hookB1 -> hookB2
+*        / \                                                                             /  \
+* currentC  currentD                                                                   wipC wipD
+* */
 let currentHook: Hook | null = null;
 let workInProgressHook: Hook | null = null;
 
@@ -173,9 +189,14 @@ let workInProgressHook: Hook | null = null;
 // does not get reset if we do another render pass; only when we're completely
 // finished evaluating this component. This is an optimization so we know
 // whether we need to clear render phase updates after a throw.
+/*
+* 在渲染阶段任何时间点的更新是否被调度。如果在其他阶段更新过了，它将不会被重置。只在组件的计算完全完成之后，会被重置。
+* 这是一个优化，它让我们知道是否需要在抛出错误之后清除渲染阶段的更新
+* */
 let didScheduleRenderPhaseUpdate: boolean = false;
 // Where an update was scheduled only during the current render pass. This
 // gets reset after each attempt.
+// 只有在当前渲染过程中才计划更新。这将在每次尝试后重置。
 // TODO: Maybe there's some way to consolidate this with
 // `didScheduleRenderPhaseUpdate`. Or with `numberOfReRenders`.
 let didScheduleRenderPhaseUpdateDuringThisPass: boolean = false;
@@ -295,6 +316,7 @@ function throwInvalidHookError() {
   );
 }
 
+// 比较依赖数组是否有变化
 function areHookInputsEqual(
   nextDeps: Array<mixed>,
   prevDeps: Array<mixed> | null,
@@ -404,6 +426,7 @@ export function renderWithHooks<Props, SecondArg>(
   let children = Component(props, secondArg);
 
   // Check if there was a render phase update
+  // 在函数组件内部直接调用设置state的hook，会引发无限循环
   if (didScheduleRenderPhaseUpdateDuringThisPass) {
     // Keep rendering in a loop for as long as render phase updates continue to
     // be scheduled. Use a counter to prevent infinite loops.
@@ -444,6 +467,10 @@ export function renderWithHooks<Props, SecondArg>(
 
   // We can assume the previous dispatcher is always this one, since we set it
   // at the beginning of the render phase and there's no re-entrancy.
+  /*
+  * 我们可以假设之前的dispatcher始终是这个dispatcher，因为我们在渲染阶段的开始设置了它，
+  * 并且没有重新进入。
+  * */
   ReactCurrentDispatcher.current = ContextOnlyDispatcher;
 
   if (__DEV__) {
@@ -558,12 +585,23 @@ function updateWorkInProgressHook(): Hook {
   // clone, or a work-in-progress hook from a previous render pass that we can
   // use as a base. When we reach the end of the base list, we must switch to
   // the dispatcher used for mounts.
+
+  /*
+  * 此函数用于render阶段更新触发的更新和重渲染。它假设现在有个可以克隆的current hook，
+  * 或者一个在上一个渲染阶段的work-in-progress hook，我们可以使用它作为基础，当到达基础链表的
+  * 末尾时，必须切换用于挂载的dispatcher
+  * */
+
+  // 其实主要作用就是更新work-in-progress hook 的指针
+
   let nextCurrentHook: null | Hook;
   if (currentHook === null) {
     const current = currentlyRenderingFiber.alternate;
     if (current !== null) {
+      // 更新阶段
       nextCurrentHook = current.memoizedState;
     } else {
+      // 挂载阶段
       nextCurrentHook = null;
     }
   } else {
@@ -651,6 +689,9 @@ function mountReducer<S, I, A>(
   return [hook.memoizedState, dispatch];
 }
 
+/*
+* 处理hook上的updateQueue
+* */
 function updateReducer<S, I, A>(
   reducer: (S, A) => S,
   initialArg: I,

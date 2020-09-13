@@ -6,25 +6,32 @@ import TasksWithDifferentPriorities from './components/TasksWithDifferentPriorit
 import Concurrent from './components/ConcurrentInput'
 import Diff from './components/Diff'
 import PropsDiff from './components/PropsDiff'
+import Hooks from "./components/Hooks";
 import './App.css';
 
-class App extends React.Component {
+// propsDiff
+/*class App extends React.Component {
   render() {
     return <PropsDiff/>
   }
+}*/
+function App() {
+
+  return <Hooks/>
+  // fiber树
+  // return (
+  //   <div className="App">
+  //     <span className={'app-span'} onClick={() => setCount(count + 1)}>App{count}</span>
+  //     <AppSibling count={count}/>
+  //   </div>
+  // );
+
+  // 高优先级插队
+  // return <TasksWithDifferentPriorities/>
+
+  // diff 算法
+  // return <Diff ref={'diffRef'}/>
 }
-// function App() {
-//   const [ count, setCount ] = useState(0)
-//   // return (
-//   //   <div className="App">
-//   //     <span className={'app-span'} onClick={() => setCount(count + 1)}>App{count}</span>
-//   //     <AppSibling count={count}/>
-//   //   </div>
-//   // );
-//   // return <TasksWithDifferentPriorities/>
-//
-//   return <Diff ref={'diffRef'}/>
-// }
 
 export default App;
 

@@ -167,11 +167,11 @@ if (current !== null && workInProgress.stateNode != null) {
                   |
                   |
   2              div
-                /   \
-               /     \
+                /   
+               /     
   3        <List/>--->span
-            /   \
-           /     \
+            /   
+           /     
   4       p ----> 'text node'
          /
         /
@@ -215,8 +215,8 @@ h1节点完成工作往上返回到第4层的p节点。
                 /
                /
   3        <List/>
-            /   \
-           /     \
+            /   
+           /     
   4 --->  p ----> 'text node'
          /
         /
@@ -244,11 +244,11 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
                   |
                   |
   2              div
-                /   \
-               /     \
+                /   
+               /     
   3 --->   <List/>--->span
-            /   \
-           /     \
+            /   
+           /     
   4       p ----> 'text'
          /
         /
@@ -277,11 +277,11 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
                   |
                   |
   2 --------->   div
-                /   \
-               /     \
+                /   
+               /     
   3        <List/>--->span
-            /   \
-           /     \
+            /   
+           /     
   4       p ---->'text'
          /
         /
@@ -327,7 +327,52 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
 由于一个原生DOM组件的子组件有可能是类组件或函数组件，所以会优先检查自身，发现自己不是原生DOM组件，不能被插入到父级fiber节点对应的DOM中，所以要往下找，直到找到原生DOM组件，执行插入，
 最后再从这一层找同级的fiber节点，同级节点也会执行`先自检，再检查下级，再检查下级的同级`的操作。
 
-可以看出，节点的插入也是深度优先。
+可以看出，节点的插入也是深度优先。值得注意的是，这一整个插入的流程并没有真的将DOM插入到真实的页面上，它只是在操作fiber上的stateNode。真实的插入DOM操作发生在commit阶段。
+
+## 节点插入源码
+下面是插入节点算法的源码，可以对照上面的过程来看。
+```javascript
+  appendAllChildren = function(
+    parent: Instance,
+    workInProgress: Fiber,
+    needsVisibilityToggle: boolean,
+    isHidden: boolean,
+  ) {
+    // 找到当前节点的子fiber节点
+    let node = workInProgress.child;
+    // 当存在子节点时，去往下遍历
+    while (node !== null) {
+      if (node.tag === HostComponent || node.tag === HostText) {
+        // 子节点是原生DOM 节点，直接可以插入
+        appendInitialChild(parent, node.stateNode);
+      } else if (enableFundamentalAPI && node.tag === FundamentalComponent) {
+        appendInitialChild(parent, node.stateNode.instance);
+      } else if (node.tag === HostPortal) {
+        // 如果是HostPortal类型的节点，什么都不做
+      } else if (node.child !== null) {
+        // 代码执行到这，说明node不符合插入要求，
+        // 继续寻找子节点
+        node.child.return = node;
+        node = node.child;
+        continue;
+      }
+      if (node === workInProgress) {
+        return;
+      }
+      // 当不存在兄弟节点时往上找，此过程发生在当前completeWork节点的子节点再无子节点的场景，
+      // 并不是直接从当前completeWork的节点去往上找 
+      while (node.sibling === null) {
+        if (node.return === null || node.return === workInProgress) {
+          return;
+        }
+        node = node.return;
+      }
+      // 当不存在子节点时，从sibling节点入手开始找
+      node.sibling.return = node.return;
+      node = node.sibling;
+    }
+  };
+```
 
 # DOM属性的处理
 上面的插入过程完成了DOM树的构建，这之后要做的就是为每个DOM节点计算它自己的属性（props）。由于节点存在创建和更新两种情况，所以对属性的处理也会区别对待。
@@ -906,11 +951,11 @@ class ErrorBoundary extends React.Component {
                   |
                   |
   2           <Example/>
-                /   \
-               /     \
+                /   
+               /     
   3 --->   <List/>--->span
-            /   \
-           /     \
+            /   
+           /     
   4       p ----> 'text'
          /
         /

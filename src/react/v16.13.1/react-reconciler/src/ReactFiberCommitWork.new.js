@@ -995,6 +995,7 @@ function commitNestedUnmounts(
   // we do an inner loop while we're still inside the host node.
   let node: Fiber = root;
   while (true) {
+    // 遍历子节点，对每个子节点都执行一次卸载操作
     commitUnmount(finishedRoot, node, renderPriorityLevel);
     // Visit children because they may contain more composite or host nodes.
     // Skip portals because commitUnmount() currently visits them recursively.
@@ -1139,7 +1140,7 @@ function getHostSibling(fiber: Fiber): ?Instance {
       node.tag !== HostComponent &&
       node.tag !== HostText &&
       node.tag !== DehydratedFragment
-    ) {
+    ){
       // If it is not host node and, we might have a host node inside it.
       // Try to search down until we find one.
       if (node.effectTag & Placement) {
@@ -1170,6 +1171,7 @@ function commitPlacement(finishedWork: Fiber): void {
   }
 
   // Recursively insert all host nodes into the parent.
+  // 往上找到最近的有dom节点的fiber，作为parentFiber
   const parentFiber = getHostParentFiber(finishedWork);
 
   // Note: these two variables *must* always be updated together.
@@ -1301,6 +1303,7 @@ function unmountHostComponents(
   while (true) {
     if (!currentParentIsValid) {
       let parent = node.return;
+      // 这个循环是找到当前节点的父级节点中第一个DOM节点，或者找到root & portal节点
       findParent: while (true) {
         invariant(
           parent !== null,
@@ -1336,6 +1339,7 @@ function unmountHostComponents(
       commitNestedUnmounts(finishedRoot, node, renderPriorityLevel);
       // After all the children have unmounted, it is now safe to remove the
       // node from the tree.
+      // 从container中删掉，还是从父节点删掉
       if (currentParentIsContainer) {
         removeChildFromContainer(
           ((currentParent: any): Container),
