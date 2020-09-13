@@ -197,7 +197,7 @@ if (current !== null && workInProgress.stateNode != null) {
   5--->h1
 ```
 
-此时WIP节点指向h1的fiber，它对应的dom节点为h1，dom标签创建出来以后进入`appendAllChildren`，因为当前的workInProgress节点为h1，所以它的child为null，无需子节点可插入，退出。
+此时WIP节点指向h1的fiber，它对应的dom节点为h1，dom标签创建出来以后进入`appendAllChildren`，因为当前的workInProgress节点为h1，所以它的child为null，无子节点可插入，退出。
 h1节点完成工作往上返回到第4层的p节点。
 
 此时的dom树为
