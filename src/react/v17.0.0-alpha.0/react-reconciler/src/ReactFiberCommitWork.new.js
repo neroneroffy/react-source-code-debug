@@ -1083,14 +1083,22 @@ function getHostSibling(fiber: Fiber): ?Instance {
     // If we didn't find anything, let's try the next sibling.
     while (node.sibling === null) {
       if (node.return === null || isHostParent(node.return)) {
-        // If we pop out of the root or hit the parent the fiber we are the
-        // last sibling.
+        // 代码执行到这里说明新节点
+        // 将作为唯一的节点插入父节点
         return null;
       }
+      // 如果父节点不为null且不是原生DOM节点，那么继续往上找
       node = node.return;
     }
+
+    // 查找node的同级兄弟节点，过滤出原生DOM组件。
     node.sibling.return = node.return;
     node = node.sibling;
+
+    // 如果node不是以下三种类型的节点，说明肯定不是基准节点，
+    // 因为基准节点的要求是DOM节点
+
+    // 会一直循环到node为dom类型的fiber为止。
     while (
       node.tag !== HostComponent &&
       node.tag !== HostText &&
@@ -1098,22 +1106,29 @@ function getHostSibling(fiber: Fiber): ?Instance {
     ) {
       // If it is not host node and, we might have a host node inside it.
       // Try to search down until we find one.
+      // 代码执行到这，说明node不是原生DOM节点，还需要再找
+      //
       if (node.effectTag & Placement) {
         // If we don't have a child, try the siblings instead.
+        // 如果这个节点也要被插入，继续siblings循环，找它的基准节点
         continue siblings;
       }
       // If we don't have a child, try the siblings instead.
       // We also skip portals because they are not part of this host tree.
       if (node.child === null || node.tag === HostPortal) {
+        // 子节点找完了，或者遇到了HostPortal节点，继续siblings循环，找它的基准节点。
+        // 注意，此时会再进入siblings循环，会判断这个节点有没有siblings，没有就向上找，
+        // 有就从siblings里找。
         continue siblings;
       } else {
+        // 过滤不出来原生DOM节点，并且有子节点，就继续往下找。
         node.child.return = node;
         node = node.child;
       }
     }
-    // Check if this host node is stable or about to be placed.
+
     if (!(node.effectTag & Placement)) {
-      // Found it!
+      // 过滤出原生DOM节点了，stateNode作为基准节点返回
       return node.stateNode;
     }
   }
