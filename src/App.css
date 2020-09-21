@@ -2,7 +2,7 @@
   position: relative;
 }
 #root:before {
-  content: 'FiberRootNode';
+  /*content: 'FiberRootNode';*/
   font-size: 20px;
   position: absolute;
   top: 20px;

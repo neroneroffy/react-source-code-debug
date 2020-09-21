@@ -312,6 +312,7 @@ function setInitialDOMProperties(
   nextProps: Object,
   isCustomComponentTag: boolean,
 ): void {
+  console.log(registrationNameDependencies);
   for (const propKey in nextProps) {
     if (!nextProps.hasOwnProperty(propKey)) {
       continue;
@@ -690,7 +691,6 @@ export function diffProperties(
   }
 
   assertValidProps(tag, nextProps);
-
   let propKey;
   let styleName;
   let styleUpdates = null;

@@ -7,6 +7,7 @@ import Concurrent from './components/ConcurrentInput'
 import Diff from './components/Diff'
 import PropsDiff from './components/PropsDiff'
 import Hooks from "./components/Hooks";
+import EventDemo from "./components/EventDemo";
 import './App.css';
 
 // propsDiff
@@ -17,7 +18,10 @@ import './App.css';
 }*/
 function App() {
 
-  return <Hooks/>
+  // 事件系统
+  return <EventDemo/>
+
+  // return <Hooks/>
   // fiber树
   // return (
   //   <div className="App">

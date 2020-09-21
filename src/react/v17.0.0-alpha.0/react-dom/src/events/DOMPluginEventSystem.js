@@ -343,6 +343,10 @@ export function listenToNativeEvent(
   // register it to the root container. Otherwise, we should
   // register the event to the target element and mark it as
   // a non-delegated event.
+  /*
+  * 如果事件可以被委托（或者在捕获阶段），事件将被注册到root container上，否则
+  * 应把事件注册到target上并标记为非委托事件
+  * */
   if (
     targetElement !== null &&
     !isCapturePhaseListener &&
@@ -354,6 +358,11 @@ export function listenToNativeEvent(
     // listener has already been added previously. However, we
     // special case the scroll event because the reality is that any
     // element can scroll.
+    /*
+    * 对于所有非委托事件，除了滚动之外，我们将它们的事件监听器附加到它们的事件触发
+    * 的相应元素上。这意味着我们可以跳过这一步，因为之前已经添加了事件侦听器。但是，
+    * 我们用滚动事件作为特例，因为实际上任何元素都可以滚动。
+    * */
     // TODO: ideally, we'd eventually apply the same logic to all
     // events from the nonDelegatedEvents list. Then we can remove
     // this special case and use the same logic for all events.
@@ -363,11 +372,14 @@ export function listenToNativeEvent(
     eventSystemFlags |= IS_NON_DELEGATED;
     target = targetElement;
   }
+  // 获取到target上所有已经被绑定的事件map
   const listenerMap = getEventListenerMap(target);
+  // 找到当前的事件在listenerMap中的key
   const listenerMapKey = getListenerMapKey(
     domEventName,
     isCapturePhaseListener,
   );
+  // 找到事件
   const listenerEntry = ((listenerMap.get(
     listenerMapKey,
   ): any): ElementListenerMapEntry | void);
@@ -375,6 +387,9 @@ export function listenToNativeEvent(
 
   // If the listener entry is empty or we should upgrade, then
   // we need to trap an event listener onto the target.
+  /*
+  * 如果事件监听为空，或者应该升级，那么需要在目标上捕获一个事件监听。
+  * */
   if (listenerEntry === undefined || shouldUpgrade) {
     // If we should upgrade, then we need to remove the existing trapped
     // event listener for the target container.
@@ -416,6 +431,14 @@ export function listenToReactEvent(
   // always only has a single dependency and SimpleEventPlugin events also
   // use either the native capture event phase or bubble event phase, there
   // is no emulation (except for focus/blur, but that will be removed soon).
+  /*
+  *
+  * 如果依赖长度是1，这意味着我们没有使用像ChangeEventPlugin, BeforeInputPlugin,
+  * EnterLeavePlugin和SelectEventPlugin这样的polyfill插件。我们总是为这些插件使用
+  * 原生气泡事件阶段，并模拟两阶段的事件派发。SimpleEventPlugin总是只有一个依赖项，并
+  * 且SimpleEventPlugin事件也使用本地捕获事件阶段或气泡事件阶段，没有仿真(除了焦点/模
+  * 糊，但很快就会被删除)。
+  * */
   const isPolyfillEventPlugin = dependenciesLength !== 1;
 
   if (isPolyfillEventPlugin) {
@@ -434,6 +457,7 @@ export function listenToReactEvent(
       }
     }
   } else {
+    console.log('reactEvent', reactEvent);
     const isCapturePhaseListener =
       reactEvent.substr(-7) === 'Capture' &&
       // Edge case: onGotPointerCapture and onLostPointerCapture

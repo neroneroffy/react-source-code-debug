@@ -91,7 +91,7 @@ export const warnAboutSpreadingKeyToJSX = false;
 
 export const enableComponentStackLocations = true;
 
-export const enableNewReconciler = false;
+export const enableNewReconciler = true;
 
 // --------------------------
 // Future APIs to be deprecated
