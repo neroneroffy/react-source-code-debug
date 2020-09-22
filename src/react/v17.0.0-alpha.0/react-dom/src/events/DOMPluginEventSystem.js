@@ -234,6 +234,7 @@ function processDispatchQueueItemsInOrder(
   inCapturePhase: boolean,
 ): void {
   let previousInstance;
+  // 模拟事件冒泡和事件捕获
   if (inCapturePhase) {
     for (let i = dispatchListeners.length - 1; i >= 0; i--) {
       const {instance, currentTarget, listener} = dispatchListeners[i];
@@ -445,6 +446,9 @@ export function listenToReactEvent(
     const listenerMap = getEventListenerMap(rootContainerElement);
     // For optimization, we register plugins on the listener map, so we
     // don't need to check each of their dependencies each time.
+    /*
+    * 为了优化，我们在侦听器映射上注册了插件，因此我们不需要每次检查它们的每个依赖项。
+    * */
     if (!listenerMap.has(reactEvent)) {
       listenerMap.set(reactEvent, null);
       for (let i = 0; i < dependenciesLength; i++) {
