@@ -385,7 +385,7 @@ export function listenToNativeEvent(
     listenerMapKey,
   ): any): ElementListenerMapEntry | void);
   const shouldUpgrade = shouldUpgradeListener(listenerEntry, isPassiveListener);
-
+  console.log('listenerEntry', listenerEntry, listenerMapKey);
   // If the listener entry is empty or we should upgrade, then
   // we need to trap an event listener onto the target.
   /*
@@ -443,12 +443,14 @@ export function listenToReactEvent(
   const isPolyfillEventPlugin = dependenciesLength !== 1;
 
   if (isPolyfillEventPlugin) {
+    console.log('onChange事件的dependencies', dependencies);
     const listenerMap = getEventListenerMap(rootContainerElement);
     // For optimization, we register plugins on the listener map, so we
     // don't need to check each of their dependencies each time.
     /*
     * 为了优化，我们在侦听器映射上注册了插件，因此我们不需要每次检查它们的每个依赖项。
     * */
+    console.log('listenerMap', listenerMap, reactEvent);
     if (!listenerMap.has(reactEvent)) {
       listenerMap.set(reactEvent, null);
       for (let i = 0; i < dependenciesLength; i++) {
