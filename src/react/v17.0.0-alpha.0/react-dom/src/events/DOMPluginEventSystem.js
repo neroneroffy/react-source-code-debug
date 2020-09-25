@@ -133,6 +133,14 @@ function extractEvents(
   // could alter all these plugins to work in such ways, but
   // that might cause other unknown side-effects that we
   // can't forsee right now.
+  /*
+  * 在原生事件的冒泡阶段我们不会处理这些事件，这意味着我们不处于捕获阶段，
+  * 这是因为我们仍然在这里模拟捕获阶段。这是一种权衡，因为理想状态下我们不可能
+  * 正确地模拟和使用这些阶段，就像在SimpleEvent 插件中做的那样。然而如下
+  * 这些插件要么期望模拟(EnterLeave) 要么使用state来本地化这些插件的状态
+  * (BeforeInput, Change, Select)。这些模块中的状态是一件麻烦的事情。
+  * 因为捕获阶段的事件可能会改变状态，只有接下来的冒泡事件
+  * */
   if (shouldProcessPolyfillPlugins) {
     EnterLeaveEventPlugin.extractEvents(
       dispatchQueue,
