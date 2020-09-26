@@ -159,6 +159,7 @@ function extractEvents(
   );
 
   const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;
+
   if (
     enableCreateEventHandleAPI &&
     eventSystemFlags & IS_EVENT_HANDLE_NON_MANAGED_NODE
@@ -174,6 +175,11 @@ function extractEvents(
     // In the past, React has always bubbled them, but this can be surprising.
     // We're going to try aligning closer to the browser behavior by not bubbling
     // them in React either. We'll start by not bubbling onScroll, and then expand.
+    /*
+    * 有些事件不会在浏览器中冒泡。在过去，React总是会让它们冒泡，但这可能会令人吃惊。
+    * 我们将通过不再让它们在React中冒泡来尝试更接近浏览器的行为，这从onScroll开始，然后拓展其他的事件。
+    *
+    * */
     const accumulateTargetOnly =
       !inCapturePhase &&
       // TODO: ideally, we'd eventually add all events from

@@ -3,17 +3,31 @@ import './index.css'
 class EventDemo extends React.Component{
   state = {
     count: 0,
-    inputValue: '',
   }
-  onInputChange = e => {
+
+  onDemoClick = e => {
+    console.log(e);
+    console.log('counter的点击事件被触发了');
     this.setState({
-      inputValue: e.target.value
+      count: this.state.count + 1
     })
   }
+  onParentClick = () => {
+    console.log('父级元素的点击事件被触发了');
+  }
   render() {
-    const { inputValue } = this.state
-    return <div className={'event-demo'}>
-      <input type="text" value={inputValue} onChange={this.onInputChange}/>
+    const { count } = this.state
+    return <div
+        className={'counter-parent'}
+        onClick={this.onParentClick}
+    >
+      counter-parent
+      <div
+          onClick={this.onDemoClick}
+          className={'counter'}
+      >
+        counter：{count}
+      </div>
     </div>
   }
 }

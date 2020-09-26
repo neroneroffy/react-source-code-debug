@@ -1,5 +1,19 @@
-.event-demo {
+.counter-parent {
     width: 500px;
+    height: 500px;
     margin: 0 auto;
     padding-top: 50px;
+    position: relative;
+    background: #939393;
+}
+.counter-parent .counter{
+    position: absolute;
+    top: 0;
+    right: -120px;
+    width: 100px;
+    height: 100px;
+    cursor: pointer;
+    line-height: 100px;
+    text-align: center;
+    background: #ccc;
 }
