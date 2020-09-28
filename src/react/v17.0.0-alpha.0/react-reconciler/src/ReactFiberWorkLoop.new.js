@@ -420,7 +420,6 @@ export function requestUpdateLane(
     // This behavior is only a fallback. The flag only exists until we can roll
     // out the setState warning, since existing code might accidentally rely on
     // the current behavior.
-
     /*
     * 当处在渲染阶段时，产生了一个更新
     * */
@@ -479,6 +478,7 @@ export function requestUpdateLane(
   // could be problematic, if we're not inside `Scheduler.runWithPriority`,
   // then we'll get the priority of the current running Scheduler task,
   // which is probably not what we want.
+  console.log('schedulerPriority', schedulerPriority);
   let lane;
   if (
     // TODO: Temporary. We're removing the concept of discrete updates.
@@ -513,7 +513,6 @@ export function requestUpdateLane(
 
     lane = findUpdateLane(schedulerLanePriority, currentEventWipLanes);
   }
-
   return lane;
 }
 
@@ -546,7 +545,7 @@ export function scheduleUpdateOnFiber(
 ) {
   checkForNestedUpdates();
   warnAboutRenderPhaseUpdatesInDEV(fiber);
-
+  console.log('本轮渲染的渲染优先级：', lane);
   const root = markUpdateLaneFromFiberToRoot(fiber, lane);
   if (root === null) {
     warnAboutUpdateOnUnmountedFiberInDEV(fiber);
@@ -1234,7 +1233,6 @@ export function discreteUpdates<A, B, C, D, R>(
 ): R {
   const prevExecutionContext = executionContext;
   executionContext |= DiscreteEventContext;
-
   if (decoupleUpdatePriorityFromScheduler) {
     const previousLanePriority = getCurrentUpdateLanePriority();
     try {

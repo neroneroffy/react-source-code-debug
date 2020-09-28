@@ -669,7 +669,7 @@ export function diffProperties(
   let propKey;
   let styleName;
   let styleUpdates = null;
-  console.log('lastProps', lastProps, 'nextProps', nextProps);
+  // console.log('lastProps', lastProps, 'nextProps', nextProps);
   for (propKey in lastProps) {
     if (
       nextProps.hasOwnProperty(propKey) ||
@@ -832,7 +832,7 @@ export function diffProperties(
     }
     (updatePayload = updatePayload || []).push(STYLE, styleUpdates);
   }
-  console.log('updatePayload', JSON.stringify(updatePayload));
+  // console.log('updatePayload', JSON.stringify(updatePayload));
   // [ 'style', { color: 'blue' }, title, '测试标题' ]
   return updatePayload;
 }

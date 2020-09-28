@@ -700,7 +700,6 @@ export function dispatchEventForPluginEventSystem(
       }
     }
   }
-
   batchedEventUpdates(() =>
     dispatchEventsForPlugins(
       domEventName,
@@ -843,7 +842,7 @@ export function accumulateSinglePhaseListeners(
     }
     instance = instance.return;
   }
-  console.log('事件收集完成的数组', listeners);
+  // console.log('事件收集完成的数组', listeners);
   if (listeners.length !== 0) {
     dispatchQueue.push(createDispatchEntry(event, listeners));
   }

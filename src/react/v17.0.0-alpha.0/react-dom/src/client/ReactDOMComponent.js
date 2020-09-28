@@ -312,7 +312,7 @@ function setInitialDOMProperties(
   nextProps: Object,
   isCustomComponentTag: boolean,
 ): void {
-  console.log(registrationNameDependencies);
+  // console.log(registrationNameDependencies);
   for (const propKey in nextProps) {
     if (!nextProps.hasOwnProperty(propKey)) {
       continue;

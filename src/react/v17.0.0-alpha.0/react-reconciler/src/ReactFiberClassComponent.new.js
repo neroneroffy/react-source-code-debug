@@ -198,7 +198,7 @@ const classComponentUpdater = {
     const eventTime = requestEventTime();
     const suspenseConfig = requestCurrentSuspenseConfig();
     const lane = requestUpdateLane(fiber, suspenseConfig);
-
+    console.log('update的lane', lane);
     const update = createUpdate(eventTime, lane, suspenseConfig);
     update.payload = payload;
     if (callback !== undefined && callback !== null) {
