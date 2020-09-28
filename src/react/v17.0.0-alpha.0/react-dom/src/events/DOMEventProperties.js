@@ -162,6 +162,7 @@ function registerSimplePluginEventsAndSetTheirPriorities(
   // result in far fewer object allocations and property accesses
   // if we only use three arrays to process all the categories of
   // instead of tuples.
+  // console.log('eventTypes', eventTypes, priority);
   for (let i = 0; i < eventTypes.length; i += 2) {
     const topEvent = ((eventTypes[i]: any): DOMEventName);
     const event = ((eventTypes[i + 1]: any): string);
@@ -171,6 +172,7 @@ function registerSimplePluginEventsAndSetTheirPriorities(
     topLevelEventsToReactNames.set(topEvent, reactName);
     registerTwoPhaseEvent(reactName, [topEvent]);
   }
+  console.log('eventPriorities', eventPriorities, topLevelEventsToReactNames);
 }
 
 function setEventPriorities(
