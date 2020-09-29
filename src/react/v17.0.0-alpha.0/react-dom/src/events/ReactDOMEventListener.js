@@ -211,7 +211,6 @@ export function dispatchEvent(
     targetContainer,
     nativeEvent,
   );
-
   if (blockedOn === null) {
     // We successfully dispatched this event.
     clearIfContinuousEvent(domEventName, nativeEvent);
