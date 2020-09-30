@@ -702,13 +702,14 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   markStarvedLanesAsExpired(root, currentTime);
 
   // Determine the next lanes to work on, and their priority.
-  // 获取新任务的渲染优先级
+  // 获取下一批更新的优先级
   const nextLanes = getNextLanes(
     root,
     root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes,
   );
   // This returns the priority level computed during the `getNextLanes` call.
-  // 获取新任务的优先级
+  // 获取新调度任务的优先级，在调用getNextLanes计算nextLanes是会将
+  // 调度任务的优先级也计算出来，returnNextLanesPriority直接返回这个优先级
   const newCallbackPriority = returnNextLanesPriority();
   // 新任务没有任何渲染优先级，退出
   if (nextLanes === NoLanes) {

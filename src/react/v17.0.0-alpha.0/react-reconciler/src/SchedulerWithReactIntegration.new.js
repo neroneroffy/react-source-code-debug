@@ -60,7 +60,7 @@ type SchedulerCallbackOptions = {timeout?: number, ...};
 const fakeCallbackNode = {};
 
 // Except for NoPriority, these correspond to Scheduler priorities. We use
-// ascending numbers so we can compare them like numbers. They start at 90 to
+// ascending numbers so we can compare them like numbers. They start at  90 to
 // avoid clashing with Scheduler's priorities.
 export const ImmediatePriority: ReactPriorityLevel = 99;
 export const UserBlockingPriority: ReactPriorityLevel = 98;
