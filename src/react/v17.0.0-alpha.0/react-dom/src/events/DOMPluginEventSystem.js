@@ -451,7 +451,7 @@ export function listenToReactEvent(
   const isPolyfillEventPlugin = dependenciesLength !== 1;
 
   if (isPolyfillEventPlugin) {
-    console.log('onChange事件的dependencies', dependencies);
+    console.log(`${reactEvent}事件的dependencies`, dependencies);
     const listenerMap = getEventListenerMap(rootContainerElement);
     // For optimization, we register plugins on the listener map, so we
     // don't need to check each of their dependencies each time.
