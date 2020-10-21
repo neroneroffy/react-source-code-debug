@@ -19,7 +19,7 @@ import './App.css';
 function App() {
 
   // 事件系统
-  // return <EventDemo/>
+  return <EventDemo/>
 
   // return <Hooks/>
   // fiber树
@@ -31,7 +31,7 @@ function App() {
   // );
 
   // 高优先级插队
-  return <TasksWithDifferentPriorities/>
+  // return <TasksWithDifferentPriorities/>
 
   // diff 算法
   // return <Diff ref={'diffRef'}/>
