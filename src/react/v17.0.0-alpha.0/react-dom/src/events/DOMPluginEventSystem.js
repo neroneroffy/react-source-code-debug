@@ -446,12 +446,12 @@ export function listenToReactEvent(
   *
   * 如果依赖长度是1，这意味着我们没有使用像ChangeEventPlugin, BeforeInputPlugin,
   * EnterLeavePlugin和SelectEventPlugin这样的polyfill插件。我们总是为这些插件使用
-  * 原生气泡事件阶段，并模拟两阶段的事件派发。SimpleEventPlugin总是只有一个依赖项，并
+  * 原生冒泡事件阶段，并模拟两阶段的事件派发。SimpleEventPlugin总是只有一个依赖项，并
   * 且SimpleEventPlugin事件也使用本地捕获事件阶段或气泡事件阶段，没有仿真(除了焦点/模
   * 糊，但很快就会被删除)。
   * */
   const isPolyfillEventPlugin = dependenciesLength !== 1;
-
+  console.log('registrationNameDependencies', registrationNameDependencies);
   if (isPolyfillEventPlugin) {
     console.log(`${reactEvent}事件的dependencies`, dependencies);
     const listenerMap = getEventListenerMap(rootContainerElement);
