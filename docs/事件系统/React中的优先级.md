@@ -8,6 +8,9 @@ React执行任务的重要依据是优先级，这里的任务不只是更新任
 * 离散事件（DiscreteEvent）：click、keydown、focusin等，这些事件的触发不是连续的，优先级为0。
 * 用户阻塞事件（UserBlockingEvent）：drag、scroll、mouseover等，特点是连续触发，阻塞用户交互，优先级为1。
 * 连续事件（ContinuousEvent）：canplay、error、audio标签的timeupdate和canplay，优先级最高，优先级为2。
+
+![事件优先级的Map](http://neroht.com/eventPriorities.jpg)
+
 事件往往是更新任务的诱因，更新任务要经过Scheduler调度，因此事件优先级是计算调度优先级和更新由优先级的基础。事件的优先级在注册阶段就已经被确定了，在向root上注册事件时，会
 根据事件的类别，注册持有不同优先级的listener。
 ```javascript
@@ -19,7 +22,7 @@ let listener = createEventListenerWrapperWithPriority(
   );
 ```
 
-`createEventListenerWrapperWithPriority`函数中按照不同事件，返回listenerWrapper
+`createEventListenerWrapperWithPriority`函数中按照不同事件，返回监听器：listenerWrapper
 
 ```javascript
 export function createEventListenerWrapperWithPriority(

@@ -269,6 +269,7 @@ export function processDispatchQueue(
   eventSystemFlags: EventSystemFlags,
 ): void {
   const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;
+  console.log('inCapturePhase', inCapturePhase);
   for (let i = 0; i < dispatchQueue.length; i++) {
     const {event, listeners} = dispatchQueue[i];
     processDispatchQueueItemsInOrder(event, listeners, inCapturePhase);
@@ -296,6 +297,7 @@ function dispatchEventsForPlugins(
     eventSystemFlags,
     targetContainer,
   );
+  console.log('dispatchQueue', dispatchQueue);
   processDispatchQueue(dispatchQueue, eventSystemFlags);
 }
 
@@ -749,7 +751,7 @@ export function accumulateSinglePhaseListeners(
   const targetType = event.type;
 
   // Accumulate all instances and listeners via the target -> root path.
-  // 从target开始一直到root，累加所有的实例和事件监听。
+  // 从target开始一直到root，累加所有的fiber对象和事件监听。
   while (instance !== null) {
     const {stateNode, tag} = instance;
     // Handle listeners that are on HostComponents (i.e. <div>)
