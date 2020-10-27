@@ -269,9 +269,9 @@ export function processDispatchQueue(
   eventSystemFlags: EventSystemFlags,
 ): void {
   const inCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0;
-  console.log('inCapturePhase', inCapturePhase);
   for (let i = 0; i < dispatchQueue.length; i++) {
     const {event, listeners} = dispatchQueue[i];
+    console.log('event', event);
     processDispatchQueueItemsInOrder(event, listeners, inCapturePhase);
     //  event system doesn't use pooling.
   }
@@ -297,7 +297,6 @@ function dispatchEventsForPlugins(
     eventSystemFlags,
     targetContainer,
   );
-  console.log('dispatchQueue', dispatchQueue);
   processDispatchQueue(dispatchQueue, eventSystemFlags);
 }
 
@@ -451,7 +450,6 @@ export function listenToReactEvent(
   * 糊，但很快就会被删除)。
   * */
   const isPolyfillEventPlugin = dependenciesLength !== 1;
-  console.log('registrationNameDependencies', registrationNameDependencies);
   if (isPolyfillEventPlugin) {
     console.log(`${reactEvent}事件的dependencies`, dependencies);
     const listenerMap = getEventListenerMap(rootContainerElement);
@@ -460,7 +458,6 @@ export function listenToReactEvent(
     /*
     * 为了优化，我们在侦听器映射上注册了插件，因此我们不需要每次检查它们的每个依赖项。
     * */
-    console.log('listenerMap', listenerMap, reactEvent);
     if (!listenerMap.has(reactEvent)) {
       listenerMap.set(reactEvent, null);
       for (let i = 0; i < dependenciesLength; i++) {
