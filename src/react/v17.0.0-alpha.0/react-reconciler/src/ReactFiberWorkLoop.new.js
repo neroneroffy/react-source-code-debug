@@ -2080,10 +2080,14 @@ function commitRootImpl(root, renderPriorityLevel) {
     // no more pending effects.
     // TODO: Might be better if `flushPassiveEffects` did not automatically
     // flush synchronous work at the end, to avoid factoring hazards like this.
+
+    /*
+    * flushPassiveEffects最终将会调用flushSyncUpdateQueue，这意味着flushSyncUpdateQueue有时会
+    * 引发额外的副作用，所以我们要一直刷新，直到没有副作用为止
+    * */
     flushPassiveEffects();
   } while (rootWithPendingPassiveEffects !== null);
   flushRenderPhaseStrictModeWarningsInDEV();
-
   invariant(
     (executionContext & (RenderContext | CommitContext)) === NoContext,
     'Should not already be working.',

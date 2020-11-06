@@ -1,0 +1,5 @@
+ReactCurrentOwner:
+
+在开发环境下，react自定义组件生成的节点上会有一个_owner变量，它会指向这个自定义组件实例，用来识别当前的DOM元素是否是由自定义组件生成的。
+
+而ReactCurrentOwner是一个全局变量，它会随着组件的构建随时切换，保存的是当前DOM元素的_owner

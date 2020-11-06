@@ -22,6 +22,7 @@ class EventDemo extends React.Component{
   }
   render() {
     const { count } = this.state
+
     return <div
         className={'counter-parent'}
         onClick={this.onParentClick}

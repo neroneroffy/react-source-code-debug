@@ -2082,6 +2082,7 @@ function commitRootImpl(root, renderPriorityLevel) {
         }
       } else {
         try {
+          // 调用getSnapshotBeforeUpdate，在即将更新前获取DOM信息
           commitBeforeMutationEffects();
         } catch (error) {
           invariant(nextEffect !== null, 'Should be working on an effect.');
@@ -2101,6 +2102,7 @@ function commitRootImpl(root, renderPriorityLevel) {
     }
 
     // The next phase is the mutation phase, where we mutate the host tree.
+    // 更新DOM阶段
     nextEffect = firstEffect;
     do {
       if (__DEV__) {
