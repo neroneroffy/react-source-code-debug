@@ -1959,6 +1959,8 @@ function commitRoot(root) {
 }
 
 function commitRootImpl(root, renderPriorityLevel) {
+  // https://zh-hans.reactjs.org/docs/hooks-reference.html#timing-of-effects
+  // effect会保证在任何新的渲染前执行。React 将在组件更新前刷新上一轮渲染的 effect。
   do {
     // `flushPassiveEffects` will call `flushSyncUpdateQueue` at the end, which
     // means `flushPassiveEffects` will sometimes result in additional
