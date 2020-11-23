@@ -19,9 +19,9 @@ import './App.css';
 function App() {
 
   // 事件系统
-  return <EventDemo/>
+  // return <EventDemo/>
 
-  // return <Hooks/>
+  return <Hooks/>
   // fiber树
   // return (
   //   <div className="App">

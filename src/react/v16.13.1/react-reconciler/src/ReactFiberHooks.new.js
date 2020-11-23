@@ -466,7 +466,7 @@ export function renderWithHooks<Props, SecondArg>(
   }
 
   // We can assume the previous dispatcher is always this one, since we set it
-  // at the beginning of the render phase and there's no re-entrancy.
+  // at the beginning of the render ph  ase and there's no re-entrancy.
   /*
   * 我们可以假设之前的dispatcher始终是这个dispatcher，因为我们在渲染阶段的开始设置了它，
   * 并且没有重新进入。
@@ -593,7 +593,6 @@ function updateWorkInProgressHook(): Hook {
   * */
 
   // 其实主要作用就是更新work-in-progress hook 的指针
-
   let nextCurrentHook: null | Hook;
   if (currentHook === null) {
     const current = currentlyRenderingFiber.alternate;
@@ -607,7 +606,6 @@ function updateWorkInProgressHook(): Hook {
   } else {
     nextCurrentHook = currentHook.next;
   }
-
   let nextWorkInProgressHook: null | Hook;
   if (workInProgressHook === null) {
     nextWorkInProgressHook = currentlyRenderingFiber.memoizedState;
