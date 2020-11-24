@@ -1252,6 +1252,7 @@ function mountEffectImpl(fiberEffectTag, hookEffectTag, create, deps): void {
   const hook = mountWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
   currentlyRenderingFiber.effectTag |= fiberEffectTag;
+  // 讲组件内的effect连成一个环，挂载到updateQueue中
   hook.memoizedState = pushEffect(
     HookHasEffect | hookEffectTag,
     create,
@@ -1266,11 +1267,13 @@ function updateEffectImpl(fiberEffectTag, hookEffectTag, create, deps): void {
   let destroy = undefined;
 
   if (currentHook !== null) {
+    // currentHook !== null 说明这是更新过程
     const prevEffect = currentHook.memoizedState;
     destroy = prevEffect.destroy;
     if (nextDeps !== null) {
       const prevDeps = prevEffect.deps;
       if (areHookInputsEqual(nextDeps, prevDeps)) {
+        // 如果前后的依赖不一致，才会将effect连接到updateQueue中，等待commit阶段去处理
         pushEffect(hookEffectTag, create, destroy, nextDeps);
         return;
       }

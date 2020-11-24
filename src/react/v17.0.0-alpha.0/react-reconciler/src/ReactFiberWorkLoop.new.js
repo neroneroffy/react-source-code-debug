@@ -2082,7 +2082,7 @@ function commitRootImpl(root, renderPriorityLevel) {
     // flush synchronous work at the end, to avoid factoring hazards like this.
 
     /*
-    * flushPassiveEffects最终将会调用flushSyncUpdateQueue，这意味着flushSyncUpdateQueue有时会
+    * flushPassiveEffects最终将会调用flushSyncUpdateQueue，这意味着flushPassiveEffects有时会
     * 引发额外的副作用，所以我们要一直刷新，直到没有副作用为止
     * */
     flushPassiveEffects();

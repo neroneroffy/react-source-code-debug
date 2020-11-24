@@ -4,7 +4,7 @@ import UseEffect from './UseEffectExp'
 import './index.css'
 const Hooks = () => {
     return <div className="hooks">
-        <UseState/>
+        {/*<UseState/>*/}
         <UseEffect/>
     </div>
 }
