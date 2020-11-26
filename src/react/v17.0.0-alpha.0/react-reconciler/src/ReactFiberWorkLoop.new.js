@@ -2092,7 +2092,7 @@ function commitRootImpl(root, renderPriorityLevel) {
     (executionContext & (RenderContext | CommitContext)) === NoContext,
     'Should not already be working.',
   );
-
+  console.log('root', root);
   const finishedWork = root.finishedWork;
   const lanes = root.finishedLanes;
 

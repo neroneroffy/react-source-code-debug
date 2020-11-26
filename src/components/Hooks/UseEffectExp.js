@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useLayoutEffect } from 'react'
 
 const UseEffectExp = () => {
   const [ text, setText ] = useState('hello')
@@ -8,7 +8,7 @@ const UseEffectExp = () => {
             console.log('destory1');
         }
     })
-    useEffect(() => {
+    useLayoutEffect(() => {
         console.log('effect2')
         setTimeout(() => {
           setText('123')
