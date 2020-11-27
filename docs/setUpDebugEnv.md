@@ -77,9 +77,10 @@ yarn add @babel/plugin-transform-flow-strip-types -D
 ```
 
 ## 修改ReactSharedInternals
-/shared/ReactSharedInternals.js
+/shared/ReactSharedInternals.js，原有内容注释掉，添加
 ```
 import ReactSharedInternals from '../react/src/ReactSharedInternals';
+export default ReactSharedInternals;
 ```
 ## 修改ReactFiberHostConfig
 修改 /react-reconciler/src/ReactFiberHostConfig.js，原有内容注释掉，
