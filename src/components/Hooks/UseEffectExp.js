@@ -10,9 +10,6 @@ const UseEffectExp = () => {
     })
     useLayoutEffect(() => {
         console.log('effect2')
-        setTimeout(() => {
-          setText('123')
-        }, 2000)
         return () => {
             console.log('destory2');
         }

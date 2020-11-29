@@ -444,6 +444,7 @@ function recursivelyCommitLayoutEffects(
   finishedWork: Fiber,
   finishedRoot: FiberRoot,
 ) {
+  console.log('finishedWork', finishedWork);
   const {flags, tag} = finishedWork;
   switch (tag) {
     case Profiler: {
