@@ -54,15 +54,15 @@ fiber.memoizedState ---> useState hook
                              |
                              ↓
                         useEffect hook
-                        memoizedState: effect1 ---> effect2
-                             |            ↑____________|
+                        memoizedState: useEffect的effect对象 ---> useLayoutEffect的effect对象
+                             |              ↑__________________________________|
                              |
                             next
                              |
                              ↓
                         useLayoutffect hook
-                        memoizedState: effect1 ---> effect2
-                                          ↑____________|
+                        memoizedState: useLayoutEffect的effect对象 ---> useEffect的effect对象
+                                            ↑___________________________________|
 
 ```
 
@@ -97,7 +97,7 @@ fiber.updateQueue ---> useLayoutEffect ----next----> useEffect
 在实际的使用中，我们调用的use(Layout)Effect函数，在挂载和更新的过程是不同的。
 
 挂载时，调用的是`mountEffectImpl`，它会为use(Layout)Effect这类hook创建一个hook对象，将workInProgressHook指向它，
-然后在这个fiber节点的flag中加入副作用相关的effectTag。最后，会构建effect链表挂载到hook上的memoizedState上，同时将新创建的effect push到fiber的updateQueue。
+然后在这个fiber节点的flag中加入副作用相关的effectTag。最后，会构建effect链表挂载到fiber的updateQueue，并且也会在hook上的memoizedState挂载effect。
 ```javascript
 function mountEffectImpl(fiberFlags, hookFlags, create, deps): void {
   // 创建hook对象
@@ -108,7 +108,7 @@ function mountEffectImpl(fiberFlags, hookFlags, create, deps): void {
   // 为fiber打上副作用的effectTag
   currentlyRenderingFiber.flags |= fiberFlags;
 
-  // 创建effect链表，挂载到hook的memoizedState上
+  // 创建effect链表，挂载到hook的memoizedState上和fiber的updateQueue
   hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     create,
@@ -120,7 +120,9 @@ function mountEffectImpl(fiberFlags, hookFlags, create, deps): void {
 > currentlyRenderingFiber 即 workInProgress节点
 
 
-更新时，调用`updateEffectImpl`，
+更新时，调用`updateEffectImpl`，完成effect链表的构建。这个过程中会根据前后依赖项是否变化，从而创建不同的effect对象。具体体现在effect的tag上，如果
+前后依赖未变，则effect的tag就赋值为传入的hookFlags，否则，在tag中加入HookHasEffect标志位。正是因为这样，在处理effect链表时才可以只处理依赖变化的effect，
+use(Layout)Effect可以根据它的依赖变化情况来决定是否执行回调。
 ```javascript
 function updateEffectImpl(fiberFlags, hookFlags, create, deps): void {
   const hook = updateWorkInProgressHook();
@@ -128,10 +130,13 @@ function updateEffectImpl(fiberFlags, hookFlags, create, deps): void {
   let destroy = undefined;
 
   if (currentHook !== null) {
+    // 从currentHook中获取上一次的effect
     const prevEffect = currentHook.memoizedState;
+    // 获取上一次effect的destory函数，也就是useEffect回调中return的函数
     destroy = prevEffect.destroy;
     if (nextDeps !== null) {
       const prevDeps = prevEffect.deps;
+      // 比较前后依赖，push一个不带HookHasEffect的effect
       if (areHookInputsEqual(nextDeps, prevDeps)) {
         pushEffect(hookFlags, create, destroy, nextDeps);
         return;
@@ -140,7 +145,8 @@ function updateEffectImpl(fiberFlags, hookFlags, create, deps): void {
   }
 
   currentlyRenderingFiber.flags |= fiberFlags;
-
+  // 如果前后依赖有变，在effect的tag中加入HookHasEffect
+  // 并将新的effect更新到hook.memoizedState上
   hook.memoizedState = pushEffect(
     HookHasEffect | hookFlags,
     create,
@@ -148,9 +154,52 @@ function updateEffectImpl(fiberFlags, hookFlags, create, deps): void {
     nextDeps,
   );
 }
-
 ```
+> 在组件挂载和更新时，有一个区别，就是挂载期间调用pushEffect创建effect对象的时候并没有传destroy函数，而更新期间传了，这是因为每次effect执行时，都是先执行前一次的销毁函数，
+  再执行新effect的创建函数。而挂载期间，上一次的effect并不存在，执行创建函数前也就无需先销毁。
 
+挂载和更新，都调用了pushEffect，它的职责很单纯，就是创建effect对象，构建effect链表，挂到WIP节点的updateQueue上。
+
+```javascript
+function pushEffect(tag, create, destroy, deps) {
+  // 创建effect对象
+  const effect: Effect = {
+    tag,
+    create,
+    destroy,
+    deps,
+    // Circular
+    next: (null: any),
+  };
+
+  // 从WIP节点上获取到updateQueue，为构建链表做准备
+  let componentUpdateQueue: null | FunctionComponentUpdateQueue = (currentlyRenderingFiber.updateQueue: any);
+  if (componentUpdateQueue === null) {
+    // 如果updateQueue为空，把effect放到链表中，和它自己形成闭环
+    componentUpdateQueue = createFunctionComponentUpdateQueue();
+    // 将updateQueue赋值给WIP节点的updateQueue，实现effect链表的挂载
+    currentlyRenderingFiber.updateQueue = (componentUpdateQueue: any);
+    componentUpdateQueue.lastEffect = effect.next = effect;
+  } else {
+    // updateQueue不为空，将effect接到链表的后边
+    const lastEffect = componentUpdateQueue.lastEffect;
+    if (lastEffect === null) {
+      componentUpdateQueue.lastEffect = effect.next = effect;
+    } else {
+      const firstEffect = lastEffect.next;
+      lastEffect.next = effect;
+      effect.next = firstEffect;
+      componentUpdateQueue.lastEffect = effect;
+    }
+  }
+  return effect;
+}
+```
+> 函数组件和类组件的updateQueue都是环状链表
+
+以上，就是effect链表的构建过程。可以认识到，effect对象创建出来最终会以两种形式放到两个地方：单个的effect，放到hook.memorizedState上；
+环状的effect链表，放到fiber节点的updateQueue中。两个行为各有用途，前者的effect会作为上次更新的effect，为本次创建effect对象提供参照（对比依赖项数组），后者的effect链表
+会作为最终被执行的主体，带到commit阶段处理。
 
 ## commit阶段-effect如何被处理
 
