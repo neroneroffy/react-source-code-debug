@@ -1979,6 +1979,7 @@ function commitRootImpl(root, renderPriorityLevel) {
     ) {
       if (!rootDoesHavePassiveEffects) {
         rootDoesHavePassiveEffects = true;
+        // layout阶段调度useEffect
         scheduleCallback(NormalSchedulerPriority, () => {
           flushPassiveEffects();
           return null;
@@ -2185,6 +2186,7 @@ function commitBeforeMutationEffectsImpl(fiber: Fiber) {
   if ((flags & Passive) !== NoFlags) {
     // If there are passive effects, schedule a callback to flush at
     // the earliest opportunity.
+    // before mutation 调度useEffects
     if (!rootDoesHavePassiveEffects) {
       rootDoesHavePassiveEffects = true;
       scheduleCallback(NormalSchedulerPriority, () => {

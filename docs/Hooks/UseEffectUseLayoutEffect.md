@@ -75,7 +75,7 @@ fiber.updateQueue ---> useLayoutEffect ----next----> useEffect
 
 现在，我们知道，调用use(Layout)Effect，会产生effect链表，它会保存在两个地方：
 * fiber.memoizedState的hooks链表的hook元素的memoizedState中，以本次更新为基准，这些effects会作为上次的effect
-* fiber.updateQueue中，本次更新的updateQueue，它会在本次更新中被处理。
+* fiber.updateQueue中，本次更新的updateQueue，它会在本次更新的commit阶段中被处理。
 
 # 流程概述
 基于上面的数据结构，对于use（Layout）Effect来说，React做的事情就是
@@ -202,6 +202,9 @@ function pushEffect(tag, create, destroy, deps) {
 会作为最终被执行的主体，带到commit阶段处理。
 
 ## commit阶段-effect如何被处理
+标记root上有副作用是在commit阶段，且只会在异步调度useEffect的时候会被清除，commit完成，真正的useEffect执行之前，有可能再次有一个更新，进入更新流程。
+所以每次commit之前都要将之前遗留的useEffect刷新干净，以保证本地调度的useEffect都是本次更新产生的
+
 
 ### 记录有副作用的root
 
