@@ -7,7 +7,7 @@
  * @flow
  */
 
-import * as Scheduler from 'scheduler';
+import * as Scheduler from '../../scheduler';
 
 // Intentionally not named imports because Rollup would
 // use dynamic dispatch for CommonJS interop named imports.

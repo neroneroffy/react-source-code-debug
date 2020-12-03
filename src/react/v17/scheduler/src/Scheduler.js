@@ -278,7 +278,6 @@ function unstable_wrapCallback(callback) {
 
 function unstable_scheduleCallback(priorityLevel, callback, options) {
   var currentTime = getCurrentTime();
-
   var startTime;
   if (typeof options === 'object' && options !== null) {
     var delay = options.delay;

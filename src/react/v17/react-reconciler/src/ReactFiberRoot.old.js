@@ -22,7 +22,7 @@ import {
   enableSchedulerTracing,
   enableSuspenseCallback,
 } from 'shared/ReactFeatureFlags';
-import {unstable_getThreadID} from 'scheduler/tracing';
+import {unstable_getThreadID} from '../../scheduler/tracing';
 import {initializeUpdateQueue} from './ReactUpdateQueue.old';
 import {LegacyRoot, BlockingRoot, ConcurrentRoot} from './ReactRootTags';
 

@@ -200,7 +200,7 @@ import {
   RetryAfterError,
   NoContext,
 } from './ReactFiberWorkLoop.old';
-import {unstable_wrap as Schedule_tracing_wrap} from 'scheduler/tracing';
+import {unstable_wrap as Schedule_tracing_wrap} from '../../scheduler/tracing';
 import {setWorkInProgressVersion} from './ReactMutableSource.old';
 
 import {disableLogs, reenableLogs} from 'shared/ConsolePatchingDev';

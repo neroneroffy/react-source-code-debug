@@ -11,7 +11,7 @@ import type {Thenable, Wakeable} from 'shared/ReactTypes';
 import type {Fiber, FiberRoot} from './ReactInternalTypes';
 import type {Lanes, Lane} from './ReactFiberLane';
 import type {ReactPriorityLevel} from './ReactInternalTypes';
-import type {Interaction} from 'scheduler/src/Tracing';
+import type {Interaction} from '../../scheduler/src/Tracing';
 import type {SuspenseState} from './ReactFiberSuspenseComponent.new';
 import type {StackCursor} from './ReactFiberStack.new';
 import type {FunctionComponentUpdateQueue} from './ReactFiberHooks.new';
@@ -78,7 +78,7 @@ import {
 } from './SchedulingProfiler';
 
 // The scheduler is imported here *only* to detect whether it's been mocked
-import * as Scheduler from 'scheduler';
+import * as Scheduler from '../../scheduler';
 
 import {__interactionsRef, __subscriberRef} from 'scheduler/tracing';
 
@@ -1782,6 +1782,9 @@ function commitRoot(root) {
 }
 
 function commitRootImpl(root, renderPriorityLevel) {
+  // 由于useEffect是异步调度的，有可能上一次更新调度的useEffect还未被真正执行，
+  // 所以在本次更新开始前，需要先将之前的useEffect都执行掉，以保证本次更新调度的
+  // useEffect都是本次更新产生的
   do {
     // `flushPassiveEffects` will call `flushSyncUpdateQueue` at the end, which
     // means `flushPassiveEffects` will sometimes result in additional
@@ -1973,6 +1976,7 @@ function commitRootImpl(root, renderPriorityLevel) {
     }
 
     // If there are pending passive effects, schedule a callback to process them.
+    // PassiveMask，包含了Deletion的effect，因此，此处调度useEffect是为了被卸载的组件去调度的
     if (
       (finishedWork.subtreeFlags & PassiveMask) !== NoFlags ||
       (finishedWork.flags & PassiveMask) !== NoFlags
@@ -2596,6 +2600,7 @@ function flushPassiveEffectsImpl() {
 
   executionContext = prevExecutionContext;
 
+  // 刷新同步任务队列
   flushSyncCallbackQueue();
 
   // If additional passive effects were scheduled, increment a counter. If this

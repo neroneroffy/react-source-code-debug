@@ -39,7 +39,7 @@ import {
   unstable_next as next,
   unstable_runWithPriority as runWithPriority,
   unstable_UserBlockingPriority as UserBlockingPriority,
-} from 'scheduler';
+} from '../../../../../scheduler';
 import {createRegExp} from '../utils';
 import {BridgeContext, StoreContext} from '../context';
 import Store from '../../store';
