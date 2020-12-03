@@ -202,6 +202,65 @@ function pushEffect(tag, create, destroy, deps) {
 会作为最终被执行的主体，带到commit阶段处理。
 
 ## commit阶段-effect如何被处理
+useEffect和useLayoutEffect，对它们的处理最终都落在处理fiber.updateQueue上，对前者来说，循环updateQueue时只处理tag包含useEffect的flag的effect，对后者来说，只处理
+tag包含useLayoutEffect的flag的effect，且都是先执行前一次更新时effect的销毁函数（destroy），再执行新effect的创建函数（create）。
+
+以上是它们的处理过程在微观上的共性，宏观上的区别主要体现在执行时机上。useEffect是在beforeMutation或是layout阶段异步调度，然后在本次的更新应用到屏幕上之后再执行，而useLayoutEffect是
+在layout阶段同步执行的。下面先分析useEffect的处理过程。
+
+
+### useEffect的异步调度
+commit阶段和useEffect真正扯上关系的有三个地方：commit阶段的开始、beforeMutation、layout。
+```javascript
+
+function commitRootImpl(root, renderPriorityLevel) {
+  // 由于useEffect是异步调度的，有可能上一次更新调度的useEffect还未被真正执行，
+  // 所以在本次更新开始前，需要先将之前的useEffect都执行掉，以保证本次更新调度的
+  // useEffect都是本次更新产生的
+  do {
+    flushPassiveEffects();
+  } while (rootWithPendingPassiveEffects !== null);
+  
+  // beforeMutation阶段：会异步调度useEffect
+  commitBeforeMutationEffects(finishedWork);
+
+    // If there are pending passive effects, schedule a callback to process them.
+    // PassiveMask，包含了Deletion的effect，因此，此处调度useEffect是为了被卸载的组件去调度的
+    // commit阶段涉及到useEffect的地方有三处：
+    // commit阶段刚开始：这个时候主要是执行本次更新之前还未被触发的useEffect，相当于清理工作。因为要保证本次调度的useEffect都是本次更新产生的
+    // commit阶段之内的beforeMutation阶段：这个时候为含有useEffect的组件调度useEffect
+    // commit阶段之内的layout阶段：为卸载的组件调度useEffect，执行effect的destroy函数，清理effect
+
+  // layout阶段：异步调度useEffect
+  if (
+    (finishedWork.subtreeFlags & PassiveMask) !== NoFlags ||
+    (finishedWork.flags & PassiveMask) !== NoFlags
+  ) {
+    if (!rootDoesHavePassiveEffects) {
+      rootDoesHavePassiveEffects = true;
+      // layout阶段调度useEffect
+      scheduleCallback(NormalSchedulerPriority, () => {
+        flushPassiveEffects();
+        return null;
+      });
+    }
+  }
+
+
+  const rootDidHavePassiveEffects = rootDoesHavePassiveEffects;
+
+  if (rootDoesHavePassiveEffects) {
+    // This commit has passive effects. Stash a reference to them. But don't
+    // schedule a callback until after flushing layout work.
+    rootDoesHavePassiveEffects = false;
+    rootWithPendingPassiveEffects = root;
+    pendingPassiveEffectsLanes = lanes;
+    pendingPassiveEffectsRenderPriority = renderPriorityLevel;
+  }
+
+}
+
+```
 标记root上有副作用是在commit阶段，且只会在异步调度useEffect的时候会被清除，commit完成，真正的useEffect执行之前，有可能再次有一个更新，进入更新流程。
 所以每次commit之前都要将之前遗留的useEffect刷新干净，以保证本地调度的useEffect都是本次更新产生的
 
