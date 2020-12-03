@@ -1977,6 +1977,10 @@ function commitRootImpl(root, renderPriorityLevel) {
 
     // If there are pending passive effects, schedule a callback to process them.
     // PassiveMask，包含了Deletion的effect，因此，此处调度useEffect是为了被卸载的组件去调度的
+    // commit阶段涉及到useEffect的地方有三处：
+    // commit阶段刚开始：这个时候主要是执行本次更新之前还未被触发的useEffect，相当于清理工作。因为要保证本次调度的useEffect都是本次更新产生的
+    // commit阶段之内的beforeMutation阶段：这个时候为含有useEffect的组件调度useEffect
+    // commit阶段之内的layout阶段：为卸载的组件调度useEffect，执行effect的destroy函数，清理effect
     if (
       (finishedWork.subtreeFlags & PassiveMask) !== NoFlags ||
       (finishedWork.flags & PassiveMask) !== NoFlags
@@ -2469,6 +2473,7 @@ function flushPassiveMountEffects(root, firstChild: Fiber): void {
 
 function flushPassiveUnmountEffects(firstChild: Fiber): void {
   let fiber = firstChild;
+  // 深度优先遍历fiber，处理删除的节点，执行useEffect的destroy函数
   while (fiber !== null) {
     const deletions = fiber.deletions;
     if (deletions !== null) {
@@ -2492,7 +2497,7 @@ function flushPassiveUnmountEffects(firstChild: Fiber): void {
         flushPassiveUnmountEffects(child);
       }
     }
-
+    // 为fiber本身执行useEffect
     const primaryFlags = fiber.flags & Passive;
     if (primaryFlags !== NoFlags) {
       setCurrentDebugFiberInDEV(fiber);
