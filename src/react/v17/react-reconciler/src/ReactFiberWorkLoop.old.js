@@ -1986,7 +1986,6 @@ function commitRootImpl(root, renderPriorityLevel) {
     // There is no effect on the root.
     firstEffect = finishedWork.firstEffect;
   }
-
   if (firstEffect !== null) {
     let previousLanePriority;
     if (decoupleUpdatePriorityFromScheduler) {
@@ -2084,6 +2083,7 @@ function commitRootImpl(root, renderPriorityLevel) {
     // the host tree after it's been mutated. The idiomatic use case for this is
     // layout, but class component lifecycles also fire here for legacy reasons.
     nextEffect = firstEffect;
+    console.log('nextEffect', nextEffect);
     do {
       if (__DEV__) {
         invokeGuardedCallback(null, commitLayoutEffects, null, root, lanes);
@@ -2133,6 +2133,7 @@ function commitRootImpl(root, renderPriorityLevel) {
   const rootDidHavePassiveEffects = rootDoesHavePassiveEffects;
 
   if (rootDoesHavePassiveEffects) {
+    console.log('rootDoesHavePassiveEffects');
     // This commit has passive effects. Stash a reference to them. But don't
     // schedule a callback until after flushing layout work.
     rootDoesHavePassiveEffects = false;
@@ -2473,6 +2474,7 @@ export function enqueuePendingPassiveHookEffectMount(
   fiber: Fiber,
   effect: HookEffect,
 ): void {
+  console.log('enqueuePendingPassiveHookEffectMount');
   pendingPassiveHookEffectsMount.push(effect, fiber);
   if (!rootDoesHavePassiveEffects) {
     rootDoesHavePassiveEffects = true;
@@ -2487,6 +2489,7 @@ export function enqueuePendingPassiveHookEffectUnmount(
   fiber: Fiber,
   effect: HookEffect,
 ): void {
+  console.log('enqueuePendingPassiveHookEffectUnmount');
   pendingPassiveHookEffectsUnmount.push(effect, fiber);
   if (__DEV__) {
     fiber.flags |= PassiveUnmountPendingDev;

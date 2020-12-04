@@ -97,7 +97,7 @@ fiber.updateQueue ---> useLayoutEffect ----next----> useEffect
 在实际的使用中，我们调用的use(Layout)Effect函数，在挂载和更新的过程是不同的。
 
 挂载时，调用的是`mountEffectImpl`，它会为use(Layout)Effect这类hook创建一个hook对象，将workInProgressHook指向它，
-然后在这个fiber节点的flag中加入副作用相关的effectTag。最后，会构建effect链表挂载到fiber的updateQueue，并且也会在hook上的memoizedState挂载effect。
+然后在这个fiber节点的flag中加入副作用相关的effectTag。最后，会构建effect链表挂载到fiber的updateQueue，并且也会在hook上的memorizedState挂载effect。
 ```javascript
 function mountEffectImpl(fiberFlags, hookFlags, create, deps): void {
   // 创建hook对象
@@ -205,93 +205,243 @@ function pushEffect(tag, create, destroy, deps) {
 useEffect和useLayoutEffect，对它们的处理最终都落在处理fiber.updateQueue上，对前者来说，循环updateQueue时只处理tag包含useEffect的flag的effect，对后者来说，只处理
 tag包含useLayoutEffect的flag的effect，且都是先执行前一次更新时effect的销毁函数（destroy），再执行新effect的创建函数（create）。
 
-以上是它们的处理过程在微观上的共性，宏观上的区别主要体现在执行时机上。useEffect是在beforeMutation或是layout阶段异步调度，然后在本次的更新应用到屏幕上之后再执行，而useLayoutEffect是
+以上是它们的处理过程在微观上的共性，宏观上的区别主要体现在执行时机上。useEffect是在beforeMutation或layout阶段异步调度，然后在本次的更新应用到屏幕上之后再执行，而useLayoutEffect是
 在layout阶段同步执行的。下面先分析useEffect的处理过程。
 
 
 ### useEffect的异步调度
-commit阶段和useEffect真正扯上关系的有三个地方：commit阶段的开始、beforeMutation、layout。
+> 与 componentDidMount、componentDidUpdate 不同的是，在浏览器完成布局与绘制之后，传给 useEffect 的函数会延迟调用。
+这使得它适用于许多常见的副作用场景，比如设置订阅和事件处理等情况，因此不应在函数中执行阻塞浏览器更新屏幕的操作。
+
+基于useEffect回调延迟调用的需求，在实现上利用的是scheduler的异步调度函数：`scheduleCallback`，将执行useEffect的动作作为一个任务去调度，这个任务会延迟调用。
+
+commit阶段和useEffect真正扯上关系的有三个地方：commit阶段的开始、beforeMutation、layout，涉及到异步调度的是后面两个。
 ```javascript
 
 function commitRootImpl(root, renderPriorityLevel) {
-  // 由于useEffect是异步调度的，有可能上一次更新调度的useEffect还未被真正执行，
-  // 所以在本次更新开始前，需要先将之前的useEffect都执行掉，以保证本次更新调度的
-  // useEffect都是本次更新产生的
+  // 进入commit阶段，先执行一次之前未执行的useEffect
   do {
     flushPassiveEffects();
   } while (rootWithPendingPassiveEffects !== null);
-  
-  // beforeMutation阶段：会异步调度useEffect
-  commitBeforeMutationEffects(finishedWork);
 
-    // If there are pending passive effects, schedule a callback to process them.
-    // PassiveMask，包含了Deletion的effect，因此，此处调度useEffect是为了被卸载的组件去调度的
-    // commit阶段涉及到useEffect的地方有三处：
-    // commit阶段刚开始：这个时候主要是执行本次更新之前还未被触发的useEffect，相当于清理工作。因为要保证本次调度的useEffect都是本次更新产生的
-    // commit阶段之内的beforeMutation阶段：这个时候为含有useEffect的组件调度useEffect
-    // commit阶段之内的layout阶段：为卸载的组件调度useEffect，执行effect的destroy函数，清理effect
+  ...
 
-  // layout阶段：异步调度useEffect
-  if (
-    (finishedWork.subtreeFlags & PassiveMask) !== NoFlags ||
-    (finishedWork.flags & PassiveMask) !== NoFlags
-  ) {
-    if (!rootDoesHavePassiveEffects) {
-      rootDoesHavePassiveEffects = true;
-      // layout阶段调度useEffect
-      scheduleCallback(NormalSchedulerPriority, () => {
-        flushPassiveEffects();
-        return null;
-      });
+  do {
+    try {
+      // beforeMutation阶段的处理函数：commitBeforeMutationEffects内部，
+      // 异步调度useEffect
+      commitBeforeMutationEffects();
+    } catch (error) {
+      ...
     }
-  }
+  } while (nextEffect !== null);
 
+  ...
 
   const rootDidHavePassiveEffects = rootDoesHavePassiveEffects;
 
   if (rootDoesHavePassiveEffects) {
-    // This commit has passive effects. Stash a reference to them. But don't
-    // schedule a callback until after flushing layout work.
-    rootDoesHavePassiveEffects = false;
+    // 重点，记录有副作用的effect
     rootWithPendingPassiveEffects = root;
-    pendingPassiveEffectsLanes = lanes;
-    pendingPassiveEffectsRenderPriority = renderPriorityLevel;
+  }
+}
+```
+这三个地方去执行或者调度useEffect有什么用意呢？我们分别来看。
+* commit开始，先执行一下useEffect：这和useEffect异步调度的特点有关，它以一般的优先级被调度，这就意味着一旦有更高优先级的任务进入到commit阶段，上一次任务的useEffect
+还没得到执行。所以在本次更新开始前，需要先将之前的useEffect都执行掉，以保证本次调度的useEffect都是本次更新产生的。
+
+* beforeMutation阶段异步调度useEffect：这个是实打实地针对effectList上有副作用的节点，去异步调度useEffect。
+```javascript
+function commitBeforeMutationEffects() {
+  while (nextEffect !== null) {
+
+    ...
+
+    if ((flags & Passive) !== NoFlags) {
+      // 如果fiber节点上的flags存在Passive调度useEffect
+      if (!rootDoesHavePassiveEffects) {
+        rootDoesHavePassiveEffects = true;
+        scheduleCallback(NormalSchedulerPriority, () => {
+          flushPassiveEffects();
+          return null;
+        });
+      }
+    }
+    nextEffect = nextEffect.nextEffect;
+  }
+}
+```
+因为`rootDoesHavePassiveEffects`的限制，只会发起一次useEffect调度，相当于用一把锁锁住调度状态，避免发起多次调度。
+* layout阶段填充effect执行数组：真正useEffect执行的时候，实际上是先执行上一次effect的销毁，再执行本次effect的创建。React用两个数组来分别存储销毁函数和
+创建函数，这两个数组的填充就是在layout阶段，到时候循环释放执行两个数组中的函数即可。
+
+```javascript
+function commitLifeCycles(
+  finishedRoot: FiberRoot,
+  current: Fiber | null,
+  finishedWork: Fiber,
+  committedLanes: Lanes,
+): void {
+  switch (finishedWork.tag) {
+    case FunctionComponent:
+    case ForwardRef:
+    case SimpleMemoComponent:
+    case Block: {
+
+      ...
+
+      // layout阶段填充effect执行数组
+      schedulePassiveEffects(finishedWork);
+      return;
+    }
+}
+```
+在调用`schedulePassiveEffects`填充effect执行数组时，有一个重要的地方就是只在flag上的包含HasEffect的effectTag的时候，才去将effect放到数组内，这一点保证了依赖项有变化再去处理effect。
+正如上文在创建effect链表表的时候提到的：
+
+**如果前后依赖未变，则effect的tag就赋值为传入的hookFlags，否则，在tag中加入HookHasEffect标志位。正是因为这样，在处理effect链表时才可以只处理依赖变化的effect，
+use(Layout)Effect可以根据它的依赖变化情况来决定是否执行回调。**
+
+schedulePassiveEffects的实现：
+```javascript
+function schedulePassiveEffects(finishedWork: Fiber) {
+  // 获取到函数组件的updateQueue
+  const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
+  // 获取effect链表
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+  if (lastEffect !== null) {
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+    // 循环effect链表
+    do {
+      const {next, tag} = effect;
+      if (
+        (tag & HookPassive) !== NoHookEffect &&
+        (tag & HookHasEffect) !== NoHookEffect
+      ) {
+        // 当effect的tag含有HookPassive和HookHasEffect时，向数组中push effect
+        enqueuePendingPassiveHookEffectUnmount(finishedWork, effect);
+        enqueuePendingPassiveHookEffectMount(finishedWork, effect);
+      }
+      effect = next;
+    } while (effect !== firstEffect);
+  }
+}
+```
+在调用`enqueuePendingPassiveHookEffectUnmount`和`enqueuePendingPassiveHookEffectMount`填充数组的时候，还会再异步调度一次useEffect，
+但这与beforeMutation的调度是互斥的，一旦之前调度过，就不会再调度了，同样是`rootDoesHavePassiveEffects`起的作用。
+
+### 执行effect
+此时我们已经知道，effect得以被处理是因为之前的调度以及effect数组的填充。现在到了最后的步骤，执行effect的destroy和create。过程就是先循环待销毁的effect数组，再循环
+待创建的effect数组，这一过程发生在`flushPassiveEffectsImpl`函数中。循环的时候每个两项去effect是由于奇数项存储的是当前的fiber。
+```javascript
+function flushPassiveEffectsImpl() {
+  // 先校验，如果root上没有 Passive efectTag的节点，则直接return
+  if (rootWithPendingPassiveEffects === null) {
+    return false;
   }
 
+  ...
+
+  // 执行effect的销毁
+  const unmountEffects = pendingPassiveHookEffectsUnmount;
+  pendingPassiveHookEffectsUnmount = [];
+  for (let i = 0; i < unmountEffects.length; i += 2) {
+    const effect = ((unmountEffects[i]: any): HookEffect);
+    const fiber = ((unmountEffects[i + 1]: any): Fiber);
+    const destroy = effect.destroy;
+    effect.destroy = undefined;
+
+    if (typeof destroy === 'function') {
+      try {
+        destroy();
+      } catch (error) {
+        captureCommitPhaseError(fiber, error);
+      }
+    }
+  }
+
+  // 再执行effect的创建
+  const mountEffects = pendingPassiveHookEffectsMount;
+  pendingPassiveHookEffectsMount = [];
+  for (let i = 0; i < mountEffects.length; i += 2) {
+    const effect = ((mountEffects[i]: any): HookEffect);
+    const fiber = ((mountEffects[i + 1]: any): Fiber);
+    try {
+      const create = effect.create;
+      effect.destroy = create();
+    } catch (error) {
+
+      captureCommitPhaseError(fiber, error);
+    }
+  }
+
+  ...
+
+  return true;
 }
-
 ```
-标记root上有副作用是在commit阶段，且只会在异步调度useEffect的时候会被清除，commit完成，真正的useEffect执行之前，有可能再次有一个更新，进入更新流程。
-所以每次commit之前都要将之前遗留的useEffect刷新干净，以保证本地调度的useEffect都是本次更新产生的
 
+### useLayoutEffect的同步执行
+useLayoutEffect在执行的时候，也是先销毁，再创建。和useEffect不同的是这两者都是同步执行的，前者在mutation阶段执行，后者在layout阶段执行。
+与useEffect不同的是，它不用数组去存储销毁和创建函数，而是直接操作fiber.updateQueue。
 
-### 记录有副作用的root
+卸载上一次的effect，发生在mutation阶段
+```javascript
 
-### 调度useEffect
+// 调用卸载layout effect的函数，传入layout有关的effectTag和说明effect有变化的effectTag：HookLayout | HookHasEffect
+commitHookEffectListUnmount(HookLayout | HookHasEffect, finishedWork);
 
-### 同步执行useLayoutEffect
+function commitHookEffectListUnmount(tag: number, finishedWork: Fiber) {
+  // 获取updateQueue
+  const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
 
-### useEffect执行
+  // 循环updateQueue上的effect链表
+  if (lastEffect !== null) {
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+    do {
+      if ((effect.tag & tag) === tag) {
+        // 执行销毁
+        const destroy = effect.destroy;
+        effect.destroy = undefined;
+        if (destroy !== undefined) {
+          destroy();
+        }
+      }
+      effect = effect.next;
+    } while (effect !== firstEffect);
+  }
+}
+```
 
+执行本次的effect创建，发生在layout阶段
+```javascript
+// 调用创建layout effect的函数
+commitHookEffectListMount(HookLayout | HookHasEffect, finishedWork);
 
+function commitHookEffectListMount(tag: number, finishedWork: Fiber) {
+  const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
+  const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+  if (lastEffect !== null) {
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+    do {
+      if ((effect.tag & tag) === tag) {
+        // 创建
+        const create = effect.create;
+        effect.destroy = create();
+      }
+      effect = effect.next;
+    } while (effect !== firstEffect);
+  }
+}
+```
 
+# 总结
+useEffect和useLayoutEffect作为组件的副作用，本质上是一样的。共用一套结构来存储effect链表。整体流程上都是先在render阶段，生成effect，并将它们拼接成链表，
+存到fiber.updateQueue上，最终带到commit阶段被处理。他们彼此的区别只是最终的执行时机不同，一个异步一个同步，这使得useEffect不会阻塞渲染，而useLayoutEffect
+会阻塞渲染。
 
-
-
-# effect hooks结构的创建时机
-稍加思考就可以想到，函数组件本质上是一个函数，那么自然是函数执行的时候去创建effect hooks。
-通过前面的文章我们知道，在fiber节点的beginWork阶段会根据组件的类型进行实例化，函数组件的这个过程发生在`renderWithHooks`函数中。
-
-# effect hooks结构的执行时机
-
-useEffect和useLayoutEffect都是在commit阶段进行处理的，不同的是useEffect采取commit阶段异步调度，在DOM的变化渲染到页面之后再执行。
-> 使用 useEffect 完成副作用操作。赋值给 useEffect 的函数会在组件渲染到屏幕之后执行。
-
-而useLayoutEffect是在React完成DOM操作，渲染出来之前这一段时间内同步执行，它会阻塞渲染。
-> 它会在所有的 DOM 变更之后同步调用 effect。可以使用它来读取 DOM 布局并同步触发重渲染。在浏览器执行绘制之前，useLayoutEffect 内部的更新计划将被同步刷新。
-
-* useEffect：
-before mutation阶段和layout阶段异步调度flushPassiveEffects
-layout阶段一旦识别到root含有effect，则将root赋值给rootWithPendingPassiveEffects
-layout阶段之后，flushPassiveEffects从rootWithPendingPassiveEffects中找出有useEffect的fiber，循环updateQueue执行掉
 

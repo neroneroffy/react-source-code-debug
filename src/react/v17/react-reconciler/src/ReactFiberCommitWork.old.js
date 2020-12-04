@@ -377,17 +377,21 @@ function commitHookEffectListMount(tag: number, finishedWork: Fiber) {
 }
 
 function schedulePassiveEffects(finishedWork: Fiber) {
+  // 获取到函数组件的updateQueue
   const updateQueue: FunctionComponentUpdateQueue | null = (finishedWork.updateQueue: any);
+  // 获取effect链表
   const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
   if (lastEffect !== null) {
     const firstEffect = lastEffect.next;
     let effect = firstEffect;
+    // 循环effect链表
     do {
       const {next, tag} = effect;
       if (
         (tag & HookPassive) !== NoHookEffect &&
         (tag & HookHasEffect) !== NoHookEffect
       ) {
+        // 当effect的tag含有HookPassive和HookHasEffect时，菜向数组中push effect
         enqueuePendingPassiveHookEffectUnmount(finishedWork, effect);
         enqueuePendingPassiveHookEffectMount(finishedWork, effect);
       }
@@ -480,7 +484,7 @@ function commitLifeCycles(
       } else {
         commitHookEffectListMount(HookLayout | HookHasEffect, finishedWork);
       }
-
+      console.log('finishedWork', finishedWork);
       schedulePassiveEffects(finishedWork);
       return;
     }
