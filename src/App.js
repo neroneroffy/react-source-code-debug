@@ -21,7 +21,7 @@ function App() {
   // 事件系统
   // return <EventDemo/>
 
-  return <Hooks/>
+  // return <Hooks/>
   // fiber树
   // return (
   //   <div className="App">
@@ -31,7 +31,7 @@ function App() {
   // );
 
   // 高优先级插队
-  // return <TasksWithDifferentPriorities/>
+  return <TasksWithDifferentPriorities/>
 
   // diff 算法
   // return <Diff ref={'diffRef'}/>
