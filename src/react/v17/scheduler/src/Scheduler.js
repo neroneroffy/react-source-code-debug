@@ -170,6 +170,7 @@ function flushWork(hasTimeRemaining, initialTime) {
 function workLoop(hasTimeRemaining, initialTime) {
   let currentTime = initialTime;
   advanceTimers(currentTime);
+  // 获取taskQueue中最紧急的任务
   currentTask = peek(taskQueue);
   while (
     currentTask !== null &&
