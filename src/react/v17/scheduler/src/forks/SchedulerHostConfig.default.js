@@ -191,6 +191,7 @@ if (
       deadline = currentTime + yieldInterval;
       const hasTimeRemaining = true;
       try {
+        // scheduledHostCallback 由requestHostCallback 赋值为flushWork
         const hasMoreWork = scheduledHostCallback(
           hasTimeRemaining,
           currentTime,

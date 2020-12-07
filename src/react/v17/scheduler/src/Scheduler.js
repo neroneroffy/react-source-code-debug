@@ -218,6 +218,7 @@ function workLoop(hasTimeRemaining, initialTime) {
     currentTask = peek(taskQueue);
   }
   // Return whether there's additional work
+  // return 的结果会作为 performWorkUntilDeadline 中hasMoreWork的依据
   if (currentTask !== null) {
     return true;
   } else {
@@ -356,6 +357,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
       }
       // Schedule a timeout.
       // 会把handleTimeout放到setTimeout里，在startTime - currentTime时间之后执行
+      // 待会再调度
       requestHostTimeout(handleTimeout, startTime - currentTime);
     }
   } else {
@@ -370,6 +372,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
     // Schedule a host callback, if needed. If we're already performing work,
     // wait until the next time we yield.
     // 调度一个主线程回调，如果已经执行了一个任务，等到下一次交还执行权的时候再执行回调。
+    // 立即调度
     if (!isHostCallbackScheduled && !isPerformingWork) {
       isHostCallbackScheduled = true;
       requestHostCallback(flushWork);
