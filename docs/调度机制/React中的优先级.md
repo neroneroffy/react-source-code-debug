@@ -90,7 +90,7 @@ function dispatchUserBlockingUpdate(
 }
 ```
 可以看到**runWithPriority**方法以**UserBlockingPriority**的优先级执行事件，而事件处理函数一旦调用了setState，就会创建update，
-优先级也会在此时计算：
+更新优先级也会在此时计算：
 ```javascript
 const classComponentUpdater = {
   enqueueSetState(inst, payload, callback) {
@@ -126,7 +126,7 @@ export function requestUpdateLane(
     (executionContext & DiscreteEventContext) !== NoContext &&
     schedulerPriority === UserBlockingSchedulerPriority
   ) {
-    // 如果事件优先级是用户阻塞级别，则直接用InputDiscreteLanePriority去计算
+    // 如果事件优先级是用户阻塞级别，则直接用InputDiscreteLanePriority去计算更新优先级
     lane = findUpdateLane(InputDiscreteLanePriority, currentEventWipLanes);
   } else {
     // 依据事件的优先级去计算schedulerLanePriority
@@ -134,7 +134,7 @@ export function requestUpdateLane(
       schedulerPriority,
     );
     ...
-    // 根据事件优先级计算得来的schedulerLanePriority，去计算update的优先级(lane)
+    // 根据事件优先级计算得来的schedulerLanePriority，去计算更新优先级
     lane = findUpdateLane(schedulerLanePriority, currentEventWipLanes);
   }
   return lane;
