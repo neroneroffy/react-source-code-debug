@@ -219,6 +219,9 @@ function workLoop(hasTimeRemaining, initialTime) {
   }
   // Return whether there's additional work
   // return 的结果会作为 performWorkUntilDeadline 中hasMoreWork的依据
+  // 高优先级任务完成后，currentTask.callback为null，任务从taskQueue中删除，此时队列中还有低优先级任务，
+  // currentTask = peek(taskQueue)  currentTask不为空，说明还有任务，继续postMessage执行workLoop，但它被取消过，导致currentTask.callback为null
+  // 所以会被删除，此时的taskQueue为空，低优先级的任务重新调度，加入taskQueue
   if (currentTask !== null) {
     return true;
   } else {
@@ -410,6 +413,7 @@ function unstable_cancelCallback(task) {
   // Null out the callback to indicate the task has been canceled. (Can't
   // remove from the queue because you can't remove arbitrary nodes from an
   // array based heap, only the first one.)
+  // 不能从队列中删除这个任务，因为不能从基于堆的数组中删除任意节点，只能删除第一个节点。
   task.callback = null;
 }
 

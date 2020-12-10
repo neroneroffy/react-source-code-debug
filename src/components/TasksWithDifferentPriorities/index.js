@@ -11,9 +11,6 @@ class TasksWithDifferentPriorities extends React.Component {
     dragY: 0,
   }
   componentDidMount() {
-    const button = this.buttonRef.current
-    setTimeout( () => this.setState( { count: 1 } ), 500 )
-    setTimeout( () => button.click(), 600)
     //   A2是常规优先级的更新，A1是button.click()产生高优先级的更新。
     //   A后边的数字表示优先级，lane模型中，越小优先级越高，1 > 2。
     //   updateQueue：A2 - A1
@@ -35,6 +32,11 @@ class TasksWithDifferentPriorities extends React.Component {
       return { count: prevState.count + 2 }
     } )
   }
+  onBeginTask = () => {
+    const button = this.buttonRef.current
+    setTimeout( () => this.setState( { count: 1 } ), 500 )
+    setTimeout( () => button.click(), 600)
+  }
   onDragHandler = e => {
     this.setState({
       dragX: e.clientX,
@@ -45,14 +47,15 @@ class TasksWithDifferentPriorities extends React.Component {
     const { dragX, dragY, count } = this.state
     return <div className={"task-with-different-priorities"}>
       <div className="counter">
-        <button ref={this.buttonRef} onClick={this.handleButtonClick}>增加2</button>
+        <button ref={this.buttonRef} onClick={this.handleButtonClick}>模拟高优先级点击交互</button>
+        <button onClick={this.onBeginTask}>开始</button>
         <div>
           {Array.from(new Array(16000)).map( (v,index) =>
             <div key={index}>{count}</div>
           )}
         </div>
       </div>
-      <div className="drag-wrapper">
+{/*      <div className="drag-wrapper">
         <p>坐标{dragX}，{dragY}</p>
         <div
           id="drag-element"
@@ -61,7 +64,7 @@ class TasksWithDifferentPriorities extends React.Component {
         >
           拖拽
         </div>
-      </div>
+      </div>*/}
 
     </div>
   }

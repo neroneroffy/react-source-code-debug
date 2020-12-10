@@ -481,6 +481,9 @@ export function includesOnlyTransitions(lanes: Lanes) {
 
 // To ensure consistency across multiple updates in the same event, this should
 // be a pure function, so that it always returns the same lane for given inputs.
+// 确保同一事件中多个更新之间的一致性
+// 对于同一个事件中的多次更新，如果一个优先级范围的lanes占满了，那么到相邻的较低优先级范围内寻找
+// 多个更新，优先级依次降低的是不会打断原有更新任务的调度过程的，只有高优先级的更新才会打断
 export function findUpdateLane(
   lanePriority: LanePriority,
   wipLanes: Lanes,
