@@ -39,3 +39,34 @@ function App() {
 
 export default App;
 
+const result = 6
+let currentResult = 0
+let index = 0
+function calculate() {
+  currentResult++
+  if (currentResult <= result) {
+    return calculate
+  }
+  return null
+}
+
+const task = {
+  callback: calculate,
+}
+const taskQueue = []
+taskQueue.push(task)
+
+const executeTask = () => {
+  const currentTask = taskQueue[0]
+  const taskCallback = currentTask.callback
+  if (typeof taskCallback() === 'function') {
+    index++
+    console.log(index);
+    currentTask.callback = taskCallback()
+  } else {
+    return
+  }
+  executeTask()
+}
+executeTask()
+

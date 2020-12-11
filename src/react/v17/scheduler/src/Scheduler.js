@@ -334,10 +334,15 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 
   var newTask = {
     id: taskIdCounter++,
+    // 任务本体
     callback,
+    // 任务优先级
     priorityLevel,
+    // 任务开始的时间，表示任务何时才能执行
     startTime,
+    // 任务的过期时间
     expirationTime,
+    // 在小顶堆队列中排序的依据
     sortIndex: -1,
   };
   if (enableProfiling) {
