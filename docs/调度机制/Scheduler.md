@@ -330,9 +330,94 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 
 总之，要把timerQueue中的任务全部都转移到taskQueue中执行掉才行。
 
-针对已过期任务，在将它放入taskQueue之后，调用`requestHostCallback`，循环执行taskQueue。但并不是简单的while循环，而是将循环执行的操作放到宏任务中去执行。
+针对已过期任务，在将它放入taskQueue之后，调用`requestHostCallback`，循环执行taskQueue。
 
 # 任务执行
+任务执行的起点是`requestHostCallback`。
+```javascript
+
+if (!isHostCallbackScheduled && !isPerformingWork) {
+  isHostCallbackScheduled = true;                                 
+  // 开始执行任务
+  requestHostCallback(flushWork);
+}
+```
+本质上是通过调用`flushWork`循环taskQueue，逐一执行任务。我们暂且不管其他的，只看`flushWork`具体做了什么。
+```javascript
+function flushWork(hasTimeRemaining, initialTime) {
+
+  ...
+
+  return workLoop(hasTimeRemaining, initialTime);
+
+  ...
+
+}
+```
+它调用了`workLoop`，并将其调用的结果return了出去，那么现在任务执行的核心内容看来就在`workLoop`中了。要理解它，需要回归Scheduler的功能之一：时间切片。时间切片使得任务的执行具备下面的这个重要特点：
+**任务会被中断，也会被恢复。**
+
+![](http://neroht.com/stopstart.png)
+
+所以不难推测出，`workLoop`作为实际执行任务的函数，它做的事情就是实现
+
+```javascript
+function workLoop(hasTimeRemaining, initialTime) {
+
+  // 获取taskQueue中排在最前面的任务
+  currentTask = peek(taskQueue);
+  while (currentTask !== null) {
+    
+    if (到了时间片限制的时间) {
+       break
+    }
+
+    ...   
+    // 执行任务
+    ...
+    
+    // 任务执行完毕，从队列中删除
+    pop(taskQueue);    
+
+    // 获取下一个任务，继续循环
+    currentTask = peek(taskQueue);
+  }
+  
+  // 到了时间片限制的时间，循环中断后，会执行到这里
+  // 
+  if (currentTask !== null) {
+    return true;
+  } else {
+    ...
+    return false;
+  }
+}
+```
+
+但是因为时间片限制了任务的最大执行时间，也就意味着一旦到时间，需要马上中止正在执行的任务。中止很容易，关键是如何恢复执行。
+
+
+
+在Scheduler中，任务的中止和恢复在支持MessageChannel的环境中是
+
+```javascript
+  const channel = new MessageChannel();
+  const port = channel.port2;
+  channel.port1.onmessage = performWorkUntilDeadline;
+
+  requestHostCallback = function(callback) {
+    scheduledHostCallback = callback;
+    if (!isMessageLoopRunning) {
+      isMessageLoopRunning = true;
+      port.postMessage(null);
+    }
+  };
+
+```
+
+
+
+
 
 # 取消调度
 
