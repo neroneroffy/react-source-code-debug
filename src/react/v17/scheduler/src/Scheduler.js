@@ -181,7 +181,7 @@ function workLoop(hasTimeRemaining, initialTime) {
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
       // This currentTask hasn't expired, and we've reached the deadline.
-      // 当前任务没有过期，但是已经到了时间片的末尾，需要结束跳出循环
+      // 当前任务没有过期，但是已经到了时间片的末尾，需要中断循环
       break;
     }
     const callback = currentTask.callback;

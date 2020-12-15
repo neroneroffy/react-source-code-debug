@@ -1409,6 +1409,7 @@ function handleError(root, thrownValue): void {
   } while (true);
 }
 
+
 function pushDispatcher() {
   const prevDispatcher = ReactCurrentDispatcher.current;
   ReactCurrentDispatcher.current = ContextOnlyDispatcher;

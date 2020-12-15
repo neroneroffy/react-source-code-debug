@@ -70,7 +70,7 @@ const scheduleCallback = (task, priority) => {
         callback: task,
         priority
     }
-    
+
     // 向队列中添加任务
     taskQueue.push(taskItem)
     // 优先级影响到任务在队列中的排序，将优先级最高的任务排在最前面
@@ -263,13 +263,13 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
   // 若是立即执行的优先级（ImmediatePriority），
   // 它的过期时间是startTime - 1，意味着立刻就过期
   var expirationTime = startTime + timeout;
-  
+
   // 创建调度任务
   var newTask = {
     id: taskIdCounter++,
     // 任务本体
     callback,
-    // 任务优先级 
+    // 任务优先级
     priorityLevel,
     // 任务开始的时间，表示任务何时才能执行
     startTime,
@@ -330,7 +330,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 
 总之，要把timerQueue中的任务全部都转移到taskQueue中执行掉才行。
 
-针对已过期任务，调用`requestHostCallback`，去循环执行taskQueue。但并不是简单的while循环，而是将循环执行的操作放到宏任务中去执行。
+针对已过期任务，在将它放入taskQueue之后，调用`requestHostCallback`，循环执行taskQueue。但并不是简单的while循环，而是将循环执行的操作放到宏任务中去执行。
 
 # 任务执行
 
