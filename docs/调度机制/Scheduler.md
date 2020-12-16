@@ -354,21 +354,23 @@ function flushWork(hasTimeRemaining, initialTime) {
 
 }
 ```
-它调用了`workLoop`，并将其调用的结果return了出去，那么现在任务执行的核心内容看来就在`workLoop`中了。要理解它，需要回归Scheduler的功能之一：时间切片。时间切片使得任务的执行具备下面的这个重要特点：
+它调用了`workLoop`，并将其调用的结果return了出去，那么现在任务执行的核心内容看来就在`workLoop`中了。要理解它，需要回顾Scheduler的功能之一：时间切片。时间切片使得任务的
+执行具备下面的这个重要特点：
 **任务会被中断，也会被恢复。**
 
 ![](http://neroht.com/stopstart.png)
 
-所以不难推测出，`workLoop`作为实际执行任务的函数，它做的事情就是实现
-
+所以不难推测出，`workLoop`作为实际执行任务的函数，它做的事情肯定与任务的中断恢复有关。我们先看一下workLoop的结构
 ```javascript
 function workLoop(hasTimeRemaining, initialTime) {
 
   // 获取taskQueue中排在最前面的任务
   currentTask = peek(taskQueue);
   while (currentTask !== null) {
-    
-    if (到了时间片限制的时间) {
+
+    if (currentTask.expirationTime > currentTime &&
+     (!hasTimeRemaining || shouldYieldToHost())) {
+       // break掉while循环
        break
     }
 
@@ -383,18 +385,44 @@ function workLoop(hasTimeRemaining, initialTime) {
     currentTask = peek(taskQueue);
   }
   
-  // 到了时间片限制的时间，循环中断后，会执行到这里
-  // 
+  
   if (currentTask !== null) {
+    // 如果currentTask不为空，说明是时间片的限制导致了任务中断
+    // return true告诉外部，此时任务还未执行完
     return true;
   } else {
-    ...
+    // 如果currentTask为空，说明taskQueue队列中的任务已经都
+    // 执行完了，然后从timerQueue中找任务，调用requestHostTimeout
+    // 去把task放到taskQueue中，到时会再次发起调度，但是这次，
+    // 会先return false，告诉外部当前的taskQueue已经清空，
+    // 先停止执行任务，也就是终止任务调度
+
+    const firstTimer = peek(timerQueue);
+    if (firstTimer !== null) {
+      requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
+    }
+
     return false;
   }
 }
 ```
+workLoop中可以分为两大部分： 循环taskQueue执行任务 和 任务状态的判断。
 
-但是因为时间片限制了任务的最大执行时间，也就意味着一旦到时间，需要马上中止正在执行的任务。中止很容易，关键是如何恢复执行。
+**循环taskQueue执行任务**
+
+暂且不管任务如何执行，只关注任务如何被时间片限制。
+```javascript
+if (currentTask.expirationTime > currentTime &&
+     (!hasTimeRemaining || shouldYieldToHost())) {
+   // break掉while循环
+   break
+}
+```
+判断条件是任务并未过期，但已经没有剩余时间了，或者应该让出执行权给主线程（时间片）。也就是说任务执行得好好的，可是已经执行了时间片这么多的时间，那只能先break掉本次while循环，使得本次循环下面的任务执行的
+逻辑都不能被执行到，但是被break的只是while循环，while下部对于任务状态的判断还是会执行到的。由于任务并未执行完，所以currentTask不可能是null，于时会return true告诉外部还没完事呢，否则说明全部的任务都已经执行完了，
+taskQueue已经被清空了，return一个false让外部好终止本次调度。
+
+
 
 
 
