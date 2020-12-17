@@ -8,128 +8,63 @@ Scheduler的出现就是为了在一定程度上解决上面的问题。它引�
 时间片规定的是一个任务在这一帧内最大的执行时间，保证页面不会因为任务执行时间过长而产生卡顿。
 
 # 原理概述
-基于这两个概念，Scheduler围绕着它的核心目标 - 任务调度，衍生出了两大核心功能：任务队列管理 和 判断任务完成状态。
+基于这两个概念，Scheduler围绕着它的核心目标 - 任务调度，衍生出了两大核心功能：任务队列管理 和 单个任务的中断以及恢复。
 
 ## 任务队列管理
 在Scheduler内部，把任务分成了两种：未过期的和已过期的，分别用两个队列存储，前者存到timerQueue中，后者存到taskQueue中。
-当一个任务进来的时候，会根据它的优先级（即调度任务优先级）计算过期时间，再决定放到哪个队列中。
 
-如果放到了taskQueue，那么立即开始调度一个回调函数，去执行它。
+**如何区分任务是否过期？**
 
-如果放到了timerQueue，那么会调度一个timeOut，时间间隔为该任务的过期时间与当前时间的差，到期后检查它是否过期，是则放入taskQueue，调度一个回调开始执行它，否则继续调度timeout去定期检查。
+用任务的开始时间（startTime）和当前时间（currentTime）作比较。开始时间大于当前时间，说明未过期，放到timerQueue；开始时间小于等于当前时间，说明已过期，放到taskQueue。
 
-这两种队列都是小顶堆的数据结构，可以很快找出过期时间最早的任务，任务的过期时间根据优先级得出，下面会提到。所以，任务队列的管理需要**调度任务优先级**重度参与，
-这样才能实现多个任务按照优先级排序。
+**不同队列中的任务如何排序？**
+当任务一个个进来的时候，自然要对它们进行排序，保证紧急的任务排在前面，所以排序的依据就是任务的紧急程度。而taskQueue和timeQueue中任务的紧急程度判定标准是有区别的。
 
-## 判断任务完成状态
-在当前帧的时间内（一般为16ms），任务执行的最大执行时间不会超过单个时间片的长度，一旦超时，必须中断，让位给更重要的工作，例如浏览器为了响应用户输入的绘制工作，
-直到这一帧完成，才在下一帧继续这个任务，能这样做的前提是知道任务在上一帧被中断时并未完成，才能做到在下一帧继续执行任务。这就需要判断任务的完成状态。
+* taskQueue中，依据任务的过期时间（expirationTime）排序，过期时间越早，说明越紧急，过期时间小的排在前面。过期时间根据任务优先级计算得出，优先级越高，过期时间越早。
+* timeQueue中，依据任务的开始时间（startTime）排序，开始时间越早，说明会越早开始，开始时间小的排在前面。任务进来的时候，开始时间默认是当前时间，如果调度的时候穿了延迟时间，则是当前时间与延迟时间的和。
 
-一个任务就是一个函数，如果这项任务没完成，是要重复执行这个函数的，直到它完成。这里有两个关键点：**重复执行任务函数、识别任务完成**。
+**任务入队两个队列，之后呢？**
+如果放到了taskQueue，那么立即调度一个函数去循环taskQueue，挨个执行里面的任务。
 
-我们可以用递归函数做类比，如果没到递归边界，就重复调用自己。这个递归边界，就是任务完成的标志。因为递归函数所处理的任务就是它本身，可以很方便地把任务完成作为递归边界去结束任务，但是Scheduler与递归不同的是，
-它只是一个执行者，调度的任务并不是它自己产生的，而是外部的（比如它去调度React的工作循环渲染fiber树），它可以做到重复执行任务函数，但边界（即任务是否完成）却无法像递归那样直接获取，
-只能依赖任务函数的返回值去判断。即：**若任务函数返回值为函数，那么就说明当前任务尚未完成，需要继续调用任务函数，否则停止调用**
+如果放到了timerQueue，那么说明它里面的任务都不会立即执行，那就过一会去检查它里面最早开始的那个任务，看它是否过期，如果是，则把它从timeQueue中拿出来放入taskQueue，
+重复上一步；否则过一会继续检查。这个“过一会”对应的时间间隔，是最早开始的那个任务的开始时间与当前时间的差。
 
-例如下面的例子，有一个任务calculate，负责把currentResult每次加1，一直到3为止。当没到3的时候，calculate不是去调用它自身，而是将自身return出去，一旦到了3，return的是null。这样外部才可以知道
-calculate是否已经完成了任务。
-```javascript
-const result = 3
-let currentResult = 0
-function calculate() {
-    currentResult++
-    if (currentResult < result) {
-        return calculate
-    }
-    return null
-}
-```
-上面是任务，接下来我们模拟一下调度，去执行calculate。但执行应该是基于时间片的，为了观察效果，只用setInterval去模拟一下，1秒只执行它一次，即全部任务的三分之一。另外Scheduler中有两个队列去管理任务，我们暂且只用一个队列（taskQueue）存储任务。
-除此之外还需要另外三个角色：把任务加入调度的函数、开始调度的函数、执行任务的函数。
-```javascript
-const result = 3
-let currentResult = 0
+任务队列管理相对于单个任务的执行，是宏观层面的概念，它利用任务的调度优先级去管理任务队列中的任务顺序，始终让最紧急的任务被优先处理。
 
-function calculate() {
-    currentResult++
-    if (currentResult < result) {
-        return calculate
-    }
-    return null
-}
+## 单个任务的中断以及恢复
+循环taskQueue时，会去执行每一个任务，如果某个任务执行时间过长，一旦达到了时间片限制的时间，那么它必须中断，以便于让位给更重要的事情，等事情完成，再恢复执行任务。
 
-// 存放任务的队列
-const taskQueue = []
-// 存放模拟时间片的定时器
-let interval
+![](http://neroht.com/stopstart.png)
 
-// 把任务加入调度的函数-------------------------------
-const scheduleCallback = (task, priority) => {
-    // 创建一个专属于调度器的任务
-    const taskItem = {
-        callback: task,
-        priority
-    }
+要实现这样的效果，需要两个角色：任务的调度者、任务的执行者。调度者调度一个执行者，执行者去循环taskQueue，逐个执行任务。当某个任务的执行时间比较长，
+执行者会根据时间片中断任务执行，然后告诉调度者：我现在正执行的这个任务被中断了，还有一部分没完成，
+但现在必须让位给更重要的事情，你再调度一个执行者吧，好让这个任务能在这个更重要的事情做完后继续被执行完（任务的恢复）。于是，调度者知道了任务还没完成，需要继续做，它会再调度一个执行者
+去继续完成这个任务。
 
-    // 向队列中添加任务
-    taskQueue.push(taskItem)
-    // 优先级影响到任务在队列中的排序，将优先级最高的任务排在最前面
-    taskQueue.sort((a, b) => (a.priority - b.priority))
-    // 开始执行任务，调度开始
-    requestHostCallback(workLoop)
-}
-// 开始调度的函数------------------------------------
-const requestHostCallback = cb => {
-    interval = setInterval(cb, 1000)
-}
-// 执行任务的函数------------------------------------
-const workLoop = () => {
-    // 从队列中取出任务
-    const currentTask = taskQueue[0]
-    // 获取真正的任务函数，即calculate
-    const taskCallback = currentTask.callback
-    // 判断任务函数否是函数，若是，执行它，将返回值更新到currentTask的callback中
-    // 所以，taskCallback是上一阶段执行的返回值，若它是函数类型，则说明上一次执行返回了函数
-    // 类型，说明任务尚未完成，本次继续执行这个函数，否则说明任务完成。
-    if (typeof taskCallback === 'function') {
-        currentTask.callback = taskCallback()
-        console.log('正在执行任务，当前的currentResult 是', currentResult);
-    } else {
-        // 任务完成。将当前的这个任务从taskQueue中移除，并清除定时器
-        console.log('任务完成，最终的 currentResult 是', currentResult);
-        taskQueue.unshift()
-        clearInterval(interval)
-    }
-}
+通过执行者和调度者的配合，可以实现任务的中断和恢复。
 
-// 把calculate加入调度，也就意味着调度开始
-scheduleCallback(calculate, 1)
-```
-最终的执行结果如下：
-```
-正在执行任务，当前的currentResult 是 1
-正在执行任务，当前的currentResult 是 2
-正在执行任务，当前的currentResult 是 3
-任务完成，最终的 currentResult 是 3
-```
 
 ## 原理小结
-任务按照优先级，计算出过期时间，依据过期时间进行排序。
+Scheduler利用优先级管理taskQueue和timeQueue中的任务，然后让调度者通知执行者循环taskQueue执行掉每一个任务，一旦任务被时间片中断，
+当前的执行者退场，退场之前通知调度者再去调度一个新的执行者继续完成这个任务，完成后出队。taskQueue中每一个任务都被这样处理，最终完成所有任务，
+这就是Scheduler的完整工作流程。
 
-依据当前时间，判断任务是否过期，有两种情况：
+让我们回到React：由于concurrent模式下React的渲染函数在构建fiber树时，可能花费较长时间。这样在某一帧中，会由于时间片的限制不得不暂停fiber树的构建，但是这个任务并没有完成，
+所以Scheduler的调度者明白应该继续调度一个执行者去完成继续这个任务。所以会有下面的现象。
 
-任务进来了就过期了（比如立即执行的优先级计算出的任务过期时间，是当前时间 - 1），那么开始执行（分段执行）它
-
-任务都未过期，那么任务都在timerQueue，之后定期去timerQueue中询问排在最前面的任务是否过期，如过期则将它转移到taskQueue，那么开始执行（分段执行）它。
-
-现在具体到任务执行上，利用while循环，执行taskQueue中的每一项任务，最终会清空taskQueue。执行任务的时候，会根据任务函数的返回值去判断该任务是否执行完成，是否继续执行当前任务，
-从而决定是否将该任务从taskQueue中剔除，便于处理下一个任务。
-
-举例来说：由于concurrent模式下React的渲染函数在fiber树未构建完成时，总是返回渲染函数自身，否则返回null。这样在某一帧中，React由于时间片的限制不得不暂停fiber树的构建时，
-渲染函数会返回它自身，所以Scheduler明白它应该继续这个任务，加上React中利用workInProgress指针，可以做到在下一帧中可以从原来暂停的地方继续往下构建fiber树，实现下图的效果。
 ![](http://neroht.com/step.png)
 
-以上是Scheduler原理的概述，下面是对React和Scheduler联合工作机制的详细解读。涉及React与Scheduler的连接、调度入口、任务优先级、任务过期时间、调度通知、任务执行、调度取消等细节，可以作为一个完成的调度流程。
+而再加上React中利用workInProgress指针，可以做到在fiber树构建任务恢复时，从原来中断的地方继续往下构建fiber树。
+
+这里面有一个关键点，就是执行者如何知道这个任务到底完成没完成呢？这是另一个话题了，也就是判断任务的完成状态。下面在讲解执行者的执行细节时会重点突出。
+
+
+以上是Scheduler原理的概述，下面是对React和Scheduler联合工作机制的详细解读。涉及React与Scheduler的连接、调度入口、任务优先级、任务过期时间、调度通知、任务执行、判断任务的完成状态等内容，
+你可以用下面的内容梳理出一个完整的调度流程。
+
+在开始之前，我们先认识Scheduler中各个函数的角色。
+
+# Scheduler中的角色
 
 # React与Scheduler的连接
 React通过Scheduler调度各种任务，但是它并不属于React，它有自己的优先级机制，这就需要针对Scheduler为React做一下兼容。实际上，在react-reconciler中提供了这样一个文件去做这样的工作，
@@ -358,7 +293,7 @@ function flushWork(hasTimeRemaining, initialTime) {
 执行具备下面的这个重要特点：
 **任务会被中断，也会被恢复。**
 
-![](http://neroht.com/stopstart.png)
+
 
 所以不难推测出，`workLoop`作为实际执行任务的函数，它做的事情肯定与任务的中断恢复有关。我们先看一下workLoop的结构
 ```javascript
@@ -418,9 +353,105 @@ if (currentTask.expirationTime > currentTime &&
    break
 }
 ```
-判断条件是任务并未过期，但已经没有剩余时间了，或者应该让出执行权给主线程（时间片）。也就是说任务执行得好好的，可是已经执行了时间片这么多的时间，那只能先break掉本次while循环，使得本次循环下面的任务执行的
-逻辑都不能被执行到，但是被break的只是while循环，while下部对于任务状态的判断还是会执行到的。由于任务并未执行完，所以currentTask不可能是null，于时会return true告诉外部还没完事呢，否则说明全部的任务都已经执行完了，
-taskQueue已经被清空了，return一个false让外部好终止本次调度。
+currentTask就是当前正在执行的任务，它中止的判断条件是：任务并未过期，但已经没有剩余时间了，或者应该让出执行权给主线程（时间片），也就是说currentTask执行得好好的，可是时间不允许，
+那只能先break掉本次while循环，使得本次循环下面currentTask执行的逻辑都不能被执行到（**此处是中断任务的关键**）。但是被break的只是while循环，while下部还是会判断currentTask的状态。
+由于它只是被中止了，所以currentTask不可能是null，那么会return一个true告诉外部还没完事呢（**此处是恢复任务的关键**），否则说明全部的任务都已经执行完了，taskQueue已经被清空了，
+return一个false好让外部终止本次调度。
+
+## 判断单个任务完成状态
+在当前帧的时间内（一般为16ms），任务执行的最大执行时间不会超过单个时间片的长度，一旦超时，必须中断，让位给更重要的工作，例如浏览器为了响应用户输入的绘制工作，
+直到这一帧完成，才在下一帧继续这个任务，能这样做的前提是知道任务在上一帧被中断时并未完成，才能做到在下一帧继续执行任务。这就需要判断任务的完成状态。
+
+一个任务就是一个函数，如果这项任务没完成，是要重复执行这个函数的，直到它完成。这里有两个关键点：**重复执行任务函数、识别任务完成**。
+
+我们可以用递归函数做类比，如果没到递归边界，就重复调用自己。这个递归边界，就是任务完成的标志。因为递归函数所处理的任务就是它本身，可以很方便地把任务完成作为递归边界去结束任务，但是Scheduler与递归不同的是，
+它只是一个执行者，调度的任务并不是它自己产生的，而是外部的（比如它去调度React的工作循环渲染fiber树），它可以做到重复执行任务函数，但边界（即任务是否完成）却无法像递归那样直接获取，
+只能依赖任务函数的返回值去判断。即：**若任务函数返回值为函数，那么就说明当前任务尚未完成，需要继续调用任务函数，否则停止调用**
+
+例如下面的例子，有一个任务calculate，负责把currentResult每次加1，一直到3为止。当没到3的时候，calculate不是去调用它自身，而是将自身return出去，一旦到了3，return的是null。这样外部才可以知道
+calculate是否已经完成了任务。
+```javascript
+const result = 3
+let currentResult = 0
+function calculate() {
+    currentResult++
+    if (currentResult < result) {
+        return calculate
+    }
+    return null
+}
+```
+上面是任务，接下来我们模拟一下调度，去执行calculate。但执行应该是基于时间片的，为了观察效果，只用setInterval去模拟一下，1秒只执行它一次，即全部任务的三分之一。另外Scheduler中有两个队列去管理任务，我们暂且只用一个队列（taskQueue）存储任务。
+除此之外还需要另外三个角色：把任务加入调度的函数、开始调度的函数、执行任务的函数。
+```javascript
+const result = 3
+let currentResult = 0
+
+function calculate() {
+    currentResult++
+    if (currentResult < result) {
+        return calculate
+    }
+    return null
+}
+
+// 存放任务的队列
+const taskQueue = []
+// 存放模拟时间片的定时器
+let interval
+
+// 把任务加入调度的函数-------------------------------
+const scheduleCallback = (task, priority) => {
+    // 创建一个专属于调度器的任务
+    const taskItem = {
+        callback: task,
+        priority
+    }
+
+    // 向队列中添加任务
+    taskQueue.push(taskItem)
+    // 优先级影响到任务在队列中的排序，将优先级最高的任务排在最前面
+    taskQueue.sort((a, b) => (a.priority - b.priority))
+    // 开始执行任务，调度开始
+    requestHostCallback(workLoop)
+}
+// 开始调度的函数------------------------------------
+const requestHostCallback = cb => {
+    interval = setInterval(cb, 1000)
+}
+// 执行任务的函数------------------------------------
+const workLoop = () => {
+    // 从队列中取出任务
+    const currentTask = taskQueue[0]
+    // 获取真正的任务函数，即calculate
+    const taskCallback = currentTask.callback
+    // 判断任务函数否是函数，若是，执行它，将返回值更新到currentTask的callback中
+    // 所以，taskCallback是上一阶段执行的返回值，若它是函数类型，则说明上一次执行返回了函数
+    // 类型，说明任务尚未完成，本次继续执行这个函数，否则说明任务完成。
+    if (typeof taskCallback === 'function') {
+        currentTask.callback = taskCallback()
+        console.log('正在执行任务，当前的currentResult 是', currentResult);
+    } else {
+        // 任务完成。将当前的这个任务从taskQueue中移除，并清除定时器
+        console.log('任务完成，最终的 currentResult 是', currentResult);
+        taskQueue.unshift()
+        clearInterval(interval)
+    }
+}
+
+// 把calculate加入调度，也就意味着调度开始
+scheduleCallback(calculate, 1)
+```
+最终的执行结果如下：
+```
+正在执行任务，当前的currentResult 是 1
+正在执行任务，当前的currentResult 是 2
+正在执行任务，当前的currentResult 是 3
+任务完成，最终的 currentResult 是 3
+```
+
+
+
 
 
 
