@@ -2083,7 +2083,6 @@ function commitRootImpl(root, renderPriorityLevel) {
     // the host tree after it's been mutated. The idiomatic use case for this is
     // layout, but class component lifecycles also fire here for legacy reasons.
     nextEffect = firstEffect;
-    console.log('nextEffect', nextEffect);
     do {
       if (__DEV__) {
         invokeGuardedCallback(null, commitLayoutEffects, null, root, lanes);

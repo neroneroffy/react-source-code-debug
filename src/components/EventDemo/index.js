@@ -5,6 +5,19 @@ class EventDemo extends React.Component{
     count: 0,
   }
 
+  componentDidMount() {
+    this.setState({count: this.state.count + 1});
+    console.log(this.state.count);
+    this.setState({count: this.state.count + 1});
+    console.log(this.state.count);
+    setTimeout(() => {
+      this.setState({count: this.state.count + 1});
+      console.log(this.state.count);
+      this.setState({count: this.state.count + 1});
+      console.log(this.state.count);
+    }, 0);
+  }
+
   onDemoClick = e => {
 
     this.setState({

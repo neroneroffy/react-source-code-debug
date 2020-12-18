@@ -1,15 +1,21 @@
+.task-with-different-priorities {
+    width: 900px;
+    margin: 0 auto;
+    display: flex;
+}
 .task-with-different-priorities .counter {
     width: 500px;
-    margin: 0 auto;
     padding-top: 50px;
     height: 600px;
     overflow: auto;
+    margin-right: 20px;
 }
 .task-with-different-priorities .counter div {
     display: inline-block;
     font-size: 40px;
 }
 .task-with-different-priorities .drag-wrapper {
+    position: relative;
     width: 400px;
     height: 400px;
     border: 1px solid #ccc;
