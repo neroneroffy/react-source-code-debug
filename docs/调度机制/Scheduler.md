@@ -8,14 +8,14 @@ Scheduler作为一个独立的包，可以独自承担起任务调度的职责�
 
 
 # 基本概念
-为了实现上述的两个行为，它引入两个概念：**调度任务优先级** 、 **时间片**。
+为了实现上述的两个行为，它引入两个概念：**任务优先级** 、 **时间片**。
 
 调度优先级让任务按照自身的紧急程度按序排列，这样可以让优先级最高的任务最先被执行到。
 
 时间片规定的是单个任务在这一帧内最大的执行时间，保证页面不会因为任务连续执行的时间过长而产生卡顿。
 
 # 原理概述
-基于调度任务优先级和时间片的概念，Scheduler围绕着它的核心目标 - 任务调度，衍生出了两大核心功能：任务队列管理 和 单个任务的中断以及恢复。
+基于任务优先级和时间片的概念，Scheduler围绕着它的核心目标 - 任务调度，衍生出了两大核心功能：任务队列管理 和 单个任务的中断以及恢复。
 
 ## 任务队列管理
 任务队列管理对应了Scheduler的多任务管理这一行为。在Scheduler内部，把任务分成了两种：未过期的和已过期的，分别用两个队列存储，前者存到timerQueue中，后者存到taskQueue中。
@@ -25,15 +25,15 @@ Scheduler作为一个独立的包，可以独自承担起任务调度的职责�
 用任务的开始时间（startTime）和当前时间（currentTime）作比较。开始时间大于当前时间，说明未过期，放到timerQueue；开始时间小于等于当前时间，说明已过期，放到taskQueue。
 
 **不同队列中的任务如何排序？**
-当任务一个个进来的时候，自然要对它们进行排序，保证紧急的任务排在前面，所以排序的依据就是任务的紧急程度。而taskQueue和timeQueue中任务的紧急程度判定标准是有区别的。
+当任务一个个进来的时候，自然要对它们进行排序，保证紧急的任务排在前面，所以排序的依据就是任务的紧急程度。而taskQueue和timerQueue中任务的紧急程度判定标准是有区别的。
 
 * taskQueue中，依据任务的过期时间（expirationTime）排序，过期时间越早，说明越紧急，过期时间小的排在前面。过期时间根据任务优先级计算得出，优先级越高，过期时间越早。
-* timeQueue中，依据任务的开始时间（startTime）排序，开始时间越早，说明会越早开始，开始时间小的排在前面。任务进来的时候，开始时间默认是当前时间，如果调度的时候穿了延迟时间，则是当前时间与延迟时间的和。
+* timerQueue中，依据任务的开始时间（startTime）排序，开始时间越早，说明会越早开始，开始时间小的排在前面。任务进来的时候，开始时间默认是当前时间，如果调度的时候穿了延迟时间，则是当前时间与延迟时间的和。
 
 **任务入队两个队列，之后呢？**
 如果放到了taskQueue，那么立即调度一个函数去循环taskQueue，挨个执行里面的任务。
 
-如果放到了timerQueue，那么说明它里面的任务都不会立即执行，那就过一会去检查它里面最早开始的那个任务，看它是否过期，如果是，则把它从timeQueue中拿出来放入taskQueue，
+如果放到了timerQueue，那么说明它里面的任务都不会立即执行，那就过一会去检查它里面最早开始的那个任务，看它是否过期，如果是，则把它从timerQueue中拿出来放入taskQueue，
 重复上一步；否则过一会继续检查。这个“过一会”对应的时间间隔，是最早开始的那个任务的开始时间与当前时间的差。
 
 任务队列管理相对于单个任务的执行，是宏观层面的概念，它利用任务的调度优先级去管理任务队列中的任务顺序，始终让最紧急的任务被优先处理。
@@ -62,7 +62,7 @@ Scheduler要实现这样的效果需要两个角色：任务的调度者、任�
 
 
 ## 原理小结
-Scheduler管理着taskQueue和timeQueue两个队列，它会定期将timerQueue中的过期任务放到taskQueue中，然后让调度者通知执行者循环taskQueue执行掉每一个任务。执行者控制着每个任务的执行，
+Scheduler管理着taskQueue和timerQueue两个队列，它会定期将timerQueue中的过期任务放到taskQueue中，然后让调度者通知执行者循环taskQueue执行掉每一个任务。执行者控制着每个任务的执行，
 一旦某个任务的执行时间超出时间片的限制。就会被中断，然后当前的执行者退场，退场之前会通知调度者再去调度一个新的执行者继续完成这个任务，新的执行者在执行任务时依旧会根据时间片中断任务，然后退场，
 重复这一过程，直到当前这个任务彻底完成后，将它出队。taskQueue中每一个任务都被这样处理，最终完成所有任务，这就是Scheduler的完整工作流程。
 
@@ -72,14 +72,26 @@ Scheduler管理着taskQueue和timeQueue两个队列，它会定期将timerQueue�
 以上是Scheduler原理的概述，下面开始是对React和Scheduler联合工作机制的详细解读。涉及React与Scheduler的连接、调度入口、任务优先级、任务过期时间、调度通知、任务执行、判断任务的完成状态等内容，
 你可以用下面的内容梳理出一个React任务的完整调度流程。
 
+
+# 详细流程
+
 在开始之前，我们先看一下React和Scheduler它们二者构成的一个系统的示意图。
 
-# Scheduler中的角色
+![](http://neroht.com/ReactSchedulerFlowChart.jpg)
 
-# React与Scheduler的连接
-React通过Scheduler调度各种任务，但是它并不属于React，它有自己的优先级机制，这就需要针对Scheduler为React做一下兼容。实际上，在react-reconciler中提供了这样一个文件去做这样的工作，
-它就是`SchedulerWithReactIntegration.old(new).js`。它将二者的优先级翻译了一下，让React和Scheduler能读懂对方。另外，封装了一些Scheduler中的函数供React使用，在执行React任务的
-重要文件`ReactFiberWorkLoop.js`中，关于Scheduler的内容都是从`SchedulerWithReactIntegration.old(new).js`导入的，它可以理解成是React和Scheduler之间的桥梁。
+整个系统分为三部分：
+* 产生任务的地方：React
+* React和Scheduler交流的翻译者：SchedulerWithReactIntegration
+* 任务的调度者：Scheduler
+
+React把任务通过翻译者交给Scheduler，Scheduler进行真正的调度，那么为什么需要一个翻译者的角色呢？
+
+## React与Scheduler的连接
+Scheduler帮助React调度各种任务，本质上它们是两个完全不耦合的东西，二者各自都有自己的优先级机制，那么这时就需要有一个中间角色充当他们之间的翻译。
+实际上，在react-reconciler中提供了这样一个文件专门去做这样的工作，
+它就是`SchedulerWithReactIntegration.old(new).js`。它将二者的优先级翻译了一下，让React和Scheduler能读懂对方。另外，封装了一些Scheduler中的函数供React使用。
+
+在执行React任务的重要文件`ReactFiberWorkLoop.js`中，关于Scheduler的内容都是从`SchedulerWithReactIntegration.old(new).js`导入的。它可以理解成是React和Scheduler之间的桥梁。
 ```javascript
 import {
   scheduleCallback,
@@ -98,8 +110,8 @@ import {
 } from './SchedulerWithReactIntegration.old';
 
 ```
-# 调度任务优先级
-上面已经提到过，调度任务的优先级会决定任务的过期时间，从而进一步影响任务在过期任务队列中的排序。Scheduler为任务定义了以下几种级别的优先级：
+## 任务优先级
+上面已经提到过，Scheduler有自己的优先级机制，它为任务定义了以下几种级别的优先级：
 ```javascript
 export const NoPriority = 0; // 没有任何优先级
 export const ImmediatePriority = 1; // 立即执行的优先级，级别最高
@@ -109,8 +121,8 @@ export const LowPriority = 4; // 较低的优先级
 export const IdlePriority = 5; // 优先级最低，表示任务可以闲置
 
 ```
-
-# 调度入口
+任务优先级的作用已经提到过，它是计算任务过期时间的重要依据，事关未过期任务在timerQueue中的排序。
+## 调度入口
 `SchedulerWithReactIntegration.old(new).js`通过封装Scheduler的内容，对React提供两种调度入口函数：`scheduleCallback` 和 `scheduleSyncCallback`。任务通过调度入口函数进入调度过程。
 
 例如，fiber树的构建任务在concurrentMode下的任务通过`scheduleCallback`完成调度，在同步渲染模式的任务由`scheduleSyncCallback`完成。
@@ -161,7 +173,7 @@ function scheduleSyncCallback(callback: SchedulerCallback) {
   return fakeCallbackNode;
 }
 ```
-# 开始调度
+## 开始调度
 通过上面一步步的梳理，我们可以确定，Scheduler中的scheduleCallback是调度流程开始的关键点。它负责生成调度任务、根据任务是否过期将任务放入timerQueue或taskQueue，然后分别请求调度。
 具体的过程我写在注释中了，理解起来不困难。
 ```javascript
@@ -277,7 +289,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 
 针对已过期任务，在将它放入taskQueue之后，调用`requestHostCallback`，循环执行taskQueue。
 
-# 任务执行
+## 任务执行
 任务执行的起点是`requestHostCallback`。
 ```javascript
 
