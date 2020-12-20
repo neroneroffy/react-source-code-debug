@@ -32,10 +32,10 @@ function App() {
   // );
 
   // Scheduler调度任务与用户交互
-  return <SchedulerTask/>
+  // return <SchedulerTask/>
 
   // 高优先级插队
-  // return <TasksWithDifferentPriorities/>
+  return <TasksWithDifferentPriorities/>
 
   // diff 算法
   // return <Diff ref={'diffRef'}/>

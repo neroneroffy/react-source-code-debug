@@ -84,12 +84,21 @@ Scheduler管理着taskQueue和timerQueue两个队列，它会定期将timerQueue
 * React和Scheduler交流的翻译者：SchedulerWithReactIntegration
 * 任务的调度者：Scheduler
 
-React把任务通过翻译者交给Scheduler，Scheduler进行真正的调度，那么为什么需要一个翻译者的角色呢？
+
+React中通过下面的代码，让fiber树的构建任务进入调度流程：
+```javascript
+scheduleCallback(
+  schedulerPriorityLevel,
+  performConcurrentWorkOnRoot.bind(null, root),
+);
+```
+任务通过翻译者交给Scheduler，Scheduler进行真正的任务调度，那么为什么需要一个翻译者的角色呢？
 
 ## React与Scheduler的连接
-Scheduler帮助React调度各种任务，本质上它们是两个完全不耦合的东西，二者各自都有自己的优先级机制，那么这时就需要有一个中间角色充当他们之间的翻译。
-实际上，在react-reconciler中提供了这样一个文件专门去做这样的工作，
-它就是`SchedulerWithReactIntegration.old(new).js`。它将二者的优先级翻译了一下，让React和Scheduler能读懂对方。另外，封装了一些Scheduler中的函数供React使用。
+Scheduler帮助React调度各种任务，本质上它们是两个完全不耦合的东西，二者各自都有自己的优先级机制，那么这时就需要有一个中间角色将它们连接起来。
+
+实际上，在react-reconciler中提供了这样一个文件专门去做这样的工作，它就是`SchedulerWithReactIntegration.old(new).js`。它将二者的优先级翻译了一下，
+让React和Scheduler能读懂对方。另外，封装了一些Scheduler中的函数供React使用。
 
 在执行React任务的重要文件`ReactFiberWorkLoop.js`中，关于Scheduler的内容都是从`SchedulerWithReactIntegration.old(new).js`导入的。它可以理解成是React和Scheduler之间的桥梁。
 ```javascript
@@ -110,19 +119,7 @@ import {
 } from './SchedulerWithReactIntegration.old';
 
 ```
-## 任务优先级
-上面已经提到过，Scheduler有自己的优先级机制，它为任务定义了以下几种级别的优先级：
-```javascript
-export const NoPriority = 0; // 没有任何优先级
-export const ImmediatePriority = 1; // 立即执行的优先级，级别最高
-export const UserBlockingPriority = 2; // 用户阻塞级别的优先级
-export const NormalPriority = 3; // 正常的优先级
-export const LowPriority = 4; // 较低的优先级
-export const IdlePriority = 5; // 优先级最低，表示任务可以闲置
 
-```
-任务优先级的作用已经提到过，它是计算任务过期时间的重要依据，事关未过期任务在timerQueue中的排序。
-## 调度入口
 `SchedulerWithReactIntegration.old(new).js`通过封装Scheduler的内容，对React提供两种调度入口函数：`scheduleCallback` 和 `scheduleSyncCallback`。任务通过调度入口函数进入调度过程。
 
 例如，fiber树的构建任务在concurrentMode下的任务通过`scheduleCallback`完成调度，在同步渲染模式的任务由`scheduleSyncCallback`完成。
@@ -162,7 +159,7 @@ function scheduleCallback(
 function scheduleSyncCallback(callback: SchedulerCallback) {
   if (syncQueue === null) {
     syncQueue = [callback];
-    // 以最高优先级去调度刷新同步队列的函数
+    // 以最高优先级去调度刷新syncQueue的函数
     immediateQueueCallbackNode = Scheduler_scheduleCallback(
       Scheduler_ImmediatePriority,
       flushSyncCallbackQueueImpl,
@@ -173,8 +170,58 @@ function scheduleSyncCallback(callback: SchedulerCallback) {
   return fakeCallbackNode;
 }
 ```
-## 开始调度
-通过上面一步步的梳理，我们可以确定，Scheduler中的scheduleCallback是调度流程开始的关键点。它负责生成调度任务、根据任务是否过期将任务放入timerQueue或taskQueue，然后分别请求调度。
+
+## Scheduler中的优先级
+说到优先级，我们来看一下Scheduler自己的优先级级别，它为任务定义了以下几种级别的优先级：
+```javascript
+export const NoPriority = 0; // 没有任何优先级
+export const ImmediatePriority = 1; // 立即执行的优先级，级别最高
+export const UserBlockingPriority = 2; // 用户阻塞级别的优先级
+export const NormalPriority = 3; // 正常的优先级
+export const LowPriority = 4; // 较低的优先级
+export const IdlePriority = 5; // 优先级最低，表示任务可以闲置
+
+```
+任务优先级的作用已经提到过，它是计算任务过期时间的重要依据，事关未过期任务在taskQueue中的排序。
+```javascript
+// 不同优先级对应的不同的任务过期时间间隔
+var IMMEDIATE_PRIORITY_TIMEOUT = -1;
+var USER_BLOCKING_PRIORITY_TIMEOUT = 250;
+var NORMAL_PRIORITY_TIMEOUT = 5000;
+var LOW_PRIORITY_TIMEOUT = 10000;
+// Never times out
+var IDLE_PRIORITY_TIMEOUT = maxSigned31BitInt;
+
+...
+
+// 计算过期时间（scheduleCallback函数中的内容）
+var timeout;
+switch (priorityLevel) {
+case ImmediatePriority:
+  timeout = IMMEDIATE_PRIORITY_TIMEOUT;
+  break;
+case UserBlockingPriority:
+  timeout = USER_BLOCKING_PRIORITY_TIMEOUT;
+  break;
+case IdlePriority:
+  timeout = IDLE_PRIORITY_TIMEOUT;
+  break;
+case LowPriority:
+  timeout = LOW_PRIORITY_TIMEOUT;
+  break;
+case NormalPriority:
+default:
+  timeout = NORMAL_PRIORITY_TIMEOUT;
+  break;
+}
+
+// startTime可暂且认为是当前时间
+var expirationTime = startTime + timeout;
+
+```
+
+## 调度入口 - scheduleCallback
+通过上面的梳理，Scheduler中的scheduleCallback是调度流程开始的关键点。它负责生成调度任务、根据任务是否过期将任务放入timerQueue或taskQueue，然后触发调度行为。
 具体的过程我写在注释中了，理解起来不困难。
 ```javascript
 function unstable_scheduleCallback(priorityLevel, callback, options) {
@@ -276,7 +323,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 ```
 这个过程中重点是任务过期与否的处理。
 
-针对未过期任务，会进入timerQueue，并按照开始时间排列，过期时间直接与任务的优先级挂钩。然后调用`requestHostTimeout`，为的是等一会，
+针对未过期任务，会进入timerQueue，并按照开始时间排列，然后调用`requestHostTimeout`，为的是等一会，
 等到了它的开始时间点，再去检查它是否过期，如果过期则放到taskQueue中，任务就可以被执行了。否则继续等。这个过程通过`handleTimeout`完成。
 
 `handleTimeout`的职责是：
@@ -287,19 +334,120 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 
 总之，要把timerQueue中的任务全部都转移到taskQueue中执行掉才行。
 
-针对已过期任务，在将它放入taskQueue之后，调用`requestHostCallback`，循环执行taskQueue。
+针对已过期任务，在将它放入taskQueue之后，调用`requestHostCallback`，调度者调度一个执行者，也就意味着调度流程开始。
 
-## 任务执行
-任务执行的起点是`requestHostCallback`。
+
+## 开始调度
+调用`requestHostCallback`进入调度流程，回顾上面scheduleCallback最终调用requestHostCallback执行任务的地方：
 ```javascript
-
 if (!isHostCallbackScheduled && !isPerformingWork) {
   isHostCallbackScheduled = true;
-  // 开始执行任务
+  // 开始进行调度
   requestHostCallback(flushWork);
 }
 ```
-本质上是通过调用`flushWork`循环taskQueue，逐一执行任务。我们暂且不管其他的，只看`flushWork`具体做了什么。
+它既然把`flushWork`作为入参，那么任务的**执行者**本质上就是`flushWork`.我们先不管执行者是如何执行任务的，先关注执行者是如何被调度的，
+这就需要看一下`requestHostCallback`的实现，找出**调度者**。
+
+Scheduler区分了浏览器环境和非浏览器环境，为`requestHostCallback`做了两套不同的实现。在非浏览器环境下，使用setTimeout实现.
+```javascript
+  requestHostCallback = function(cb) {
+    if (_callback !== null) {
+      setTimeout(requestHostCallback, 0, cb);
+    } else {
+      _callback = cb;
+      setTimeout(_flushCallback, 0);
+    }
+  };
+```
+在浏览器环境，用MessageChannel实现，关于MessageChannel的[介绍](https://developer.mozilla.org/zh-CN/docs/Web/API/MessageChannel)就不再赘述。
+```javascript
+
+  const channel = new MessageChannel();
+  const port = channel.port2;
+  channel.port1.onmessage = performWorkUntilDeadline;
+
+  
+  requestHostCallback = function(callback) {
+    scheduledHostCallback = callback;
+    if (!isMessageLoopRunning) {
+      isMessageLoopRunning = true;
+      port.postMessage(null);
+    }
+  };
+
+```
+之所以有两种实现，是因为非浏览器环境不存在屏幕刷新率，没有帧的概念，也就不会有时间片，它们在执行任务的时候有本质区别，非浏览器环境不判断任务执行时间是否超出了时间片限制，而浏览器环境会。除了这一点，
+虽然两种环境下实现方式不一样，但是做的事情大致相同。
+
+先看非浏览器环境，它将入参存储到内部的变量`_callback`上，然后调度`_flushCallback`去执行这个此时已经被赋值为执行者的变量_callback，taskQueue被清空。
+
+再看浏览器环境，它将入参存到内部的变量`scheduledHostCallback`上，然后通过MessageChannel的port去发送一个消息，让`channel.port1`的监听函数`performWorkUntilDeadline`得以执行。
+`performWorkUntilDeadline`内部会执行掉`scheduledHostCallback`，taskQueue被清空。
+
+通过上面的描述，可以很清楚得找出调度者：非浏览器环境是**setTimeout**，浏览器环境是**port.postMessage**。
+而两个环境的执行者也显而易见，前者是`_flushCallback`，后者是`performWorkUntilDeadline`，执行者做的事情都是去调用实际的任务执行函数。
+
+因为本文围绕Scheduler的时间片调度行为展开，所以主要探讨浏览器环境下的调度行为，performWorkUntilDeadline涉及到调用任务执行函数去执行任务，这个过程中会涉及任务的中断和恢复、
+任务完成状态的判断的实现。接下来的内容将重点对这两点进行讲解。
+
+## 任务执行 - 从performWorkUntilDeadline说起
+
+在文章开头的原理概述中提到过`performWorkUntilDeadline`作为执行者，它的作用是按照时间片的限制去中断任务，并通知调度者再次调度一个新的执行者去继续任务。按照这种认知去看它的实现，会很清晰。
+
+```javascript
+  const performWorkUntilDeadline = () => {
+    
+    if (scheduledHostCallback !== null) {
+      // 获取当前时间
+      const currentTime = getCurrentTime();
+
+      // 计算deadline，deadline会参与到
+      // shouldYieldToHost（根据时间片去限制任务执行）的计算中
+      deadline = currentTime + yieldInterval;
+      // hasTimeRemaining表示任务是否还有剩余时间，
+      // 它和时间片一起限制任务的执行。如果没有时间，
+      // 或者任务的执行时间超出时间片限制了，那么中断任务。
+
+      // 它的默认为true，表示一直有剩余时间
+      // 因为MessageChannel的port在postMessage，
+      // 是比setTimeout还靠前执行的宏任务，这意味着
+      // 在这一帧开始时，总是会有剩余时间
+      // 所以现在中断任务只看时间片的了
+      const hasTimeRemaining = true;
+      try {
+        // scheduledHostCallback去执行任务的函数，
+        // 当任务因为时间片被打断时，它会返回true，表示
+        // 还有任务，所以会再让调度者调度一个执行者
+        // 继续执行任务
+        const hasMoreWork = scheduledHostCallback(
+          hasTimeRemaining,
+          currentTime,
+        );
+       
+        if (!hasMoreWork) {
+          // 如果没有任务了，停止调度
+          isMessageLoopRunning = false;
+          scheduledHostCallback = null;
+        } else {
+          // 如果还有任务，继续让调度者调度执行者，便于继续
+          // 完成任务
+          port.postMessage(null);
+        }
+      } catch (error) {
+        port.postMessage(null);
+        throw error;
+      }
+    } else {
+      isMessageLoopRunning = false;
+    }
+    needsPaint = false;
+  };
+```
+
+`performWorkUntilDeadline`内部调用的是`scheduledHostCallback`，它早在开始调度的时候就被`requestHostCallback`赋值为了`flushWork`，具体可以翻到上面回顾一下`requestHostCallback`的实现。
+
+`flushWork`作为真正去执行任务的函数，它会循环taskQueue，逐一调用里面的任务函数。我们看一下`flushWork`具体做了什么。
 ```javascript
 function flushWork(hasTimeRemaining, initialTime) {
 
@@ -311,11 +459,9 @@ function flushWork(hasTimeRemaining, initialTime) {
 
 }
 ```
-它调用了`workLoop`，并将其调用的结果return了出去，那么现在任务执行的核心内容看来就在`workLoop`中了。要理解它，需要回顾Scheduler的功能之一：时间切片。时间切片使得任务的
-执行具备下面的这个重要特点：
+它调用了`workLoop`，并将其调用的结果return了出去，那么现在任务执行的核心内容看来就在`workLoop`中了。要理解它，需要回顾Scheduler的功能之一：时间片。时间片使得任务的
+执行具备下面的重要特点：
 **任务会被中断，也会被恢复。**
-
-
 
 所以不难推测出，`workLoop`作为实际执行任务的函数，它做的事情肯定与任务的中断恢复有关。我们先看一下workLoop的结构
 ```javascript
@@ -345,7 +491,8 @@ function workLoop(hasTimeRemaining, initialTime) {
 
   if (currentTask !== null) {
     // 如果currentTask不为空，说明是时间片的限制导致了任务中断
-    // return true告诉外部，此时任务还未执行完
+    // return 一个 true告诉外部，此时任务还未执行完，还有任务，
+    // 翻译成英文就是hasMoreWork
     return true;
   } else {
     // 如果currentTask为空，说明taskQueue队列中的任务已经都
@@ -363,7 +510,7 @@ function workLoop(hasTimeRemaining, initialTime) {
   }
 }
 ```
-workLoop中可以分为两大部分： 循环taskQueue执行任务 和 任务状态的判断。
+workLoop中可以分为两大部分：循环taskQueue执行任务 和 任务状态的判断。
 
 **循环taskQueue执行任务**
 
@@ -375,20 +522,48 @@ if (currentTask.expirationTime > currentTime &&
    break
 }
 ```
-currentTask就是当前正在执行的任务，它中止的判断条件是：任务并未过期，但已经没有剩余时间了，或者应该让出执行权给主线程（时间片），也就是说currentTask执行得好好的，可是时间不允许，
+currentTask就是当前正在执行的任务，它中止的判断条件是：任务并未过期，但已经没有剩余时间了（由于hasTimeRemaining一直为true，我们忽略这个判断条件，只看时间片），
+或者应该让出执行权给主线程（时间片的限制），也就是说currentTask执行得好好的，可是时间不允许，
 那只能先break掉本次while循环，使得本次循环下面currentTask执行的逻辑都不能被执行到（**此处是中断任务的关键**）。但是被break的只是while循环，while下部还是会判断currentTask的状态。
 由于它只是被中止了，所以currentTask不可能是null，那么会return一个true告诉外部还没完事呢（**此处是恢复任务的关键**），否则说明全部的任务都已经执行完了，taskQueue已经被清空了，
-return一个false好让外部终止本次调度。
+return一个false好让外部终止本次调度。而workLoop的执行结果会被flushWork return出去，flushWork又是scheduledHostCallback。
+
+回顾`performWorkUntilDeadline`中的行为，可以很清晰地将任务中断恢复的机制串联起来：
+
+```javascript
+  const performWorkUntilDeadline = () => {
+    
+    ...
+  
+    const hasTimeRemaining = true;
+    // scheduledHostCallback去执行任务的函数，
+    // 当任务因为时间片被打断时，它会返回true，表示
+    // 还有任务，所以会再让调度者调度一个执行者
+    // 继续执行任务
+    const hasMoreWork = scheduledHostCallback(
+      hasTimeRemaining,
+      currentTime,
+    );
+ 
+    if (!hasMoreWork) {
+      // 如果没有任务了，停止调度
+      isMessageLoopRunning = false;
+      scheduledHostCallback = null;
+    } else {
+      // 如果还有任务，继续让调度者调度执行者，便于继续
+      // 完成任务
+      port.postMessage(null);
+    }
+  };
+```
+当任务被打断之后，会再让调度者调用一个执行者，继续执行这个任务，直到任务完成。但是这里有一个重点是如何判断该任务是否完成呢？这就需要研究`workLoop`中执行任务的那部分逻辑。
 
 ## 判断单个任务完成状态
-在当前帧的时间内（一般为16ms），任务执行的最大执行时间不会超过单个时间片的长度，一旦超时，必须中断，让位给更重要的工作，例如浏览器为了响应用户输入的绘制工作，
-直到这一帧完成，才在下一帧继续这个任务，能这样做的前提是知道任务在上一帧被中断时并未完成，才能做到在下一帧继续执行任务。这就需要判断任务的完成状态。
+一个任务就是一个函数，在`workLoop`中，完成一项任务的方式是重复执行任务函数，直到它完成。这里除了判断任务完成这个重点之外，还有一个关键点：**重复执行任务函数**。
 
-一个任务就是一个函数，如果这项任务没完成，是要重复执行这个函数的，直到它完成。这里有两个关键点：**重复执行任务函数、识别任务完成**。
-
-我们可以用递归函数做类比，如果没到递归边界，就重复调用自己。这个递归边界，就是任务完成的标志。因为递归函数所处理的任务就是它本身，可以很方便地把任务完成作为递归边界去结束任务，但是Scheduler与递归不同的是，
-它只是一个执行者，调度的任务并不是它自己产生的，而是外部的（比如它去调度React的工作循环渲染fiber树），它可以做到重复执行任务函数，但边界（即任务是否完成）却无法像递归那样直接获取，
-只能依赖任务函数的返回值去判断。即：**若任务函数返回值为函数，那么就说明当前任务尚未完成，需要继续调用任务函数，否则停止调用**
+我们可以用递归函数做类比，如果没到递归边界，就重复调用自己。这个递归边界，就是任务完成的标志。因为递归函数所处理的任务就是它本身，可以很方便地把任务完成作为递归边界去结束任务，
+但是Scheduler中的`workLoop`与递归不同的是，它只是一个执行任务的，这个任务并不是它自己产生的，而是外部的（比如它去执行React的工作循环渲染fiber树），它可以做到重复执行任务函数，
+但边界（即任务是否完成）却无法像递归那样直接获取，只能依赖任务函数的返回值去判断。即：**若任务函数返回值为函数，那么就说明当前任务尚未完成，需要继续调用任务函数，否则任务完成**
 
 例如下面的例子，有一个任务calculate，负责把currentResult每次加1，一直到3为止。当没到3的时候，calculate不是去调用它自身，而是将自身return出去，一旦到了3，return的是null。这样外部才可以知道
 calculate是否已经完成了任务。
@@ -472,32 +647,78 @@ scheduleCallback(calculate, 1)
 任务完成，最终的 currentResult 是 3
 ```
 
-
-
-
-
-
-
-
-在Scheduler中，任务的中止和恢复在支持MessageChannel的环境中是
-
+这个例子简单阐释了`workLoop`执行任务时对于任务状态的判断，现在我们回到`workLoop`中，看一看真正的实现：
 ```javascript
-  const channel = new MessageChannel();
-  const port = channel.port2;
-  channel.port1.onmessage = performWorkUntilDeadline;
+function workLoop(hasTimeRemaining, initialTime) {
+  let currentTime = initialTime;
+  // 开始执行前检查一下timerQueue中的过期任务，
+  // 放到taskQueue中
+  advanceTimers(currentTime);
+  // 获取taskQueue中最紧急的任务
+  currentTask = peek(taskQueue);
 
-  requestHostCallback = function(callback) {
-    scheduledHostCallback = callback;
-    if (!isMessageLoopRunning) {
-      isMessageLoopRunning = true;
-      port.postMessage(null);
+  // 循环taskQueue，执行任务
+  while (
+    currentTask !== null &&
+    !(enableSchedulerDebugging && isSchedulerPaused)
+  ) {
+    if (
+      currentTask.expirationTime > currentTime &&
+      (!hasTimeRemaining || shouldYieldToHost())
+    ) {
+      // 时间片的限制，中断任务
+      break;
     }
-  };
+    // 执行任务 ---------------------------------------------------
+    // 获取任务的执行函数，这个callback就是React传给Scheduler
+    // 的任务。例如：performConcurrentWorkOnRoot
+    const callback = currentTask.callback;
+    if (typeof callback === 'function') {
+      // 如果执行函数为function，说明还有任务可做，调用它
+      currentTask.callback = null;
+      // 获取任务的优先级
+      currentPriorityLevel = currentTask.priorityLevel;
+      // 任务是否过期
+      const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
+      // 获取任务函数的执行结果
+      const continuationCallback = callback(didUserCallbackTimeout);
 
+      if (typeof continuationCallback === 'function') {
+        // 检查callback的执行结果返回的是不是函数，如果返回的是函数，则将这个函数作为当前任务新的回调。
+        // concurrent模式下，callback是performConcurrentWorkOnRoot，其内部根据当前调度的任务
+        // 是否相同，来决定是否返回自身，如果相同，则说明还有任务没做完，返回自身，其作为新的callback
+        // 被放到当前的task上。while循环完成一次之后，检查shouldYieldToHost，如果需要让出执行权，
+        // 则中断循环，走到下方，判断currentTask不为null，返回true，说明还有任务，回到performWorkUntilDeadline
+        // 中，判断还有任务，继续port.postMessage(null)，调用监听函数performWorkUntilDeadline（执行者），
+        // 继续执行任务
+        currentTask.callback = continuationCallback;
+      } else {
+        if (currentTask === peek(taskQueue)) {
+          pop(taskQueue);
+        }
+      }
+      advanceTimers(currentTime);
+    } else {
+      pop(taskQueue);
+    }
+    currentTask = peek(taskQueue);
+  }
+  // return 的结果会作为 performWorkUntilDeadline 
+  // 中判断是否还需要再次发起调度的依据
+  if (currentTask !== null) {
+    return true;
+  } else {
+    // 若任务完成，去timerQueue中找需要最早开始执行的那个任务
+    // 调度requestHostTimeout，目的是等到了它的开始事件时把它
+    // 放到taskQueue中，再次调度
+    const firstTimer = peek(timerQueue);
+    if (firstTimer !== null) {
+      requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
+    }
+    return false;
+  }
+}
 ```
-
-
-
 
 
 # 取消调度

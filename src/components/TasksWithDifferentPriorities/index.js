@@ -55,7 +55,7 @@ class TasksWithDifferentPriorities extends React.Component {
           )}
         </div>
       </div>
-      {/*      <div className="drag-wrapper">
+      <div className="drag-wrapper">
         <p>坐标{dragX}，{dragY}</p>
         <div
           id="drag-element"
@@ -64,7 +64,7 @@ class TasksWithDifferentPriorities extends React.Component {
         >
           拖拽
         </div>
-      </div>*/}
+      </div>
 
     </div>
   }
