@@ -69,15 +69,14 @@ Scheduler管理着taskQueue和timerQueue两个队列，它会定期将timerQueue
 这里面有一个关键点，就是执行者如何知道这个任务到底完成没完成呢？这是另一个话题了，也就是判断任务的完成状态。下面在讲解执行者的执行细节时会重点突出。
 
 
-以上是Scheduler原理的概述，下面开始是对React和Scheduler联合工作机制的详细解读。涉及React与Scheduler的连接、调度入口、任务优先级、任务过期时间、调度通知、任务执行、判断任务的完成状态等内容，
-你可以用下面的内容梳理出一个React任务的完整调度流程。
+以上是Scheduler原理的概述，下面开始是对React和Scheduler联合工作机制的详细解读。涉及React与Scheduler的连接、调度入口、任务优先级、任务过期时间、任务中断和恢复、判断任务的完成状态等内容。
 
 
 # 详细流程
 
 在开始之前，我们先看一下React和Scheduler它们二者构成的一个系统的示意图。
 
-![](http://neroht.com/ReactSchedulerFlowChart.jpg)
+![](http://neroht.com/ReactSchedulerFlowChartImage.jpg)
 
 整个系统分为三部分：
 * 产生任务的地方：React
@@ -221,8 +220,33 @@ var expirationTime = startTime + timeout;
 ```
 
 ## 调度入口 - scheduleCallback
-通过上面的梳理，Scheduler中的scheduleCallback是调度流程开始的关键点。它负责生成调度任务、根据任务是否过期将任务放入timerQueue或taskQueue，然后触发调度行为。
-具体的过程我写在注释中了，理解起来不困难。
+通过上面的梳理，Scheduler中的scheduleCallback是调度流程开始的关键点。
+
+在进入这个调度入口之前，我们先来认识一下Scheduler中的任务是什么形式：
+```javascript
+  var newTask = {
+    id: taskIdCounter++,
+    // 任务函数
+    callback,
+    // 任务优先级
+    priorityLevel,
+    // 任务开始的时间
+    startTime,
+    // 任务的过期时间
+    expirationTime,
+    // 在小顶堆队列中排序的依据
+    sortIndex: -1,
+  };
+```
+* callback：真正的任务函数，重点，也就是外部传入的任务函数，例如构建fiber树的任务函数：performConcurrentWorkOnRoot
+* priorityLevel：任务优先级，参与计算任务过期时间
+* startTime：表示任务开始的时间，影响它在timerQueue中的排序
+* expirationTime：表示任务何时过期，影响它在taskQueue中的排序
+* sortIndex：在小顶堆队列中排序的依据，在区分好任务是过期或非过期之后，sortIndex会被赋值为expirationTime或startTime，为两个小顶堆的队列（taskQueue,timerQueue）提供排序依据
+
+真正的重点是**callback**，作为任务函数，它的执行结果会影响到任务完成状态的判断，后面我们会讲到，暂时先无需关注。现在我们先来看看`scheduleCallback`做的事情：**它负责生成调度任务、
+根据任务是否过期将任务放入timerQueue或taskQueue，然后触发调度行为，让任务进入调度**。完整代码如下：
+
 ```javascript
 function unstable_scheduleCallback(priorityLevel, callback, options) {
   // 获取当前时间，它是计算任务开始时间、过期时间和判断任务是否过期的依据
@@ -271,7 +295,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
   // 创建调度任务
   var newTask = {
     id: taskIdCounter++,
-    // 任务本体
+    // 真正的任务函数，重点
     callback,
     // 任务优先级
     priorityLevel,
@@ -638,7 +662,7 @@ const workLoop = () => {
     } else {
         // 任务完成。将当前的这个任务从taskQueue中移除，并清除定时器
         console.log('任务完成，最终的 currentResult 是', currentResult);
-        taskQueue.unshift()
+        taskQueue.shift()
         clearInterval(interval)
     }
 }
@@ -653,7 +677,8 @@ scheduleCallback(calculate, 1)
 正在执行任务，当前的currentResult 是 3
 任务完成，最终的 currentResult 是 3
 ```
-这个例子只抽离出了workLoop中判断任务完成状态的逻辑，现在让我们加上决定任务中断后被恢复的逻辑，完整地看一下它真正的实现：
+可见，如果没有加到3，那么calculate会return它自己，让workLoop继续调用自己完成任务。这个例子只保留了workLoop中判断任务完成状态的逻辑，其余的地方有并不完善，要以真正的的workLoop为准，
+现在让我们贴出全部代码，完整地看一下它真正的实现：
 ```javascript
 function workLoop(hasTimeRemaining, initialTime) {
   let currentTime = initialTime;
@@ -709,6 +734,9 @@ function workLoop(hasTimeRemaining, initialTime) {
     } else {
       pop(taskQueue);
     }
+    // 从taskQueue中继续获取任务，如果上一个任务未完成，那么它将不会
+    // 被从队列剔除，所以获取到的currentTask还是上一个任务，会继续
+    // 去执行它
     currentTask = peek(taskQueue);
   }
   // return 的结果会作为 performWorkUntilDeadline 
@@ -728,7 +756,11 @@ function workLoop(hasTimeRemaining, initialTime) {
 }
 ```
 
-这里有一个点需要提一下，就是构建fiber树的任务函数：`performConcurrentWorkOnRoot`，它接受的参数是fiberRoot。
+总结一下判断任务完成状态与任务执行的整体关系：当开始调度后，调度者调度执行者去执行任务，实际上是执行任务上的callback。如果执行者判断callback返回值为一个function，说明未完成，
+那么会将返回的这个function再次赋值给任务的callback，由于他还没执行完，并不会被剔除出taskQueue，currentTask获取到的还是它，所以while循环到下一次还是会继续执行这个任务，直到任务完成出队，
+才会继续下一个。
+
+有一个点需要提一下，就是构建fiber树的任务函数：`performConcurrentWorkOnRoot`，它接受的参数是fiberRoot。
 ```javascript
 function performConcurrentWorkOnRoot(root) {
   ...
@@ -774,12 +806,65 @@ runTest()(false)
 // 结果：root false
 ```
 
-总结一下判断任务完成状态与任务执行的整体关系：当开始调度后，调度者调度执行者去执行任务，一旦执行者判断任务未完成，会再去让调度者调用一个新的执行者，由于任务未完成，所以它不会从taskQueue中剔除出去，所一当前做的还是那个任务，
-本质上是重复调用任务函数，类似递归。
-
+以上，是Scheduler执行任务时的两大核心逻辑：任务的中断与恢复 & 任务完成状态的判断。它们协同合作，若任务未完成就中断了任务，那么调度的新执行者会恢复执行该任务，直到它完成。到此，Scheduler的
+核心部分已经写完了，下面是取消调度的逻辑。
 
 # 取消调度
+通过上面的内容我们直到，任务执行实际上是执行的任务的callback，当callback是function的时候去执行它，当它为null的时候会发生什么？当前的任务会被剔除出taskQueue，
+让我们再来看一下workLoop函数：
+```javascript
+function workLoop(hasTimeRemaining, initialTime) {
+  ...
 
-# 任务执行
+  // 获取taskQueue中最紧急的任务
+  currentTask = peek(taskQueue);
+  while (currentTask !== null) {
+    ...
+    const callback = currentTask.callback;
 
+    if (typeof callback === 'function') {
+      // 执行任务
+    } else {
+      // 如果callback为null，将任务出队
+      pop(taskQueue);
+    }
+    currentTask = peek(taskQueue);
+  }
+  ...
+}
+```
+所以取消调度的关键就是将当前这个任务的callback设置为null。
+```javascript
+function unstable_cancelCallback(task) {
 
+  ...
+
+  task.callback = null;
+}
+
+```
+为什么设置callback为null就能取消任务调度呢？因为在workLoop中，如果callback是null会被移出taskQueue，所以当前的这个任务就不会再被执行了。它取消的是当前任务的执行，
+while循环还会继续执行下一个任务。
+
+取消任务在React的场景是什么呢？当一个更新任务正在进行的时候，突然有高优先级任务进来了，那么就要取消掉这个正在进行的任务，这只是众多场景中的一种。
+```javascript
+function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
+
+  ...
+
+  if (existingCallbackNode !== null) {
+    const existingCallbackPriority = root.callbackPriority;
+    if (existingCallbackPriority === newCallbackPriority) {
+      return;
+    }
+    // 取消掉原有的任务
+    cancelCallback(existingCallbackNode);
+  }
+    
+  ...
+}
+```
+
+# 总结
+Scheduler用任务优先级去实现多任务的管理，优先解决高优任务，用任务的持续调度来解决时间片造成的单个任务中断恢复问题。任务函数的执行结果为是否结束当前任务的调度提供参考，
+在有限的时间片内完成任务的一部分，为浏览器响应交互与完成任务提供了保障。
