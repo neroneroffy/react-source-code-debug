@@ -9,6 +9,7 @@ import Diff from './components/Diff'
 import PropsDiff from './components/PropsDiff'
 import Hooks from "./components/Hooks";
 import EventDemo from "./components/EventDemo";
+import ContextDemo from "./components/Context";
 import './App.css';
 
 // propsDiff
@@ -35,7 +36,10 @@ function App() {
   // return <SchedulerTask/>
 
   // 高优先级插队
-  return <TasksWithDifferentPriorities/>
+  // return <TasksWithDifferentPriorities/>
+
+  // context
+  return <ContextDemo/>
 
   // diff 算法
   // return <Diff ref={'diffRef'}/>

@@ -195,6 +195,7 @@ export function propagateContextChange(
 
     // Visit this fiber.
     const list = fiber.dependencies;
+    console.log('list', list);
     if (list !== null) {
       nextFiber = fiber.child;
 

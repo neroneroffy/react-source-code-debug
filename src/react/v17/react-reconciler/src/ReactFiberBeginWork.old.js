@@ -3104,7 +3104,6 @@ function beginWork(
       );
     }
   }
-
   if (current !== null) {
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
@@ -3123,6 +3122,7 @@ function beginWork(
       // This fiber does not have any pending work. Bailout without entering
       // the begin phase. There's still some bookkeeping we that needs to be done
       // in this optimized path, mostly pushing stuff onto the stack.
+
       switch (workInProgress.tag) {
         case HostRoot:
           pushHostRootContext(workInProgress);

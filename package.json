@@ -69,7 +69,7 @@
     "dev:17.0.0-alpha.0": "cross-env REACT_VERSION=v17.0.0-alpha.0 node scripts/start.js",
     "dev:17": "cross-env REACT_VERSION=v17 node scripts/start.js",
     "dev:lanes": "cross-env REACT_VERSION=Lanes node scripts/start.js",
-    "dev": "npm run dev:17.0.0-alpha.0",
+    "dev": "npm run dev:17",
     "build": "node scripts/build.js",
     "test": "node scripts/test.js"
   },
