@@ -218,7 +218,7 @@ export const NoLanePriority: LanePriority = 0;
 期时间对更新任务进行小顶堆排序，保证高优任务先执行。
 
 调度优先级由**调度任务的优先级**计算得出，在更新真正发起调度之前，会去计算调度优先级。
-```
+```javascript
 export function lanePriorityToSchedulerPriority(
   lanePriority: LanePriority,
 ): ReactPriorityLevel {
