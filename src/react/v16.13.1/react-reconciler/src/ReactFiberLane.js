@@ -331,12 +331,10 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
       位置P在nextLanes最左侧的1（非0位）的左边一位，所以P右侧的那些1肯定包含nextLanes
       中的1的位置，例如：
       nextLanes为-------- 0b001100
-      计算结果 ---------- 0b001111
+      计算结果  ---------- 0b001111
       证明了equalOrHigherPriorityLanes中的优先级相对于nextLanes相等或较高
     * */
   } else {
-    // 如果任务都没有过期，就检查这些任务里有没有被挂起的任务，如果有挂起的任务，
-    // nextLanes就被赋值成挂起的任务里优先级最高的。
     // Do not work on any idle work until all the non-idle work has finished,
     // even if the work is suspended.
     // 即使具有优先级的任务被挂起，也不要处理空闲的任务，除非有优先级的任务都被处理完了
@@ -346,27 +344,28 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
     //
     // 不为空的话，把被挂起任务的优先级踢出去，只剩下那些真正待处理的任务的优先级集合。
     // 然后从这些优先级里找出最紧急的return出去。如果已经将挂起任务优先级踢出了之后还是
-    // 为空，那么就说明需要处理这些被挂起的任务了。将它们重启。pingedLanes是那些需要
-    // 重启的任务的优先级
+    // 为空，那么就说明需要处理这些被挂起的任务了。将它们重启。pingedLanes是那些被挂起
+    // 任务的优先级
 
     const nonIdlePendingLanes = pendingLanes & NonIdleLanes;
     if (nonIdlePendingLanes !== NoLanes) {
       const nonIdleUnblockedLanes = nonIdlePendingLanes & ~suspendedLanes;
-      // 未被阻塞的lanes，它等于有优先级的lanes中除去被挂起的lanes
+      // nonIdleUnblockedLanes也就是未被阻塞的那些lanes，它等于所有未闲置的lanes中除去被挂起的那些lanes
       // & ~ 相当于删除
 
-      // 如果有任务被阻塞了
+      // nonIdleUnblockedLanes不为空，说明如果有任务需要被处理。
       if (nonIdleUnblockedLanes !== NoLanes) {
-        // 那么从这些被阻塞的任务中挑出最重要的
+        // 那么从这些任务中挑出最重要的
         nextLanes = getHighestPriorityLanes(nonIdleUnblockedLanes);
         nextLanePriority = return_highestLanePriority;
+
         // return_updateRangeEnd 在上边调用getHighestPriorityLanes时候已经被赋值成了
-        // 最高优先级（如“0b0000000000000000000000000011100”）从右数到最左侧的非零
-        // 位的位置（如上边的优先级，return_updateRangeEnd就是5）
+        // nonIdleUnblockedLanes 中的最高优先级（如“0b0000000000000000000000000011100”）
+        // 从右数到最左侧的非零位的位置（如上边的优先级，return_updateRangeEnd就是5）
         // equalOrHigherPriorityLanes依然计算的是相对于nextLanes相等或较高的优先级
         equalOrHigherPriorityLanes = (1 << return_updateRangeEnd) - 1;
       } else {
-        // 如果没有任务被阻塞，从正在处理的lanes中找到优先级最高的
+        // 如果目前没有任务需要被处理，就从正在那些被挂起的lanes中找到优先级最高的
         const nonIdlePingedLanes = nonIdlePendingLanes & pingedLanes;
         if (nonIdlePingedLanes !== NoLanes) {
           nextLanes = getHighestPriorityLanes(nonIdlePingedLanes);
@@ -376,7 +375,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
       }
     } else {
       // The only remaining work is Idle.
-      // 剩下的任务是闲置的优先级不高的任务。unblockedLanes是未被阻塞的闲置任务
+      // 剩下的任务是闲置的任务。unblockedLanes是闲置任务的lanes
       const unblockedLanes = pendingLanes & ~suspendedLanes;
       if (unblockedLanes !== NoLanes) {
         // 从这些未被阻塞的闲置任务中挑出最重要的
@@ -384,7 +383,7 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
         nextLanePriority = return_highestLanePriority;
         equalOrHigherPriorityLanes = (1 << return_updateRangeEnd) - 1;
       } else {
-        // pingedLanes中已经都是那些闲置的，优先级不高的任务了
+        // 找到被挂起的那些任务中优先级最高的
         if (pingedLanes !== NoLanes) {
           nextLanes = getHighestPriorityLanes(pingedLanes);
           nextLanePriority = return_highestLanePriority;
@@ -395,13 +394,14 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   }
 
   if (nextLanes === NoLanes) {
+    // 找了一圈之后发现nextLanes是空的，return一个空
     // This should only be reachable if we're suspended
     // TODO: Consider warning in this path if a fallback timer is not scheduled.
     return NoLanes;
   }
 
   // If there are higher priority lanes, we'll include them even if they are suspended.
-  // 如果有更高优先级的lanes，即使它们被暂停，也会被包含在内。
+  // 如果有更高优先级的lanes，即使它们被挂起，也会放到nextLanes里。
   nextLanes = pendingLanes & equalOrHigherPriorityLanes;
   // nextLanes 实际上是待处理的lanes中优先级较高的那些lanes
 
@@ -410,9 +410,9 @@ export function getNextLanes(root: FiberRoot, wipLanes: Lanes): Lanes {
   // higher priority.
   /*
    * 翻译：如果已经在渲染过程中，切换lanes会中断渲染，将会丢失进程。
-   * 只有在新lanes有更高优先级的情况下，才应该这样做。（只有在高优先级的任务插队时，才会这样做？）
+   * 只有在新lanes有更高优先级的情况下，才应该这样做。（只有在高优先级的任务插队时，才会这样做）
    *
-   * 如果正在渲染，而且新任务的优先级不足，那么不管它，继续往下渲染，只有在新的优先级比当前的正在
+   * 理解：如果正在渲染，但是新任务的优先级不足，那么不管它，继续往下渲染，只有在新的优先级比当前的正在
    * 渲染的优先级高的时候，才去打断（高优先级任务插队）
   * */
   if (
@@ -512,9 +512,11 @@ export function markStarvedLanesAsExpired(
   // it as expired to force it to finish.
 
   // 遍历待处理的lanes，检查是否到了过期时间，如果过期，
-  // 将这个更新视为被占用并把它们标记成过期，强制更新
+  // 将这个更新视为饥饿状态并把它们标记成过期，强制更新
   let lanes = pendingLanes;
   while (lanes > 0) {
+    // pickArbitraryLaneIndex是找到lanes中最靠左的那个1在lanes中的index
+    // 意味着标记饥饿lane是从优先级最低的部分开始的
     const index = pickArbitraryLaneIndex(lanes);
     // console.log(index);
     //       1 = 0b0000000000000000000000000000001
@@ -536,6 +538,8 @@ export function markStarvedLanesAsExpired(
       ) {
         // Assumes timestamps are monotonically increasing.
         // 将时间戳视为单调递增的
+
+        // 实际上这里是在计算当前lane的过期时间
         expirationTimes[index] = computeExpirationTime(lane, currentTime);
       }
     } else if (expirationTime <= currentTime) {
@@ -543,7 +547,7 @@ export function markStarvedLanesAsExpired(
       // 已经过期，将lane并入到expiredLanes中，实现了将lanes标记为过期
       root.expiredLanes |= lane;
     }
-    // 将lane从lanes中删除，每循环一次删除一个，直到lanes清空成0
+    // 将lane从lanes中删除，每循环一次删除一个，直到lanes清空成0，结束循环
     lanes &= ~lane;
     // 此时 lanes = 0b0000000000000000000000000010100
   }
@@ -705,7 +709,7 @@ function findLane(start, end, skipLanes) {
 
 function getLowestPriorityLane(lanes: Lanes): Lane {
   // This finds the most significant non-zero bit.
-  // 找到最重要的非零位
+  // 找到最重要的非零位，实际上就是找到lanes中优先级最低的那一个
   /**
    * @From MDN https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32
    * Math.clz32() 函数返回一个数字在转换成 32 无符号整形数字的二进制形式后,
@@ -726,6 +730,7 @@ export function pickArbitraryLane(lanes: Lanes): Lane {
 }
 
 function pickArbitraryLaneIndex(lanes: Lane | Lanes) {
+  // 找到lanes中优先级最低的lane(最靠左的那个1的index)
   return 31 - clz32(lanes);
 }
 
@@ -786,7 +791,8 @@ export function markRootUpdated(root: FiberRoot, updateLane: Lane) {
   // it's not practical to try every single possible combination. We need a
   // heuristic to decide which lanes to attempt to render, and in which batches.
   // For now, we use the same heuristic as in the old ExpirationTimes model:
-  // retry any lane at equal or lower priority, but don't try updates at higher priority without also including the lower priority updates. This works well
+  // retry any lane at equal or lower priority, but don't try updates at higher
+  // priority without also including the lower priority updates. This works well
   // when considering updates across different priority levels, but isn't
   // sufficient for updates within the same priority, since we want to treat
   // those updates as parallel.

@@ -699,6 +699,10 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // Check if there's an existing task. We may be able to reuse it.
   if (existingCallbackNode !== null) {
     const existingCallbackPriority = root.callbackPriority;
+    // 当某一优先级任务正在渲染时，进来一个低优先级的任务，恰好这两个任务的优先级
+    // 是两个不同的级别，理论上，前者的优先级获取到的callbackPriority是一个，后者的优先级获取到的callbackPriority是另一个，二者肯定不相同。
+    // 但是，getHighestPriorityLanes总会获取到这一批lanes里最高的lane，所以获取到的callbackPriority总是高优先级任务的，低优先级任务的callbackPriority
+    // 无法获取到。也就是说，callbackPriority总是取高优先级任务的，所以低优先级任务无法打断高优先级任务，但反过来却可以。
     if (existingCallbackPriority === newCallbackPriority) {
       // The priority hasn't changed. We can reuse the existing task. Exit.
       return;
@@ -1586,6 +1590,9 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
     markRenderStarted(lanes);
   }
 
+  // 时间片打断一次，break一次
+  // 意味着如果被break了，走到下面的代码了
+  // 就说明是被时间片打断任务了，或者fiber树直接构建完了
   do {
     try {
       workLoopConcurrent();
@@ -1609,6 +1616,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
   }
 
   // Check if the tree has completed.
+  // workInProgress 不为null，说明是被时间片打断的，任务尚未完成
   if (workInProgress !== null) {
     // Still work remaining.
     if (enableSchedulingProfiler) {
