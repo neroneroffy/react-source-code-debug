@@ -709,7 +709,7 @@ function findLane(start, end, skipLanes) {
 
 function getLowestPriorityLane(lanes: Lanes): Lane {
   // This finds the most significant non-zero bit.
-  // 找到最重要的非零位，实际上就是找到lanes中优先级最低的那一个
+  // 找到lanes中优先级最低的那一个
   /**
    * @From MDN https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32
    * Math.clz32() 函数返回一个数字在转换成 32 无符号整形数字的二进制形式后,
