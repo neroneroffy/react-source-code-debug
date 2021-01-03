@@ -34,7 +34,9 @@ class TasksWithDifferentPriorities extends React.Component {
   }
   onBeginTask = () => {
     const button = this.buttonRef.current
-    setTimeout( () => this.setState( { count: 1 } ), 500 )
+    setTimeout( () => this.setState( prevState => {
+      return { count: prevState.count + 1 }
+    } ), 500 )
     setTimeout( () => button.click(), 600)
   }
   onDragHandler = e => {
