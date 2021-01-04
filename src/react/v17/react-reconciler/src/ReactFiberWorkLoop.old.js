@@ -412,6 +412,12 @@ export function requestUpdateLane(fiber: Fiber): Lane {
     // This behavior is only a fallback. The flag only exists until we can roll
     // out the setState warning, since existing code might accidentally rely on
     // the current behavior.
+    /** 直译
+     * 这是一个渲染阶段的更新。这些都不受官方支持。旧的做法是给当前呈现的内容相同的“线程”(过期时间)。
+     * 如果你在一个组件上调用setState，它会刷新。理想情况下，我们希望删除特殊情况，并将它们视为来
+     * 自交叉事件。无论如何，此模式不受官方支持。这种行为只是一种退路。因为现有代码可能会意外地依赖
+     * 于当前行为，所以该标志只在我们可以推出setState警告之前存在。
+     * */
     return pickArbitraryLane(workInProgressRootRenderLanes);
   }
 
@@ -429,6 +435,29 @@ export function requestUpdateLane(fiber: Fiber): Lane {
   // Our heuristic for that is whenever we enter a concurrent work loop.
   //
   // We'll do the same for `currentEventPendingLanes` below.
+  /** 直译
+   * 对于同一事件中具有相同优先级的所有更新，分配更新给lane的算法应该是稳定的。要做到这一点，
+   * 算法的输入必须是相同的。例如，我们使用“renderLanes”来避免选择已经在渲染中的lane。但是，
+   * “included”的lane可能会在同一事件的更新之间发生变化，比如在' flushSync '中执行更新。或者
+   * 任何其他可能调用" prepareFreshStack "的代码中。我们使用的技巧是将这些输入中的第
+   * 一个缓存到一个事件中。然后在确定事件结束后重置缓存的值。我们的启发式是当我们进入一个并
+   * 发的工作循环时。我们将对下面的' currentEventPendingLanes '做同样的操作。
+   *
+   * 如下代码：
+   * onClick = () => {
+   *     this.setState({ count: 1 })
+   *     this.setState({ count: 2 })
+   * }
+   * 在React17 和 16版本的行为是不一样的，16版本会将两次setState合并，只发起一次调度，而17则会发起两次
+   * 但因为两个setState都来自于同一事件，这意味着它们有相同的事件优先级，第一个setState会发起一次调度，
+   * 第二个也会发起一次，但是当第二次计算出的lane无论如何优先级都会低于第一次，在调度的关键
+   * 函数ensureRootIsScheduled中，如果新任务的优先级小于等于当前正在渲染的优先级，那么会直接中止新任务
+   * 继续调度，复用高优先级的任务，将低优先级的更新一并完成
+   *
+   * workInProgressRootIncludedLanes就是本次计算lane时之前已经存在的lane，可以理解为上边例子的第一个
+   * setState计算出的lane，它会参与第二次setState的lane的计算，使得新lane的位在已有lane位的左边，即优先级
+   * 低于已有的lane
+   * */
   if (currentEventWipLanes === NoLanes) {
     currentEventWipLanes = workInProgressRootIncludedLanes;
   }
@@ -446,6 +475,8 @@ export function requestUpdateLane(fiber: Fiber): Lane {
 
   // TODO: Remove this dependency on the Scheduler priority.
   // To do that, we're replacing it with an update lane priority.
+  // 先前事件优先级已经内化为scheduler的优先级，并记录下来了，这一步是获取这个记录下来的优先级
+  // 为计算lane做准备
   const schedulerPriority = getCurrentPriorityLevel();
 
   // The old behavior was using the priority level of the Scheduler.
@@ -485,7 +516,7 @@ export function requestUpdateLane(fiber: Fiber): Lane {
         }
       }
     }
-
+    // 根据优先级和已有的lane去计算新的lane
     lane = findUpdateLane(schedulerLanePriority, currentEventWipLanes);
   }
 

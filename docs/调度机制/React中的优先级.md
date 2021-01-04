@@ -118,7 +118,7 @@ export function requestUpdateLane(
 ): Lane {
 
   ...
-  // 获取事件优先级
+  // 根据记录下的事件优先级，获取任务调度优先级
   const schedulerPriority = getCurrentPriorityLevel();
 
   let lane;
