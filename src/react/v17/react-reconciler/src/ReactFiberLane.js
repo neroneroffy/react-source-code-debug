@@ -807,6 +807,8 @@ export function markRootUpdated(
   updateLane: Lane,
   eventTime: number,
 ) {
+
+  // 将本次更新的lane放入root的pendingLanes
   root.pendingLanes |= updateLane;
 
   // TODO: Theoretically, any update to any lane can unblock any other lane. But
@@ -819,25 +821,38 @@ export function markRootUpdated(
   // sufficient for updates within the same priority, since we want to treat
   // those updates as parallel.
   // 理论上，对任何lane的任何更新都可以解除对其他lane的封锁。但是尝试每一个可能的组合是不实际的。
-  // 我们需要一种方式来决定渲染哪个lanes以及在哪个批处理中渲染它。当前是用的是与之前的过期时间模
-  // 式相同的方式：对于优先级相同或者较低的lane进行重新处理。但是如果没有包含较低优先级的更新，
-  // 就不要尝试高优先级的更新。当考虑跨不同优先级级别的更新时，这种方法很合适，但对于相同优先级
-  // 的更新来说，这是不够的，因为我们希望对这些update并行处理。
+  // 我们需要一种启发式算法来决定渲染哪些lanes要被尝试渲染，以及在哪个批次中处理它。当前是用的是
+  // 与之前的过期时间模式相同的方式：对于优先级相同或者较低的lane进行重新处理，但是如果没有包含较
+  // 低优先级的更新，就不会去处理高优先级的更新。当考虑跨不同优先级级别的更新时，这种方法很合适，但
+  // 对于相同优先级的更新来说，这是不够的，因为我们希望对这些update并行处理。
+
+  // 上面的意思是，现有的lanes优先级机制是模拟expirationTime的优先级机制，若在lanes中存在高低两种
+  // 优先级的任务，那么会在高优先级任务完成后，再回来做低优先级的任务。比如lanes: 0b001100，React会
+  // 优先处理倒数第三个1，完事之后再处理倒数第四个1，如果这两个1属于不同的优先级级别倒还好说，比如倒数
+  // 第三个是A优先级集合中的一个lane，倒数第四个是B优先级集合中的一个lane，那么这是跨优先级层级的正常
+  // 更新行为，但是如果这两个1都是属于B优先级集合中的lane，那么问题来了，现有的行为还是沿用上面提到的
+  // 模拟expirationTime优先级机制下的更新行为，即做完高优任务回过头重做低优任务，但是React的希望是在
+  // 一次更新任务中把两个1都处理掉，所以这里写了个Todo
+
   // Unsuspend any update at equal or lower priority.
   // 取消同等或较低优先级的更新。
 
-  // Unsuspend any update at equal or lower priority.
   const higherPriorityLanes = updateLane - 1; // Turns 0b1000 into 0b0111
-  //        0b1000
-  //        0b0111
-  //        0b1011
-  // -------------
-  // result 0b1111
-  // 将 updateLane 放到 suspendedLanes 和 pingedLanes中
-
+  // (before) suspendedLanes 0b10100
+  //                         &
+  // higherPriorityLanes     0b01111
+  // ----------------------------------
+  // (after)  suspendedLanes 0b00100
+  // 目的是剔除掉suspendedLanes 和 pingedLanes中优先级低于本次更新优先级（updateLane）的lane
+  // 实现上方注释中的 “取消同等或较低优先级的更新。”
   root.suspendedLanes &= higherPriorityLanes;
   root.pingedLanes &= higherPriorityLanes;
 
+  /*
+  * 假设 lanes：0b000100
+  * 那么eventTimes是这种形式： [ -1, -1, -1, 44573.3452, -1, -1 ]
+  * 用一个数组去存储eventTimes，-1表示空位，非-1的位置与lanes中的1的位置相同
+  * */
   const eventTimes = root.eventTimes;
   const index = laneToIndex(updateLane);
   // We can always overwrite an existing timestamp because we prefer the most

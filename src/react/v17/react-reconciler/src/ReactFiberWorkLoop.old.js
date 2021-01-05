@@ -658,7 +658,9 @@ function markUpdateLaneFromFiberToRoot(
   lane: Lane,
 ): FiberRoot | null {
   // Update the source fiber's lanes
+  // 更新现有fiber上的lanes
   sourceFiber.lanes = mergeLanes(sourceFiber.lanes, lane);
+  // 获取现有fiber的alternate，通过alternate是否为null，来区分是否是更新过程
   let alternate = sourceFiber.alternate;
   if (alternate !== null) {
     alternate.lanes = mergeLanes(alternate.lanes, lane);
@@ -672,6 +674,7 @@ function markUpdateLaneFromFiberToRoot(
     }
   }
   // Walk the parent path to the root and update the child expiration time.
+  // 从产生更新的fiber节点开始，向上收集lanes
   let node = sourceFiber;
   let parent = sourceFiber.return;
   while (parent !== null) {
