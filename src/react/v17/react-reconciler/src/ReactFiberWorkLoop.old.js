@@ -590,6 +590,7 @@ export function scheduleUpdateOnFiber(
 
   // TODO: requestUpdateLanePriority also reads the priority. Pass the
   // priority as an argument to that function and this one.
+  // 根据Scheduler的优先级获取到对应的React优先级
   const priorityLevel = getCurrentPriorityLevel();
 
   if (lane === SyncLane) {
@@ -599,6 +600,9 @@ export function scheduleUpdateOnFiber(
       // Check if we're not already rendering
       (executionContext & (RenderContext | CommitContext)) === NoContext
     ) {
+      // 如果是本次更新是同步的，并且当前未在渲染流程中，那么
+      // 调用performSyncWorkOnRoot开始执行同步任务
+
       // Register pending interactions on the root to avoid losing traced interaction data.
       schedulePendingInteractions(root, lane);
 
@@ -607,6 +611,10 @@ export function scheduleUpdateOnFiber(
       // should be deferred until the end of the batch.
       performSyncWorkOnRoot(root);
     } else {
+      // 如果是本次更新是同步的，但是当前处在同步更新过程中，
+      // 因为无法打断，所以调用ensureRootIsScheduled
+      // 目的是去复用已经在更新的任务，让这个已有的任务
+      // 把这次更新顺便做了
       ensureRootIsScheduled(root, eventTime);
       schedulePendingInteractions(root, lane);
       if (executionContext === NoContext) {
@@ -621,6 +629,9 @@ export function scheduleUpdateOnFiber(
     }
   } else {
     // Schedule a discrete update but only if it's not Sync.
+    // 只在异步的情况下调度一个离散更新
+    // rootsWithPendingDiscreteUpdates只与React的测试用例相关
+    // 可暂时先不关注
     if (
       (executionContext & DiscreteEventContext) !== NoContext &&
       // Only updates at user-blocking priority or greater are considered
@@ -637,6 +648,7 @@ export function scheduleUpdateOnFiber(
       }
     }
     // Schedule other updates after in case the callback is sync.
+    // 如果是更新是异步的，调用ensureRootIsScheduled去进入异步调度
     ensureRootIsScheduled(root, eventTime);
     schedulePendingInteractions(root, lane);
   }
@@ -674,7 +686,7 @@ function markUpdateLaneFromFiberToRoot(
     }
   }
   // Walk the parent path to the root and update the child expiration time.
-  // 从产生更新的fiber节点开始，向上收集lanes
+  // 从产生更新的fiber节点开始，向上收集childLanes
   let node = sourceFiber;
   let parent = sourceFiber.return;
   while (parent !== null) {
