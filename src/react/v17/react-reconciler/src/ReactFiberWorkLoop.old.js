@@ -722,6 +722,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 
   // Check if any lanes are being starved by other work. If so, mark them as
   // expired so we know to work on those next.
+  console.log('markStarvedLanesAsExpired');
   markStarvedLanesAsExpired(root, currentTime);
 
   // Determine the next lanes to work on, and their priority.
@@ -772,27 +773,33 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   if (newCallbackPriority === SyncLanePriority) {
     // Special case: Sync React callbacks are scheduled on a special
     // internal queue
-
-    // 若新任务的优先级为同步优先级，则同步调度
+    // 若新任务的优先级为同步优先级，则同步调度，传统的同步渲染会走这里
     newCallbackNode = scheduleSyncCallback(
       performSyncWorkOnRoot.bind(null, root),
     );
   } else if (newCallbackPriority === SyncBatchedLanePriority) {
     // https://github.com/facebook/react/pull/19469
+    // 同步模式到concurrent模式的过渡模式： blocking模式会走这里
     newCallbackNode = scheduleCallback(
       ImmediateSchedulerPriority,
       performSyncWorkOnRoot.bind(null, root),
     );
   } else {
+    // concurrent模式的渲染会走这里
+
+    // 根据lane获取调度优先级
     const schedulerPriorityLevel = lanePriorityToSchedulerPriority(
       newCallbackPriority,
     );
+
+    // 将React的更新任务放到Scheduler中去调度，调度优先级是schedulerPriorityLevel
     newCallbackNode = scheduleCallback(
       schedulerPriorityLevel,
       performConcurrentWorkOnRoot.bind(null, root),
     );
   }
 
+  // 更新root上任务相关的字段
   root.callbackPriority = newCallbackPriority;
   root.callbackNode = newCallbackNode;
 }

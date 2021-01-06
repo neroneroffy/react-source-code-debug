@@ -9,7 +9,7 @@ const root = document.getElementById('root')
 ReactDOM.createRoot(root).render(<App />);
 
 // blocking mode
-ReactDOM.createBlockingRoot(root).render(<App />);
+// ReactDOM.createBlockingRoot(root).render(<App />);
 
 // Sync mode
 // ReactDOM.render(<App />, root);
