@@ -745,28 +745,40 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // Check if there's an existing task. We may be able to reuse it.
   if (existingCallbackNode !== null) {
     const existingCallbackPriority = root.callbackPriority;
-    // 当某一优先级任务正在渲染时，进来一个低优先级的任务，恰好这两个任务的优先级
-    // 是两个不同的级别，理论上，前者的优先级获取到的callbackPriority是一个，后者的优先级获取到的callbackPriority是另一个，二者肯定不相同。
-    // 但是，getHighestPriorityLanes总会获取到这一批lanes里最高的lane，所以获取到的callbackPriority总是高优先级任务的，低优先级任务的callbackPriority
-    // 无法获取到。也就是说，callbackPriority总是取高优先级任务的，所以低优先级任务无法打断高优先级任务，但反过来却可以。
+    // 当某一优先级任务正在渲染时，进来一个低优先级的任务，恰好这两个任务的优先级不同
+    // 理论上，前者的优先级获取到的callbackPriority是一个，后者的优先级获取到的
+    // callbackPriority是另一个，二者肯定不相同。
+
+    // 但是，getHighestPriorityLanes总会获取到本次renderLanes里优先级最高的那
+    // 些lanes，所以获取到的callbackPriority总是高优先级任务的，低优先级任务的callbackPriority
+    // 无法获取到。也就是说，即使低优先级任务的lanes被加入了renderLanes，但是获取
+    // 到的还是先前已经在执行的高优先级任务的lane，即：如果existingCallbackPriority
+    // 和 newCallbackPriority不相等，说明newCallbackPriority 一定大于 existingCallbackPriority
+    // 所以要取消掉原有的低优先级任务，相等的话说明没必要再重新调度一个，直接复用已有的任务
+    // 去做更新
     if (existingCallbackPriority === newCallbackPriority) {
       // The priority hasn't changed. We can reuse the existing task. Exit.
       return;
     }
     // The priority changed. Cancel the existing callback. We'll schedule a new
     // one below.
+    // 取消掉已有任务
     cancelCallback(existingCallbackNode);
   }
 
   // Schedule a new callback.
+  // 调度一个新任务
   let newCallbackNode;
   if (newCallbackPriority === SyncLanePriority) {
     // Special case: Sync React callbacks are scheduled on a special
     // internal queue
+
+    // 若新任务的优先级为同步优先级，则同步调度
     newCallbackNode = scheduleSyncCallback(
       performSyncWorkOnRoot.bind(null, root),
     );
   } else if (newCallbackPriority === SyncBatchedLanePriority) {
+    // https://github.com/facebook/react/pull/19469
     newCallbackNode = scheduleCallback(
       ImmediateSchedulerPriority,
       performSyncWorkOnRoot.bind(null, root),
