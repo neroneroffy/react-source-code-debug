@@ -488,13 +488,8 @@ export function markStarvedLanesAsExpired(
    * 模型是这样的，假设lanes有7个二进制位（实际是31个）：
      0b0011000
      对应一个7个元素的数组，每个元素表示一个过期时间，与lanes中的位相对应
-     [ -1, -1, -1, -1, -1, -1, -1 ]
-     -1表示任务未过期。root.expirationTimes就是这个数组
-
-     那么现在比如倒数第5个lane过期了，这在数组中体现为：
      [ -1, -1, 4395.2254, -1, -1, -1, -1 ]
-     就是表示在lanes中，倒数第5个lane过期
-
+     -1表示任务未过期。root.expirationTimes就是这个数组
    *
   * */
   // TODO: This gets called every time we yield. We can optimize by storing

@@ -56,7 +56,7 @@ class NewDemo extends React.Component {
         <button ref={this.buttonRef} onClick={this.handleButtonClick}>增加2</button>
         <button onClick={this.onBeginTask} style={{ marginLeft: 16 }}>开始</button>
         <div>
-          {Array.from(new Array(16000)).map( (v,index) =>
+          {Array.from(new Array(40000)).map( (v,index) =>
             <div key={index}>{count}</div>
           )}
         </div>

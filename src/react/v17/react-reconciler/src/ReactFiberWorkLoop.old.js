@@ -895,7 +895,6 @@ function performConcurrentWorkOnRoot(root) {
     root.finishedLanes = lanes;
     finishConcurrentRender(root, exitStatus, lanes);
   }
-
   ensureRootIsScheduled(root, now());
   if (root.callbackNode === originalCallbackNode) {
     // The task node scheduled for this root is the same one that's
