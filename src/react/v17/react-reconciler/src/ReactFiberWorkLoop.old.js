@@ -786,7 +786,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   } else {
     // concurrent模式的渲染会走这里
 
-    // 根据lane获取调度优先级
+    // 根据任务优先级获取调度优先级
     const schedulerPriorityLevel = lanePriorityToSchedulerPriority(
       newCallbackPriority,
     );

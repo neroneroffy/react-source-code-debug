@@ -596,7 +596,7 @@ export function findUpdateLane(
     case InputDiscreteLanePriority: {
       const lane = pickArbitraryLane(InputDiscreteLanes & ~wipLanes);
       if (lane === NoLane) {
-        // Shift to the next priority level
+        // 下移到下个优先级范围内寻找空闲的lane
         return findUpdateLane(InputContinuousLanePriority, wipLanes);
       }
       return lane;
@@ -604,7 +604,7 @@ export function findUpdateLane(
     case InputContinuousLanePriority: {
       const lane = pickArbitraryLane(InputContinuousLanes & ~wipLanes);
       if (lane === NoLane) {
-        // Shift to the next priority level
+        // 下移到下个优先级范围内寻找空闲的lane
         return findUpdateLane(DefaultLanePriority, wipLanes);
       }
       return lane;
@@ -614,11 +614,15 @@ export function findUpdateLane(
       if (lane === NoLane) {
         // If all the default lanes are already being worked on, look for a
         // lane in the transition range.
+        // 如果所有的位都被占用了，那么去transition的区间中去寻找空闲的位，因为
+        // transition范围内的可用位数更多
         lane = pickArbitraryLane(TransitionLanes & ~wipLanes);
         if (lane === NoLane) {
           // All the transition lanes are taken, too. This should be very
           // rare, but as a last resort, pick a default lane. This will have
           // the effect of interrupting the current work-in-progress render.
+          // 基本不会出现的一种场景是所有的lane位都被占用了，那么这时候赋值一个默认优先级级别的lane，
+          // 但是这将会打断正在渲染的工作
           lane = pickArbitraryLane(DefaultLanes);
         }
       }

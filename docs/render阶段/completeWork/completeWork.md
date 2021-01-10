@@ -1,5 +1,5 @@
 # 概述
-每个WIP节点都会经历两个阶段：beginWork和completeWork。节点进入complete的前提是已经完成了beginWork。这个时候拿到的WIP节点都是
+每个fiber节点在更新时都会经历两个阶段：beginWork和completeWork。节点进入complete的前提是已经完成了beginWork。这个时候拿到的WIP节点都是
 经过diff算法调和过的，也就意味着对于某个WIP节点来说它fiber类型的形态已经基本确定了，但除此之外还有两点：
 
 * 目前只有fiber形态变了，对于原生DOM组件（HostComponent）和文本节点（HostText）的fiber来说，对应的DOM节点（fiber.stateNode）并未变化。
