@@ -120,38 +120,46 @@ function FiberNode(
   mode: TypeOfMode,
 ) {
   // Instance
+  // Fiber元素的静态属性相关
   this.tag = tag;
-  this.key = key;
+  this.key = key; // fiber的key
   this.elementType = null;
-  this.type = null;
-  this.stateNode = null;
+  this.type = null; // fiber对应的DOM元素的标签类型，div、p...
+  this.stateNode = null; // fiber的实例，类组件场景下，是组件的类，HostComponent场景，是dom元素
 
-  // Fiber
-  this.return = null;
-  this.child = null;
-  this.sibling = null;
+  // Fiber 链表相关
+  this.return = null; // 指向父级fiber
+  this.child = null; // 指向子fiber
+  this.sibling = null; // 同级兄弟fiber
   this.index = 0;
 
-  this.ref = null;
+  this.ref = null; // ref相关
 
+  // Fiber更新相关
   this.pendingProps = pendingProps;
   this.memoizedProps = null;
-  this.updateQueue = null;
-  this.memoizedState = null;
+  this.updateQueue = null; // 存储update的链表
+  this.memoizedState = null; // 类组件存储fiber的状态，函数组件存储hooks链表
   this.dependencies = null;
 
   this.mode = mode;
 
   // Effects
+  // flags原为effectTag，表示当前这个fiber节点变化的类型：增、删、改
   this.flags = NoFlags;
   this.nextEffect = null;
 
+  // effect链相关，也就是那些需要更新的fiber节点
   this.firstEffect = null;
   this.lastEffect = null;
 
-  this.lanes = NoLanes;
-  this.childLanes = NoLanes;
+  this.lanes = NoLanes; // 该fiber中的优先级，它可以判断当前节点是否需要更新
+  this.childLanes = NoLanes;// 子树中的优先级，它可以判断当前节点的子树是否需要更新
 
+  /*
+  * 可以看成是workInProgress（或current）树中的和它一样的节点，
+  * 可以通过这个字段是否为null判断当前这个fiber处在更新还是创建过程
+  * */
   this.alternate = null;
 
   if (enableProfilerTimer) {
