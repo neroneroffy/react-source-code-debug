@@ -1,4 +1,4 @@
-UI产生交互的根本原因是各种事件，这也就意味着事件与更新有着直接关系。不同的事件产生的更新，它们的优先级是有差异的，所以更新优先级的根源在于事件的优先级。
+UI产生交互的根本原因是各种事件，这也就意味着事件与更新有着直接关系。不同事件产生的更新，它们的优先级是有差异的，所以更新优先级的根源在于事件的优先级。
 一个更新的产生可直接导致React生成一个更新任务，最终这个任务被Scheduler调度。
 
 所以在React中，人为地将事件划分了等级，最终目的是决定调度任务的轻重缓急，因此，React有一套从事件到调度的优先级机制。
@@ -6,8 +6,8 @@ UI产生交互的根本原因是各种事件，这也就意味着事件与更新
 本文将围绕事件优先级、更新优先级、任务优先级、调度优先级，重点梳理它们之间的转化关系。
 
 * 事件优先级：按照用户事件的交互紧急程度，划分的优先级
-* 更新优先级：事件导致React每产生的更新对象（update）的优先级（update.lane）
-* 任务优先级：产生更新对象之后，React需要生成一个更新任务，这个任务所持有的优先级
+* 更新优先级：事件导致React产生的更新对象（update）的优先级（update.lane）
+* 任务优先级：产生更新对象之后，React去执行一个更新任务，这个任务所持有的优先级
 * 调度优先级：Scheduler依据React更新任务生成一个调度任务，这个调度任务所持有的优先级
 
 前三者属于React的优先级机制，第四个属于Scheduler的优先级机制，Scheduler内部有自己的优先级机制，虽然与React有所区别，但等级的划分基本一致。下面我们从事件优先级开始说起。
@@ -97,7 +97,7 @@ function dispatchUserBlockingUpdate(
 
 }
 ```
-这么做可以将传入的优先级记录到Scheduler中，相当于告诉Scheduler：你帮我记录一下当前事件的优先级，等React那边创建更新对象（即update）计算更新优先级的时候时直接从你这拿就好了。
+这么做可以将事件优先级记录到Scheduler中，相当于告诉Scheduler：你帮我记录一下当前事件派发的优先级，等React那边创建更新对象（即update）计算更新优先级时直接从你这拿就好了。
 ```javascript
 function unstable_runWithPriority(priorityLevel, eventHandler) {
   switch (priorityLevel) {
@@ -124,7 +124,7 @@ function unstable_runWithPriority(priorityLevel, eventHandler) {
 
 ```
 # 更新优先级
-以setState为例，事件的执行会导致setState执行，而setState本质上是调用的enqueueSetState，生成一个update对象，这时候会计算它的更新优先级，即update.lane：
+以setState为例，事件的执行会导致setState执行，而setState本质上是调用enqueueSetState，生成一个update对象，这时候会计算它的更新优先级，即update.lane：
 ```javascript
 const classComponentUpdater = {
   enqueueSetState(inst, payload, callback) {
@@ -143,8 +143,8 @@ const classComponentUpdater = {
   },
 };
 ```
-重点关注**requestUpdateLane**，这是属于React的函数，它首先找出Scheduler中记录的事件优先级：schedulerPriority，然后计算更新优先级：lane，具体的计算过程在findUpdateLane函数中，
-计算过程是一个从高到低依次占用空闲位的操作，具体的代码在[这里]() ，这里就先不详细展开。
+重点关注**requestUpdateLane**，它首先找出Scheduler中记录的优先级：schedulerPriority，然后计算更新优先级：lane，具体的计算过程在findUpdateLane函数中，
+计算过程是一个从高到低依次占用空闲位的操作，具体的代码在[这里](https://github.com/neroneroffy/react-source-code-debug/blob/master/src/react/v17/react-reconciler/src/ReactFiberLane.js#L585) ，这里就先不详细展开。
 
 ```javascript
 export function requestUpdateLane(
@@ -185,15 +185,15 @@ function unstable_getCurrentPriorityLevel() {
 update对象创建完成后意味着需要对页面进行更新，会调用scheduleUpdateOnFiber进入调度，而真正开始调度之前会计算本次产生的更新任务的任务优先级，目的是
 与已有任务的任务优先级去做比较，便于做出多任务的调度决策。
 
-*调度决策的逻辑在[ensureRootIsScheduled]() 函数中，这是一个非常重要的函数，控制着React任务进入Scheduler的大门。*
+*调度决策的逻辑在[ensureRootIsScheduled](https://github.com/neroneroffy/react-source-code-debug/blob/master/src/react/v17/react-reconciler/src/ReactFiberWorkLoop.old.js#L720) 函数中，这是一个非常重要的函数，控制着React任务进入Scheduler的大门。*
 
 
 # 任务优先级
-一个update会对应一个更新任务，任务优先级被用来区分多个更新任务的优先级，任务优先级由更新优先级计算而来。
+一个update会被一个React的更新任务执行掉，任务优先级被用来区分多个更新任务的紧急程度，它由更新优先级计算而来，举例来说：
 
-假设产生一前一后两个update，它们持有各自的更新优先级，也会产生各自的更新任务。如果后者的任务优先级高于前者，那么会让Scheduler取消前者的任务调度；如果后者的任务优先级等于前者的任务优先级，
+假设产生一前一后两个update，它们持有各自的更新优先级，也会被各自的更新任务执行。经过优先级计算，如果后者的任务优先级高于前者的任务优先级，那么会让Scheduler取消前者的任务调度；如果后者的任务优先级等于前者的任务优先级，
 后者不会导致前者被取消，而是会复用前者的更新任务，将两个同等优先级的更新收敛到一次任务中；如果后者的任务优先级低于前者的任务优先级，同样不会导致前者的任务被取消，而是在前者更新完成后，
-再次用Scheduler对后者发起一次专门属于它的任务调度。
+再次用Scheduler对后者发起一次任务调度。
 
 这是任务优先级存在的意义，保证高优先级任务及时响应，收敛同等优先级的任务调度。
 
@@ -217,7 +217,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 }
 ```
 
-通过调用getNextLanes去计算在本次更新中应该处理的这批lanes（nextLanes），getNextLanes会调用getHighestPriorityLanes去计算任务优先级。任务优先级计算的原理是更新优先级（update的lane），
+通过调用getNextLanes去计算在本次更新中应该处理的这批lanes（nextLanes），getNextLanes会调用getHighestPriorityLanes去计算任务优先级。任务优先级计算的原理是这样：更新优先级（update的lane），
 它会被并入root.pendingLanes，root.pendingLanes经过getNextLanes处理后，挑出那些应该处理的lanes，传入`getHighestPriorityLanes`，根据nextLanes找出这些lanes的优先级作为任务优先级。
 ```javascript
 function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
@@ -237,7 +237,7 @@ function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
 }
 ```
 
-*getHighestPriorityLanes的[源码]()在这里，getNextLanes的[源码]()在这里*
+*getHighestPriorityLanes的[源码](https://github.com/neroneroffy/react-source-code-debug/blob/master/src/react/v17/react-reconciler/src/ReactFiberLane.js#L121)在这里，getNextLanes的[源码](https://github.com/neroneroffy/react-source-code-debug/blob/master/src/react/v17/react-reconciler/src/ReactFiberLane.js#L266)在这里*
 
 `return_highestLanePriority`就是任务优先级，它有如下这些值，值越大，优先级越高，暂时只理解任务优先级的作用即可。
 
