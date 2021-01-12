@@ -1,3 +1,5 @@
+[点击](https://github.com/neroneroffy/react-source-code-debug)进入React源码调试仓库。
+
 # 概述
 当工作循环开始时，React对每个WIP节点进行beginWork操作，对组件的新状态的计算、diff操作生成新Fiber、effectTag标记都在这个阶段。
 它的入参是current节点、WIP节点、此次更新任务的渲染优先级。返回入参WIP节点的子节点，作为下一个工作单元继续这个过程；
@@ -157,3 +159,7 @@ beginWork的主要功能就是处理当前节点，并返回新的工作单元�
 不同的处理函数。需要注意的是在更新时，会有无需更新的节点，对于这种情况会判断它的子节点有无更新。然后依据判断结果返回下一个工作单元。
 
 beginWork调用更新函数更新节点状态后，会依次进入两大处理流程：计算新状态和Diff算法。
+
+欢迎扫码关注公众号，发现更多技术文章
+
+![](https://neroht.com/qrcode-small.jpg)

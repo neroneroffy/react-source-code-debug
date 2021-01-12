@@ -1,3 +1,5 @@
+[点击](https://github.com/neroneroffy/react-source-code-debug)进入React源码调试仓库。
+
 Scheduler作为一个独立的包，可以独自承担起任务调度的职责，你只需要将任务和任务的优先级交给它，它就可以帮你管理任务，安排任务的执行。
 
 安排任务的执行只是它的基本职责，它更重要的功能是，对于单个任务，它会有节制地去执行。换句话说，线程只有一个，它不会一直占用着线程去执行任务。而是执行一会，中断一下，如此往复。用这样的模式，来避免
@@ -389,7 +391,7 @@ Scheduler区分了浏览器环境和非浏览器环境，为`requestHostCallback
   const port = channel.port2;
   channel.port1.onmessage = performWorkUntilDeadline;
 
-  
+
   requestHostCallback = function(callback) {
     scheduledHostCallback = callback;
     if (!isMessageLoopRunning) {
@@ -419,7 +421,7 @@ Scheduler区分了浏览器环境和非浏览器环境，为`requestHostCallback
 
 ```javascript
   const performWorkUntilDeadline = () => {
-    
+
     if (scheduledHostCallback !== null) {
       // 获取当前时间
       const currentTime = getCurrentTime();
@@ -446,7 +448,7 @@ Scheduler区分了浏览器环境和非浏览器环境，为`requestHostCallback
           hasTimeRemaining,
           currentTime,
         );
-       
+
         if (!hasMoreWork) {
           // 如果没有任务了，停止调度
           isMessageLoopRunning = false;
@@ -558,9 +560,9 @@ return一个false好让外部**终止本次调度**。而workLoop的执行结果
 
 ```javascript
   const performWorkUntilDeadline = () => {
-    
+
     ...
-  
+
     const hasTimeRemaining = true;
     // scheduledHostCallback去执行任务的函数，
     // 当任务因为时间片被打断时，它会返回true，表示
@@ -570,7 +572,7 @@ return一个false好让外部**终止本次调度**。而workLoop的执行结果
       hasTimeRemaining,
       currentTime,
     );
- 
+
     if (!hasMoreWork) {
       // 如果没有任务了，停止调度
       isMessageLoopRunning = false;
@@ -742,7 +744,7 @@ function workLoop(hasTimeRemaining, initialTime) {
     // 去执行它
     currentTask = peek(taskQueue);
   }
-  // return 的结果会作为 performWorkUntilDeadline 
+  // return 的结果会作为 performWorkUntilDeadline
   // 中判断是否还需要再次发起调度的依据
   if (currentTask !== null) {
     return true;
@@ -865,7 +867,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
     // 取消掉原有的任务
     cancelCallback(existingCallbackNode);
   }
-    
+
   ...
 }
 ```
@@ -873,3 +875,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
 # 总结
 Scheduler用任务优先级去实现多任务的管理，优先解决高优任务，用任务的持续调度来解决时间片造成的单个任务中断恢复问题。任务函数的执行结果为是否应该结束当前任务的调度提供参考，
 在有限的时间片内完成任务的一部分，为浏览器响应交互与完成任务提供了保障。
+
+欢迎扫码关注公众号，发现更多技术文章
+
+![](https://neroht.com/qrcode-small.jpg)

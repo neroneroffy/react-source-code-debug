@@ -1,3 +1,5 @@
+React源码调试[仓库](https://github.com/neroneroffy/react-source-code-debug)
+
 UI产生交互的根本原因是各种事件，这也就意味着事件与更新有着直接关系。不同事件产生的更新，它们的优先级是有差异的，所以更新优先级的根源在于事件的优先级。
 一个更新的产生可直接导致React生成一个更新任务，最终这个任务被Scheduler调度。
 
@@ -342,3 +344,8 @@ export function lanePriorityToSchedulerPriority(
 # 总结
 本文一共提到了4种优先级：**事件优先级、更新优先级、任务优先级、调度优先级**，它们之间是递进的关系。事件优先级由事件本身决定，更新优先级由事件计算得出，然后放到root.pendingLanes，
 任务优先级来自root.pendingLanes中最紧急的那些lanes对应的优先级，调度优先级根据任务优先级获取。几种优先级环环相扣，保证了高优任务的优先执行。
+
+欢迎扫码关注公众号，发现更多技术文章
+
+![](https://neroht.com/qrcode-small.jpg)
+

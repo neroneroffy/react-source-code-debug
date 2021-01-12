@@ -1,3 +1,5 @@
+[点击](https://github.com/neroneroffy/react-source-code-debug)进入React源码调试仓库。
+
 # 概述
 我们知道，每次组件渲染后，会产生新的ReactElement，另外组件也有对应的fiber节点。Diff算法就是通过对比新产生的ReactElement和
 已有的fiber节点的child节点，来生成新的child。最终将其挂载到组件对应的fiber上。
@@ -729,3 +731,7 @@ Diff算法通过key和tag来对节点进行取舍，可直接将复杂的比对�
 树的结构因此被一点点地确定，而新的WIP节点也基本定型。
 
 这意味着，在diff过后，workInProgress节点的beginWork节点就完成了。接下来会进入completeWork阶段。
+
+欢迎扫码关注公众号，发现更多技术文章
+
+![](https://neroht.com/qrcode-small.jpg)

@@ -1,4 +1,4 @@
-
+[点击](https://github.com/neroneroffy/react-source-code-debug)进入React源码调试仓库。
 
 React在构建用户界面整体遵循函数式的编程理念，即固定的输入有固定的输出，尤其是在推出函数式组件之后，更加强化了组件纯函数的理念。
 但实际业务中编写的组件不免要产生请求数据、订阅事件、手动操作DOM这些副作用（effect），这样难免让函数组件变得不那么纯，于是React
@@ -444,4 +444,7 @@ useEffect和useLayoutEffect作为组件的副作用，本质上是一样的。�
 存到fiber.updateQueue上，最终带到commit阶段被处理。他们彼此的区别只是最终的执行时机不同，一个异步一个同步，这使得useEffect不会阻塞渲染，而useLayoutEffect
 会阻塞渲染。
 
+欢迎扫码关注公众号，发现更多技术文章
+
+![](https://neroht.com/qrcode-small.jpg)
 

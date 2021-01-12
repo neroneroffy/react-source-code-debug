@@ -1,3 +1,5 @@
+[点击](https://github.com/neroneroffy/react-source-code-debug)进入React源码调试仓库。
+
 # 概述
 每个fiber节点在更新时都会经历两个阶段：beginWork和completeWork。节点进入complete的前提是已经完成了beginWork。这个时候拿到的WIP节点都是
 经过diff算法调和过的，也就意味着对于某个WIP节点来说它fiber类型的形态已经基本确定了，但除此之外还有两点：
@@ -167,11 +169,11 @@ if (current !== null && workInProgress.stateNode != null) {
                   |
                   |
   2              div
-                /   
-               /     
+                /
+               /
   3        <List/>--->span
-            /   
-           /     
+            /
+           /
   4       p ----> 'text node'
          /
         /
@@ -215,8 +217,8 @@ h1节点完成工作往上返回到第4层的p节点。
                 /
                /
   3        <List/>
-            /   
-           /     
+            /
+           /
   4 --->  p ----> 'text node'
          /
         /
@@ -244,11 +246,11 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
                   |
                   |
   2              div
-                /   
-               /     
+                /
+               /
   3 --->   <List/>--->span
-            /   
-           /     
+            /
+           /
   4       p ----> 'text'
          /
         /
@@ -277,11 +279,11 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
                   |
                   |
   2 --------->   div
-                /   
-               /     
+                /
+               /
   3        <List/>--->span
-            /   
-           /     
+            /
+           /
   4       p ---->'text'
          /
         /
@@ -360,7 +362,7 @@ p节点的所有工作完成，它的兄弟节点：HostText类型的组件'text
         return;
       }
       // 当不存在兄弟节点时往上找，此过程发生在当前completeWork节点的子节点再无子节点的场景，
-      // 并不是直接从当前completeWork的节点去往上找 
+      // 并不是直接从当前completeWork的节点去往上找
       while (node.sibling === null) {
         if (node.return === null || node.return === workInProgress) {
           return;
@@ -565,7 +567,7 @@ export function diffProperties(
 
   let lastProps: Object;
   let nextProps: Object;
-  
+
   ...
 
   let propKey;
@@ -756,7 +758,7 @@ completeUnitWork中的错误处理是错误边界机制的组成部分。
 要走另一个判断分支进行处理。
 ```javascript
 if ((completedWork.effectTag & Incomplete) === NoEffect) {
-  
+
 } else {
   // 有Incomplete的节点会进入到这个判断分支进行错误处理
 }
@@ -799,7 +801,7 @@ function handleError(root, thrownValue):void {
 
   // 开始对错误节点执行completeWork阶段
   completeUnitOfWork(erroredWork);
-  
+
   ...
 
 }
@@ -826,7 +828,7 @@ function unwindWork(workInProgress: Fiber, renderLanes: Lanes) {
       if (effectTag & ShouldCapture) {
         // 删它上面的ShouldCapture，再打上DidCapture
         workInProgress.effectTag = (effectTag & ~ShouldCapture) | DidCapture;
-        
+
         return workInProgress;
       }
       return null;
@@ -844,7 +846,7 @@ return出去之后呢？会被赋值给workInProgress节点，我们往下看一
 if ((completedWork.effectTag & Incomplete) === NoEffect) {
 
     // 正常流程
-    ... 
+    ...
 
 } else {
   // 验证节点是否是错误边界
@@ -933,7 +935,7 @@ class ErrorBoundary extends React.Component {
       return <h1>Something went wrong.</h1>;
     }
 
-    return this.props.children; 
+    return this.props.children;
   }
 }
 ```
@@ -951,11 +953,11 @@ class ErrorBoundary extends React.Component {
                   |
                   |
   2           <Example/>
-                /   
-               /     
+                /
+               /
   3 --->   <List/>--->span
-            /   
-           /     
+            /
+           /
   4       p ----> 'text'
          /
         /
@@ -1005,7 +1007,6 @@ workInProgress节点的completeWork阶段主要做的事情再来回顾一下：
 虽然用了不少的篇幅去讲错误处理，但是仍然需要重点关注正常节点的处理过程。completeWork阶段处在beginWork之后，commit之前，起到的是一个承上启下的作用。
 它接收到的是经过diff后的fiber节点，然后他自己要将DOM节点和effectList都准备好。因为commit阶段是不能被打断的，所以充分准备有利于commit阶段做更少的工作。
 
+欢迎扫码关注公众号，发现更多技术文章
 
-
-
-
+![](https://neroht.com/qrcode-small.jpg)
