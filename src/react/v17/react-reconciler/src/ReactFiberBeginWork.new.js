@@ -2883,6 +2883,7 @@ function updateContextProvider(
     } else {
       // The context value changed. Search for matching consumers and schedule
       // them to update.
+      // context 值发生了变化，寻找匹配的consumer然后给它们调度更新
       propagateContextChange(workInProgress, context, changedBits, renderLanes);
     }
   }

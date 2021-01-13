@@ -856,7 +856,9 @@ function performConcurrentWorkOnRoot(root) {
     // For example, when unhiding a hidden tree, we include all the lanes
     // that were previously skipped when the tree was hidden. That set of
     // lanes is a superset of the lanes we started rendering with.
-    //
+    // 本次渲染包含的lanes都是那些在本次render阶段被更新的lanes，
+    // 例如，当把workInProgress树切换为current树的时候，我们会将所有之前被跳过的
+    // lanes包含在内。这些lanes的集合是我们开始渲染时候的lanes的超集。
     // So we'll throw out the current work and restart.
     prepareFreshStack(root, NoLanes);
   } else if (exitStatus !== RootIncomplete) {
@@ -1631,10 +1633,15 @@ function workLoopSync() {
 function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
   const prevExecutionContext = executionContext;
   executionContext |= RenderContext;
+
+  // 预先把hooks函数都设置为报错的函数，只在渲染函数组件的时候，
+  // 将hooks改成正确的函数，这样保证一旦在其他非函数组件中调用hooks函数，
+  // 能够立即报错
   const prevDispatcher = pushDispatcher();
 
   // If the root or lanes have changed, throw out the existing stack
   // and prepare a fresh one. Otherwise we'll continue where we left off.
+  // 如果root或者lanes变化，准备刷新stack，否则继续上次的工作
   if (workInProgressRoot !== root || workInProgressRootRenderLanes !== lanes) {
     resetRenderTimer();
     prepareFreshStack(root, lanes);
