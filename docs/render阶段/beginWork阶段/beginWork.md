@@ -1,24 +1,30 @@
 [点击](https://github.com/neroneroffy/react-source-code-debug)进入React源码调试仓库。
 
 # 概述
-当工作循环开始时，React对每个WIP节点进行beginWork操作，对组件的新状态的计算、diff操作生成新Fiber、effectTag标记都在这个阶段。
-它的入参是current节点、WIP节点、此次更新任务的渲染优先级。返回入参WIP节点的子节点，作为下一个工作单元继续这个过程；
-若没有子节点返回null，返回null可进入节点的complete阶段。
+更新会导致React去执行更新任务，更新任务主要是调用一个叫做workLoop的工作循环去执行workInProgress树的构建，构建过程分为两个阶段：向下遍历和向上回溯。
+
+向下遍历即基于current树在向下遍历，去构建出一棵workInProgress树。向上回溯是从新构建的workInProgress树的末端节点回溯到root。本文提到的
+beginWork工作就发生在向下遍历的过程中。
+
+React对current树的每个节点进行beginWork操作，进入beginWork后，首先判断节点及其子树是否有更新，若有更新，则会在计算新状态和diff之后生成新的Fiber，
+然后在新的fiber上标记effectTag，最后return它的子节点，以便继续针对子节点进行beginWork。若它没有子节点，则返回null，这样说明这个节点是末端节点，
+可以进行向上回溯，进入completeWork阶段。
+
 
 工作流程如下图，图中简化了流程，只对App节点进行了beginWork处理，其余节点流程相似
 
-![beginWork流程](https://neroht.com/beginWork.gif)
+![beginWork流程](http://neroht.com/beginWork2.gif)
 
 # 职责
-通过概述可知beginWork函数主要负责对WIP节点进行更新。但它只是入口，不直接进行更新操作。作为入口，它的职责很明显，拦截无需
-更新的节点。同时，它还会将context信息入到栈中（beginWork入栈，completeWork出栈），暂时先不关注，后续讲context时会讲到。
+通过概述可知beginWork阶段的工作是会去更新节点，并返回子树，但真正的beginWork函数只是节点更新的入口，不会直接进行更新操作。作为入口，它的职责很明显，拦截无需
+更新的节点。同时，它还会将context信息入到栈中（beginWork入栈，completeWork出栈），暂时先不关注。
 ```javascript
 function beginWork(
     current: Fiber | null,
     workInProgress: Fiber,
     renderLanes: Lanes
 ): Fiber | null {
-  // 获取workInProgress.lanes，后边判断是否需要更新会用到
+  // 获取workInProgress.lanes，可通过判断它是否为空去判断该节点是否需要更新
   const updateLanes = workInProgress.lanes;
 
   // 依据current是否存在判断是初始化还是更新过程
@@ -94,7 +100,7 @@ function beginWork(
 ```
 代码结构不复杂，但仍有几个关键点需要注意
 ## 如何区分更新与初始化过程
-结论是区分是处在更新过程还是初始化过程是依据current是否存在。
+通过区分是处在更新过程还是初始化过程是依据current是否存在。
 
 首先要理解current的概念基于双缓冲的规则，调度更新时有两棵树，展示在屏幕上的current Tree和正在后台基于current树构建的
 workInProgress Tree。
