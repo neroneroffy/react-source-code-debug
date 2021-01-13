@@ -192,7 +192,6 @@ export function propagateContextChange(
   }
   while (fiber !== null) {
     let nextFiber;
-
     // Visit this fiber.
     const list = fiber.dependencies;
     if (list !== null) {
