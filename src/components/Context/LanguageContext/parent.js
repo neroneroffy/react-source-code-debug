@@ -6,7 +6,6 @@ const { ZH_CN, EN } = LANGUAGE
 
 const Parent = () => {
   const [ language, setLanguage ] = useState(ZH_CN)
-  console.log(LanguageContext);
   return <div className={'language-context'}>
     <span>语言</span>
     <select

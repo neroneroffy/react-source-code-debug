@@ -57,14 +57,20 @@ function pop<T>(cursor: StackCursor<T>, fiber: Fiber): void {
 }
 
 function push<T>(cursor: StackCursor<T>, value: T, fiber: Fiber): void {
+  console.log('value', value);
   index++;
-
+  /*
+  * [ { theme: 'red' }, false ]
+  *
+  * [ emptyContext, contextValue ]
+  *
+  * */
   valueStack[index] = cursor.current;
 
   if (__DEV__) {
     fiberStack[index] = fiber;
   }
-
+  // console.log('valueStack', valueStack);
   cursor.current = value;
 }
 

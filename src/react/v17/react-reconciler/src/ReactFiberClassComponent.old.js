@@ -626,6 +626,7 @@ function constructClassInstance(
     context = readContext((contextType: any));
   } else if (!disableLegacyContext) {
     unmaskedContext = getUnmaskedContext(workInProgress, ctor, true);
+    console.log('unmaskedContext', unmaskedContext);
     const contextTypes = ctor.contextTypes;
     isLegacyContextConsumer =
       contextTypes !== null && contextTypes !== undefined;

@@ -7,6 +7,7 @@ const { PURPLE, BLUE, RED } = THEME_COLOR
 const Parent = () => {
   const [ theme, setTheme ] = useState(PURPLE)
   return <div className={'theme-context'}>
+    <h2>新版context</h2>
     <span>主题</span>
     <select
       onChange={e => {

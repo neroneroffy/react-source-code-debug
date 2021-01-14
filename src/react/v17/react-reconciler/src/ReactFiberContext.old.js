@@ -54,6 +54,7 @@ function getUnmaskedContext(
       // we may have already pushed its own child context on the stack. A context
       // provider should not "see" its own child context. Therefore we read the
       // previous (parent) context instead for a context provider.
+      console.log('previousContext', previousContext);
       return previousContext;
     }
     return contextStackCursor.current;
