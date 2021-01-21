@@ -1,11 +1,55 @@
 [点击](https://github.com/neroneroffy/react-source-code-debug)进入React源码调试仓库。
 
-# 概述
-我们知道，每次组件渲染后，会产生新的ReactElement，另外组件也有对应的fiber节点。Diff算法就是通过对比新产生的ReactElement和
-已有的fiber节点的child节点，来生成新的child。最终将其挂载到组件对应的fiber上。
+上一篇[扒一扒React计算状态的原理](https://segmentfault.com/a/1190000039008910) 之后，我们来分析一下Diff的过程。
+
+fiber上的updateQueue经过React的一番计算之后，这个fiber已经有了新的状态，也就是state，对于类组件来说，state是在render函数里被使用的，
+既然已经得到了新的state，那么当务之急是执行一次render，得到持有新state的ReactElement。
+
+假设render一次之后得到了大量的ReactElement，而这些ReactElement之中若只有少量需要更新的节点，那么显然不能全部去更新它们，此时就需要有一个diff过程来决定哪些节点是真正需要更新的。
+
 ## 源码结构
-diff算法最终会进到`ChildReconciler`函数中。该函数针对组件新生成的节点的类型，调用不同的函数进行处理。
+我们以类组件为例，state的计算发生在类组件对应的fiber节点beginWork中的`updateClassInstance`函数中，在状态计算完毕之后，紧跟着就是去调用`finishClassComponent`执行diff、
+打上effectTag（即新版本的flag）。
+
+> 打上effectTag可以标识这个fiber发生了怎样的变化，例如：新增（Placement）、更新（Update）、删除（Deletion），这些被打上flag的fiber会在complete阶段被收集起来，形成一个effectList链表，只包含这些需要操作的fiber，最后在commit阶段被更新掉。
+
+```javascript
+function updateClassComponent(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  Component: any,
+  nextProps: any,
+  renderLanes: Lanes,
+) {
+  
+  ...
+  
+  // 计算状态
+  shouldUpdate = updateClassInstance(
+    current,
+    workInProgress,
+    Component,
+    nextProps,
+    renderLanes,
+  );
+
+  ...
+
+  // 执行render，进入diff，为fiber打上effectTag
+  const nextUnitOfWork = finishClassComponent(
+    current,
+    workInProgress,
+    Component,
+    shouldUpdate,
+    hasContext,
+    renderLanes,
+  );
+  return nextUnitOfWork;
+}
 ```
+在`finishClassComponent`函数中，调用`reconcileChildFibers`去做diff，而`reconcileChildFibers`实际上就是`ChildReconciler`，这是diff的核心函数，
+该函数针对组件render生成的新节点的类型，调用不同的函数进行处理。
+```javascript
 function ChildReconciler(shouldTrackSideEffects) {
   ...
   function reconcileSingleElement(
@@ -78,8 +122,8 @@ function ChildReconciler(shouldTrackSideEffects) {
 ```
 
 # Diff的主体
-关于Diff的参与者，在上游获得Diff最终结果的函数(reconcileChildren)的入参可以看出
-```
+关于Diff的参与者，在reconcileChildren函数的入参中可以看出
+```javascript
 workInProgress.child = reconcileChildFibers(
   workInProgress,
   current.child,
@@ -95,24 +139,33 @@ workInProgress.child = reconcileChildFibers(
 
 可以看出，diff的两个主体是：oldFiber（current.child）和newChildren（nextChildren，新的ReactElement），它们是两个不一样的数据结构。
 
-current.child是现有fiber节点（current）的第一个子节点，通过sibling可以寻找到所有current的子节点：
+比如现在有组件<Example/>，它计算完新的状态之后，要基于这两个东西去做diff,分别是**现有fiber树中（current树）<Example/>对应fiber的所有子fiber节点**和**<Example/>的render函数的执行结果，即那些ReactElements**。
+
+<Example/>对应fiber的所有子fiber节点：oldFiber
 ```
-A --sibling---> B --sibling---> C
+    current树中
+
+    <Example/> fiber
+      |
+      |
+      A --sibling---> B --sibling---> C
 
 ```
 
-而newChildren则是ReactElement类型的节点，通过遍历可以处理到所有节点，newChildren通过类组件的render方法生成。
-```javascript
-[
-    {$$typeof: Symbol(react.element), type: "div", key: "A" },
-    {$$typeof: Symbol(react.element), type: "div", key: "B" },
-    {$$typeof: Symbol(react.element), type: "div", key: "B" },
-]
+<Example/>的render函数的执行结果，newChildren
+```
+  current fiber 对应的组件render的结果
+
+    [
+        {$$typeof: Symbol(react.element), type: "div", key: "A" },
+        {$$typeof: Symbol(react.element), type: "div", key: "B" },
+        {$$typeof: Symbol(react.element), type: "div", key: "B" },
+    ]
 ```
 
-# 基本原则
-对于新旧两种结构来说，场景有节点自身更新、节点增删、节点移动三种情况。面对复杂的情况，即使最前沿的算法，复杂度也极高。面对这种情况，
-React以如下策略应对：
+# Diff的基本原则
+对于新旧两种结构来说，场景有节点自身更新、节点增删、节点移动三种情况。面对复杂的情况，即使最前沿的算法，复杂度也极高。面对这种情况，React以如下策略应对：
+
 * 即使两个元素的子树完全一样，但前后的父级元素不同，依照规则div元素及其子树会完全销毁，并重建一个p元素及其子树，不会尝试复用子树。
 ```html
 旧
@@ -140,13 +193,11 @@ React以如下策略应对：
 因为tag 和 key的存在，所以React可以知道这两个节点只是位置发生了变化。
 
 # 场景
-上面说到diff算法应对三种场景：`节点更新、节点增删、节点移动`，但一个fiber的子元素有可能是单节点，也有可能是多节点。
-所以依据这两类节点可以再细分为：
+上面说到diff算法应对三种场景：`节点更新、节点增删、节点移动`，但一个fiber的子元素有可能是单节点，也有可能是多节点。所以依据这两类节点可以再细分为：
 * 单节点更新、单节点增删。
 * 多节点更新、多节点增删、多节点移动。
 
-什么是节点的更新呢？对于DOM节点来说，在前后的节点类型（tag）和key都相同的情况下，节点的属性发生了变化，是节点更新。
-若前后的节点tag或者key不相同，Diff算法会认为新节点和旧节点毫无关系。
+什么是节点的更新呢？对于DOM节点来说，在前后的节点类型（tag）和key都相同的情况下，节点的属性发生了变化，是节点更新。若前后的节点tag或者key不相同，Diff算法会认为新节点和旧节点毫无关系。
 
 以下例子中，key为b的新节点的className发生了变化，是节点更新。
 
@@ -200,22 +251,28 @@ React以如下策略应对：
 ```
 单节点指newChildren为单一节点，但是oldFiber的数量不一定，所以实际有如下三种场景：
 *为了降低理解成本，我们用简化的节点模型来说明问题，字母代表key。*
+
 * 单个旧节点
+```
 旧： A
 
 新： A
 
+```
 * 多个旧节点
+```
 旧： A - B - C
 
 新： B
+```
 * 没有旧节点
+```
 旧： --
 
 新： A
+```
 
-对于单节点的diff，其实就只有更新操作，不会涉及位移和位置的变化，使用`reconcileSingleElement`函数处理单节点的更新。
-函数中对以上三种场景都做了覆盖。但实际上上边的情况对于React来说只是两种，oldFiber链是否为空。因此，在实现上也只处理了这两种情况。
+对于单节点的diff，其实就只有更新操作，不会涉及位移和位置的变化，单节点的更新会调用`reconcileSingleElement`函数处理。该函数中对以上三种场景都做了覆盖。但实际上面的情况对于React来说只是两种，oldFiber链是否为空。因此，在实现上也只处理了这两种情况。
 ## oldFiber链不为空
 遍历它们，找到key相同的节点，然后删除剩下的oldFiber节点，再用匹配的oldFiber，newChildren中新节点的props来生成新的fiber节点。
 ```javascript
@@ -312,32 +369,34 @@ React以如下策略应对：
 多节点的变化有以下四种可能性。
 
 * 节点更新
-
+```
 旧： A - B - C
 
 新： `A - B - C`
 
+```
 * 新增节点
-
+```
 旧： A - B - C
 
 新： A - B - C - `D - E`
 
+```
 * 删除节点
-
+```
 旧： A - B - C - `D - E`
 
 新： A - B - C
 
+```
 * 节点移动
-
+```
 旧： A - B - C - D - E
 
 新： A - B - `D - C - E`
 
-多节点的情况一定是属于这四种情况的任意组合，会调用`reconcileChildrenArray`进行diff计算。这个过程按照以上四种情况，会以newChildren为主体进行最多三轮遍历，
-但这三轮遍历并不是相互独立的，事实上只有第一轮是从头开始的，之后的每一轮都是上轮结束的断点继续。实际上在平时的实践中，节点自身的更新是最多的，所以Diff算法会优先处理更新的节点。因此四轮遍历又可以按照场
-景分为两部分：
+```
+多节点的情况一定是属于这四种情况的任意组合，这种情况会调用`reconcileChildrenArray`进行diff。按照以上四种情况，它会以newChildren为主体进行最多三轮遍历，但这三轮遍历并不是相互独立的，事实上只有第一轮是从头开始的，之后的每一轮都是上轮结束的断点继续。实际上在平时的实践中，节点自身的更新是最多的，所以Diff算法会优先处理更新的节点。因此四轮遍历又可以按照场景分为两部分：
 
 第一轮是针对节点自身属性更新，剩下的两轮依次处理节点的新增、移动，而重点又在移动节点的处理上，所以本文会着重讲解节点更新和节点移动的处理，对删除和新增简单带过。
 
@@ -347,7 +406,7 @@ React以如下策略应对：
 * 没变则从oldFiber节点clone一个props被更新的fiber节点，新的props来自newChildren中的新节点，这样就实现了节点更新。
 * 有变化说明不满足复用条件，立即中断遍历进入下边的遍历。Diff算法的复杂度也因为这个操作大幅降低。
 
-```
+```javascript
 let newIdx = 0;
 for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
   ...
@@ -385,9 +444,7 @@ for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
 
 **关于移动节点的参照物**
 
-为了方便说明，把保留在原位的节点称为固定节点。经过这次循环的处理，可以看出固定节点是A 和 B。在newChildren中，最靠右的固定节点的
-位置至关重要，对于后续的移动节点的处理来说，它的意义是提供参考位置。所以，每当处理到最后一个固定节点时，要记住此时它的位置，
-这个位置就是`lastPlacedIndex`。关键代码如下：
+为了方便说明，把保留在原位的节点称为固定节点。经过这次循环的处理，可以看出固定节点是A 和 B。在newChildren中，最靠右的固定节点的位置至关重要，对于后续的移动节点的处理来说，它的意义是提供参考位置。所以，每当处理到最后一个固定节点时，要记住此时它的位置，这个位置就是`lastPlacedIndex`。关键代码如下：
 
 ```
 let newIdx = 0;
@@ -411,17 +468,17 @@ for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
 
 因为遍历的是newChildren，当它遍历结束，但oldFiber链还没有遍历完，那么说明剩下的节点都要被删除。直接在oldFiber节点上标记Deletion的effectTag来实现删除。
 
-```
+```javascript
 if (newIdx === newChildren.length) {
 
-  新子节点遍历完，说明剩下的oldFiber都是没用的了，可以删除
+  // 新子节点遍历完，说明剩下的oldFiber都是没用的了，可以删除
   deleteRemainingChildren(returnFiber, oldFiber);
 
   return resultingFirstChild;
 }
 ```
 `deleteRemainingChildren`调用了`deleteChild`，值得注意的是，删除不仅仅是标记了effectTag为Deletion，还会将这个被删除的fiber节点添加到父级的effectList中。
-```
+```javascript
 function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
   ...
   const last = returnFiber.lastEffect;
