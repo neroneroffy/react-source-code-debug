@@ -78,5 +78,5 @@ Hooks作为革命性的新功能，必然要深入学习，下面的文章从基
 * [任务饥饿问题](https://github.com/neroneroffy/react-source-code-debug/blob/master/docs/Concurrent%E6%A8%A1%E5%BC%8F%E4%B8%8BReact%E7%9A%84%E6%9B%B4%E6%96%B0%E8%A1%8C%E4%B8%BA/%E9%A5%A5%E9%A5%BF%E9%97%AE%E9%A2%98.md)
 
 
-本系列文章在之后会继续更新未完成的部分，如果对你有帮助欢迎点个star~。点击访问我的[个人网站](https://www.neroht.com/)
+本系列文章在之后会继续更新未完成的部分，会同步发到我的[个人网站](https://www.neroht.com/) 以及segmentFault专栏 [React的秘密](https://segmentfault.com/blog/react-secret?_ea=101930838) 上。
 
