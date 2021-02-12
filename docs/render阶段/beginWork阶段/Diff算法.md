@@ -1,6 +1,6 @@
-[点击](https://github.com/neroneroffy/react-source-code-debug)进入React源码调试仓库。
+[点击](https://github.com/neroneroffy/react-source-code-debug) 进入React源码调试仓库。
 
-上一篇[扒一扒React计算状态的原理](https://segmentfault.com/a/1190000039008910) 之后，我们来分析一下Diff的过程。
+上一篇[扒一扒React计算状态的原理](https://github.com/neroneroffy/react-source-code-debug/blob/master/docs/render%E9%98%B6%E6%AE%B5/beginWork%E9%98%B6%E6%AE%B5/%E5%A4%84%E7%90%86%E6%9B%B4%E6%96%B0.md) 之后，我们来分析一下Diff的过程。
 
 fiber上的updateQueue经过React的一番计算之后，这个fiber已经有了新的状态，也就是state，对于类组件来说，state是在render函数里被使用的，
 既然已经得到了新的state，那么当务之急是执行一次render，得到持有新state的ReactElement。

@@ -5,7 +5,7 @@ React在构建用户界面整体遵循函数式的编程理念，即固定的输
 下面我们会从effect的数据结构入手，梳理use(Layout)Effect在render和commit阶段的整体流程。
 
 # Effect的数据结构
-关于hook链表结构的基本概念我已经总结过一篇文章：[React hooks 的基础概念：hooks链表](https://github.com/neroneroffy/react-source-code-debug/blob/master/docs/Hooks/%E6%A6%82%E8%BF%B0.md)。对函数组件来说，其fiber上的memorizedState专门用来存储hooks链表，每一个hook对应链表中的每一个元素。use(Layout)Effect产生的hook会放到fiber.memorizedState上，而它们调用后最终会生成一个effect对象，存储到它们对应hook的memoizedState中，与其他的effect连接成环形链表。
+关于hook链表结构的基本概念我已经总结过一篇文章：[React hooks 的基础概念：hooks链表](https://github.com/neroneroffy/react-source-code-debug/blob/master/docs/Hooks/%E6%A6%82%E8%BF%B0.md) 。对函数组件来说，其fiber上的memorizedState专门用来存储hooks链表，每一个hook对应链表中的每一个元素。use(Layout)Effect产生的hook会放到fiber.memorizedState上，而它们调用后最终会生成一个effect对象，存储到它们对应hook的memoizedState中，与其他的effect连接成环形链表。
 
 单个的effect对象包括以下几个属性：
 * create: 传入use（Layout）Effect函数的第一个参数，即回调函数
