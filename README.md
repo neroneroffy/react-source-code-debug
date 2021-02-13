@@ -45,6 +45,7 @@ React源码体系较为复杂，在了解了整体流程之后，我编排的内
 ## Render阶段
 产生更新后，React会渲染一棵离屏Fiber树（workInProgress树），Render阶段正是这棵Fiber树的构建阶段。构建过程分为深度优先的向下beginWork阶段，以及触碰到叶子节点之后的向上completeWork回溯阶段。在Concurrent模式下，Render阶段是可以被打断的。
 ### beginWork阶段
+  * [beginWork阶段概述](https://github.com/neroneroffy/react-source-code-debug/blob/master/docs/render%E9%98%B6%E6%AE%B5/beginWork%E9%98%B6%E6%AE%B5/beginWork.md)
   * [扒一扒React的state计算原理](https://github.com/neroneroffy/react-source-code-debug/blob/master/docs/render%E9%98%B6%E6%AE%B5/beginWork%E9%98%B6%E6%AE%B5/%E5%A4%84%E7%90%86%E6%9B%B4%E6%96%B0.md)
   * [深入理解Diff算法](https://github.com/neroneroffy/react-source-code-debug/blob/master/docs/render%E9%98%B6%E6%AE%B5/beginWork%E9%98%B6%E6%AE%B5/Diff%E7%AE%97%E6%B3%95.md)
 ### completeWork阶段
