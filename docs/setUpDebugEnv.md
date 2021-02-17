@@ -1,5 +1,5 @@
 # 搭建源码调试环境
-使用create-react-app搭建项目，下载源码。
+使用create-react-app搭建项目，下载源码。在src目录下创建源码存放目录： ‘/react’，将React源码拷贝到该目录下。
 ## 修改alias
 ```
 resolve: {
