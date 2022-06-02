@@ -7,6 +7,10 @@
 npm install
 
 ## 启动React不同版本的调试环境：
+* 启动18，该版本代码获取自2022年6月2日下午3点14分React官方仓库的main分支
+```
+ npm run dev:18
+```
 * 启动17正式版
 ```
  npm run dev:17

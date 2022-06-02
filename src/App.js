@@ -36,10 +36,10 @@ function App() {
   // return <SchedulerTask/>
 
   // 高优先级插队
-  // return <TasksWithDifferentPriorities/>
+  return <TasksWithDifferentPriorities/>
 
   // context
-  return <ContextDemo/>
+  // return <ContextDemo/>
 
   // diff 算法
   // return <Diff ref={'diffRef'}/>
